@@ -1302,7 +1302,7 @@ class AppLocalization {
   }
 
   String get explorerUrlByDefault {
-    return 'https://bismuth.online/search?quicksearch=%1';
+    return 'https://bismuth.im/search?quicksearch=%1';
   }
 
   /// -- END NON-TRANSLATABLE ITEMS

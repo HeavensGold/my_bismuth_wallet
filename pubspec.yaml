@@ -144,6 +144,7 @@ dependencies:
 
   # Service provider
   get_it: ^7.2.0
+  #get_it: ^6.1.0
   
   quiver: ^3.0.1
 

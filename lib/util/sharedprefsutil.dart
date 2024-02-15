@@ -183,7 +183,7 @@ class SharedPrefsUtil {
 
   Future<String> getExplorerUrl() async {
     return await get(explorer_url,
-        defaultValue: "https://bismuth.online/search?quicksearch=%1");
+        defaultValue: "https://bismuth.im/search?quicksearch=%1");
   }
 
   Future<void> setLock(bool value) async {

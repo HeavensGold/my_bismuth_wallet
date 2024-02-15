@@ -75,7 +75,8 @@ class HttpService {
     HttpClient httpClient = new HttpClient();
     try {
       HttpClientRequest request = await httpClient.getUrl(
-          Uri.parse("https://api.bismuth.live/servers/wallet/legacy.json"));
+          //Uri.parse("https://api.bismuth.live/servers/wallet/legacy.json"));
+          Uri.parse("https://bismuth.world/api/legacy.json"));
       request.headers.set('content-type', 'application/json');
       HttpClientResponse response = await request.close();
       if (response.statusCode == 200) {
@@ -115,6 +116,8 @@ class HttpService {
     simplePriceResponse.currency = currency;
 
     HttpClient httpClient = new HttpClient();
+    HttpClientResponse previousResponse;
+
     try {
       HttpClientRequest request = await httpClient.getUrl(Uri.parse(
           "https://api.coingecko.com/api/v3/simple/price?ids=bismuth&vs_currencies=BTC"));
@@ -133,6 +136,7 @@ class HttpService {
       request.headers.set('content-type', 'application/json');
       response = await request.close();
       if (response.statusCode == 200) {
+        previousResponse = response;
         String reply = await response.transform(utf8.decoder).join();
         switch (currency.toUpperCase()) {
           case "ARS":
@@ -349,14 +353,32 @@ class HttpService {
           default:
             SimplePriceUsdResponse simplePriceLocalResponse =
                 simplePriceUsdResponseFromJson(reply);
+            print(simplePriceLocalResponse);
+            print(simplePriceLocalResponse.bismuth.usd);
             simplePriceResponse.localCurrencyPrice =
                 simplePriceLocalResponse.bismuth.usd;
             break;
-        }
-      }
+        }       
+       } else {
+            response = previousResponse;
+            print("The variable reply is injected a random number of 0.0222222 to prevent null error.");
+            String reply = '{"bismuth":{"usd":0.0222222}}';
+            reply = await response.transform(utf8.decoder).join();
+            SimplePriceUsdResponse simplePriceLocalResponse =
+                simplePriceUsdResponseFromJson(reply);
+            print(simplePriceLocalResponse);
+            print(simplePriceLocalResponse.bismuth.usd);
+            
+            simplePriceResponse.localCurrencyPrice =
+                simplePriceLocalResponse.bismuth.usd;
+       }
+
       // Post to callbacks
       EventTaxiImpl.singleton().fire(PriceEvent(response: simplePriceResponse));
     } catch (e) {
+      print("Bismuth Price API response error: response is null.");
+      print(e);
+
     } finally {
       httpClient.close();
     }

@@ -135,3 +135,10 @@ update_g_cmd.txt
 update_translation.txt
 android/fastlane/report.xml
 ios/fastlane/report.xml
+
+# FVM Version Cache
+.fvm/
+.fvmrc
+android/app/key.properties
+key.properties
+
