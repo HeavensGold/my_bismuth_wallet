@@ -33,7 +33,7 @@ https://fvm.app/documentation/getting-started/installation
 - I rebased from that commit, fixed some errors and updated api url addresses.
 5. cd my_bismuth_wallet
 6. fvm install 2.2.1
-7. fvm use 2.2.1
+7. fvm use 2.2.1 --skip-pub-get
 8. .fvm/flutter_sdk/bin/flutter clean
 9. .fvm/flutter_sdk/bin/flutter pub get
 10. .fvm/flutter_sdk/bin/flutter devices

@@ -91,5 +91,7 @@ flutter {
 
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
-    implementation "com.bottlerocketstudios:vault:1.4.2"
+    //implementation "com.bottlerocketstudios:vault:1.4.2"
+    implementation(name:'vault-1.4.2', ext:'jar')
+    //implementation(name:'zxing-1.9.8', ext:'aar')
 }
