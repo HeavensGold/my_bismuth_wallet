@@ -217,7 +217,14 @@ class DBHelper {
   Future<void> updateAccountBalance(Account account, String balance) async {
     Box<Account> box = await Hive.openBox<Account>(_accountsTable);
     account.balance = balance;
-    box.putAt(account.index!, account);
+    
+    // Check if the account exists at the specified index
+    if (account.index != null && account.index! < box.length) {
+      box.putAt(account.index!, account);
+    } else {
+      // Account doesn't exist at index, add it instead
+      box.add(account);
+    }
   }
 
   Future<Account?> getSelectedAccount(String seed) async {

@@ -10,6 +10,7 @@ import 'package:flutter/services.dart';
 // Package imports:
 import 'package:event_taxi/event_taxi.dart';
 import 'package:fluttericon/font_awesome_icons.dart';
+import 'package:http/http.dart' as http;
 import 'package:logger/logger.dart';
 
 // Project imports:
@@ -18,6 +19,7 @@ import 'package:my_bismuth_wallet/appstate_container.dart';
 import 'package:my_bismuth_wallet/bus/events.dart';
 import 'package:my_bismuth_wallet/localization.dart';
 import 'package:my_bismuth_wallet/network/model/response/wstatusget_response.dart';
+import 'package:my_bismuth_wallet/network/model/response/servers_wallet_legacy.dart';
 import 'package:my_bismuth_wallet/service/app_service.dart';
 import 'package:my_bismuth_wallet/service/http_service.dart';
 import 'package:my_bismuth_wallet/service_locator.dart';
@@ -34,8 +36,13 @@ class CustomUrl extends StatefulWidget {
   _CustomUrlState createState() => _CustomUrlState();
 }
 
-class _CustomUrlState extends State<CustomUrl> {
+class _CustomUrlState extends State<CustomUrl> with SingleTickerProviderStateMixin {
   final Logger log = sl.get<Logger>();
+  
+  late TabController _tabController;
+  List<ServerWalletLegacyResponse> _availableServers = [];
+  bool _loadingServers = false;
+  Timer? _serverRefreshTimer;
 
   late WStatusGetResponse wStatusGetResponse;
 
@@ -103,11 +110,60 @@ class _CustomUrlState extends State<CustomUrl> {
     await sl.get<SharedPrefsUtil>().setExplorerUrl(_explorerUrlController.text);
     setState(() {});
   }
+  
+  Future<void> _fetchAvailableServers() async {
+    setState(() {
+      _loadingServers = true;
+    });
+    
+    try {
+      final response = await http.get(
+        Uri.parse("https://bismuth.world/api/legacy.json"),
+        headers: {
+          'content-type': 'application/json',
+          'access-Control-Allow-Origin': '*'
+        }
+      );
+      
+      if (response.statusCode == 200) {
+        List<ServerWalletLegacyResponse> servers = 
+            serverWalletLegacyResponseFromJson(response.body);
+        
+        // Sort servers: active first, then by number of clients
+        servers.sort((a, b) {
+          if (a.active != b.active) {
+            return a.active ? -1 : 1;
+          }
+          return a.clients.compareTo(b.clients);
+        });
+        
+        setState(() {
+          _availableServers = servers;
+          _loadingServers = false;
+        });
+      }
+    } catch (e) {
+      log.e("Error fetching servers: $e");
+      setState(() {
+        _loadingServers = false;
+      });
+    }
+  }
+  
+  void _selectServer(ServerWalletLegacyResponse server) {
+    setState(() {
+      _walletServerController.text = "${server.ip}:${server.port}";
+      useCustomWalletServer = true;
+    });
+    updateWalletServer();
+  }
 
   @override
   void initState() {
     _registerBus();
     super.initState();
+    
+    _tabController = TabController(length: 2, vsync: this);
 
     useCustomWalletServer = false;
     useCustomExplorerUrl = false;
@@ -123,6 +179,14 @@ class _CustomUrlState extends State<CustomUrl> {
     _explorerUrlController = TextEditingController();
 
     initControllerText();
+    
+    // Fetch available servers on init
+    _fetchAvailableServers();
+    
+    // Refresh server list every 30 seconds
+    _serverRefreshTimer = Timer.periodic(Duration(seconds: 30), (timer) {
+      _fetchAvailableServers();
+    });
 
     _walletServerFocusNode.addListener(() {
       if (_walletServerFocusNode.hasFocus) {
@@ -161,6 +225,8 @@ class _CustomUrlState extends State<CustomUrl> {
 
   @override
   void dispose() {
+    _tabController.dispose();
+    _serverRefreshTimer?.cancel();
     _destroyBus();
     super.dispose();
   }
@@ -233,12 +299,50 @@ class _CustomUrlState extends State<CustomUrl> {
                   ],
                 ),
               ),
+              // Add TabBar
+              Container(
+                decoration: BoxDecoration(
+                  color: StateContainer.of(context).curTheme.backgroundDarkest,
+                  border: Border(
+                    bottom: BorderSide(
+                      color: StateContainer.of(context).curTheme.text15,
+                      width: 1,
+                    ),
+                  ),
+                ),
+                child: TabBar(
+                  controller: _tabController,
+                  indicatorColor: StateContainer.of(context).curTheme.primary,
+                  labelColor: StateContainer.of(context).curTheme.primary,
+                  unselectedLabelColor: StateContainer.of(context).curTheme.text60,
+                  tabs: [
+                    Tab(
+                      child: Text(
+                        "Available Servers",
+                        style: TextStyle(fontSize: 14),
+                      ),
+                    ),
+                    Tab(
+                      child: Text(
+                        "Custom URL",
+                        style: TextStyle(fontSize: 14),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // TabBarView for content
               Expanded(
-                  child: SingleChildScrollView(
+                child: TabBarView(
+                  controller: _tabController,
+                  children: [
+                    // Tab 1: Available Servers
+                    _buildAvailableServersTab(),
+                    // Tab 2: Custom URL (existing content)
+                    SingleChildScrollView(
                       child: Padding(
-                          padding:
-                              EdgeInsets.only(top: 30, bottom: bottom + 30),
-                          child: Column(children: <Widget>[
+                        padding: EdgeInsets.only(top: 30, bottom: bottom + 30),
+                        child: Column(children: <Widget>[
                             Stack(children: <Widget>[
                               Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -418,10 +522,101 @@ class _CustomUrlState extends State<CustomUrl> {
                                         : SizedBox(),
                                   ])
                             ])
-                          ])))),
+                          ])),
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
         ));
+  }
+
+  Widget _buildAvailableServersTab() {
+    return Container(
+      padding: EdgeInsets.all(16),
+      child: _loadingServers
+          ? Center(
+              child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  StateContainer.of(context).curTheme.primary,
+                ),
+              ),
+            )
+          : _availableServers.isEmpty
+              ? Center(
+                  child: Text(
+                    "No servers available",
+                    style: AppStyles.textStyleParagraph(context),
+                  ),
+                )
+              : ListView.builder(
+                  itemCount: _availableServers.length,
+                  itemBuilder: (context, index) {
+                    final server = _availableServers[index];
+                    final isCurrentServer = _walletServerController.text == 
+                        "${server.ip}:${server.port}";
+                    
+                    return Card(
+                      margin: EdgeInsets.symmetric(vertical: 4),
+                      color: isCurrentServer 
+                          ? StateContainer.of(context).curTheme.primary.withValues(alpha: 0.1)
+                          : StateContainer.of(context).curTheme.backgroundDarkest,
+                      child: ListTile(
+                        leading: CircleAvatar(
+                          backgroundColor: server.active 
+                              ? Colors.green 
+                              : Colors.red,
+                          radius: 8,
+                        ),
+                        title: Text(
+                          server.label.isNotEmpty ? server.label : "${server.ip}:${server.port}",
+                          style: TextStyle(
+                            color: StateContainer.of(context).curTheme.text,
+                            fontWeight: isCurrentServer ? FontWeight.bold : FontWeight.normal,
+                          ),
+                        ),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "${server.ip}:${server.port}",
+                              style: TextStyle(
+                                color: StateContainer.of(context).curTheme.text60,
+                                fontSize: 12,
+                              ),
+                            ),
+                            Text(
+                              "Country: ${server.country} | Clients: ${server.clients}/${server.totalSlots} | Height: ${server.height}",
+                              style: TextStyle(
+                                color: StateContainer.of(context).curTheme.text45,
+                                fontSize: 11,
+                              ),
+                            ),
+                            if (!server.active)
+                              Text(
+                                "Server is currently offline",
+                                style: TextStyle(
+                                  color: Colors.red,
+                                  fontSize: 11,
+                                ),
+                              ),
+                          ],
+                        ),
+                        trailing: isCurrentServer
+                            ? Icon(
+                                Icons.check_circle,
+                                color: StateContainer.of(context).curTheme.primary,
+                              )
+                            : null,
+                        onTap: server.active
+                            ? () => _selectServer(server)
+                            : null,
+                      ),
+                    );
+                  },
+                ),
+    );
   }
 
   getWalletServerContainer() {

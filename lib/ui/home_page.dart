@@ -97,6 +97,7 @@ class _AppHomePageState extends State<AppHomePage>
   bool _lockDisabled = false; // whether we should avoid locking the app
   
   Timer? _updateTimer; // Timer for periodic updates
+  DateTime? _lastBackPressed; // Track back button presses for double-tap exit
 
   // Main card height
   late double mainCardHeight;
@@ -677,6 +678,27 @@ class _AppHomePageState extends State<AppHomePage>
     });
   }
 
+  void _handleBackButton() {
+    final now = DateTime.now();
+    const exitDuration = Duration(seconds: 2);
+    
+    if (_lastBackPressed == null || now.difference(_lastBackPressed!) > exitDuration) {
+      // First back press or too much time has passed - show warning
+      _lastBackPressed = now;
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Press back again to exit'),
+          duration: exitDuration,
+          backgroundColor: StateContainer.of(context).curTheme.primary,
+        ),
+      );
+    } else {
+      // Second back press within timeframe - exit app
+      SystemNavigator.pop();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     _displayReleaseNote
@@ -684,22 +706,27 @@ class _AppHomePageState extends State<AppHomePage>
             .addPostFrameCallback((_) => displayReleaseNote())
         : null;
 
-    return Scaffold(
-      drawerEdgeDragWidth: 200,
-      resizeToAvoidBottomInset: false,
-      key: _scaffoldKey,
-      backgroundColor: StateContainer.of(context).curTheme.background,
-      drawer: SizedBox(
-        width: UIUtil.drawerWidth(context),
-        child: Drawer(
-          child: SettingsSheet(_eggPrice),
+    return PopScope(
+      canPop: false, // Prevent accidental exits, but allow intentional double-tap
+      onPopInvokedWithResult: (didPop, result) {
+        _handleBackButton();
+      },
+      child: Scaffold(
+        drawerEdgeDragWidth: 200,
+        resizeToAvoidBottomInset: false,
+        key: _scaffoldKey,
+        backgroundColor: StateContainer.of(context).curTheme.background,
+        drawer: SizedBox(
+          width: UIUtil.drawerWidth(context),
+          child: Drawer(
+            child: SettingsSheet(_eggPrice),
+          ),
         ),
-      ),
-      body: SafeArea(
-        minimum: EdgeInsets.only(
-            top: MediaQuery.of(context).size.height * 0.045,
-            bottom: MediaQuery.of(context).size.height * 0.035),
-        child: Column(
+        body: SafeArea(
+          minimum: EdgeInsets.only(
+              top: MediaQuery.of(context).size.height * 0.045,
+              bottom: MediaQuery.of(context).size.height * 0.035),
+          child: Column(
           children: <Widget>[
             Expanded(
               child: Stack(
@@ -833,12 +860,13 @@ class _AppHomePageState extends State<AppHomePage>
                     ],
                   ),
                 ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+              ), // Close Stack
+            ), // Close Expanded  
+          ], // Close Column children
+        ), // Close Column (SafeArea child)
+      ), // Close SafeArea
+        ), // Close Scaffold
+    ); // Close PopScope
   }
 
   void displayReleaseNote() {
@@ -2001,7 +2029,7 @@ class _AppHomePageState extends State<AppHomePage>
                   ],
                 ),
               ),
-      ),
+      ), // Close WillPopScope child (Scaffold)  
     );
   }
 }

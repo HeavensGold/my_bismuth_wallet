@@ -246,7 +246,7 @@ class _AppState extends State<App> {
               return null;
           }
         },
-        home: IntroWelcomePage(),
+        // home: IntroWelcomePage(), // Removed - causes navigation issues
       ),
     );
   }
@@ -336,16 +336,19 @@ class SplashState extends State<Splash> with WidgetsBindingObserver {
     
       if (isLoggedIn) {
         if (isEncrypted) {
-          Navigator.of(context).pushReplacementNamed('/password_lock_screen');
+          Navigator.of(context).pushNamedAndRemoveUntil(
+              '/password_lock_screen', (Route<dynamic> route) => false);
         } else if (await sl.get<SharedPrefsUtil>().getLock() ||
             await sl.get<SharedPrefsUtil>().shouldLock()) {
-          Navigator.of(context).pushReplacementNamed('/lock_screen');
+          Navigator.of(context).pushNamedAndRemoveUntil(
+              '/lock_screen', (Route<dynamic> route) => false);
         } else {
           await AppUtil().loginAccount(seed, context);
           PriceConversion conversion =
               await sl.get<SharedPrefsUtil>().getPriceConversion();
-          Navigator.of(context)
-              .pushReplacementNamed('/home', arguments: conversion);
+          Navigator.of(context).pushNamedAndRemoveUntil(
+              '/home_transition', (Route<dynamic> route) => false,
+              arguments: conversion);
         }
       } else {
         // No valid seed/pin found, go to intro welcome page

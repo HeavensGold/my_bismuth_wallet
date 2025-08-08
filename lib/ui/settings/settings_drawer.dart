@@ -37,7 +37,6 @@ import 'package:my_bismuth_wallet/ui/accounts/accounts_sheet.dart';
 // import 'package:my_bismuth_wallet/ui/dragginator/my_dragginator_merging.dart'; // Deleted
 import 'package:my_bismuth_wallet/ui/send/send_confirm_sheet.dart';
 import 'package:my_bismuth_wallet/ui/settings/backupseed_sheet.dart';
-import 'package:my_bismuth_wallet/ui/settings/contacts_widget.dart';
 import 'package:my_bismuth_wallet/ui/settings/custom_url_widget.dart';
 import 'package:my_bismuth_wallet/ui/settings/disable_password_sheet.dart';
 import 'package:my_bismuth_wallet/ui/settings/set_password_sheet.dart';
@@ -45,6 +44,7 @@ import 'package:my_bismuth_wallet/ui/settings/settings_list_item.dart';
 // import 'package:my_bismuth_wallet/ui/settings/tokens_widget.dart'; // Deleted
 import 'package:my_bismuth_wallet/ui/util/ui_util.dart';
 import 'package:my_bismuth_wallet/ui/widgets/app_simpledialog.dart';
+import 'package:my_bismuth_wallet/ui/widgets/dialog.dart';
 import 'package:my_bismuth_wallet/ui/widgets/security.dart';
 import 'package:my_bismuth_wallet/ui/widgets/sheet_util.dart';
 import 'package:my_bismuth_wallet/util/biometrics.dart';
@@ -60,8 +60,6 @@ class SettingsSheet extends StatefulWidget {
 
 class _SettingsSheetState extends State<SettingsSheet>
     with TickerProviderStateMixin, WidgetsBindingObserver {
-  late AnimationController _controller;
-  late Animation<Offset> _offsetFloat;
   late AnimationController _securityController;
   late Animation<Offset> _securityOffsetFloat;
   late AnimationController _customUrlController;
@@ -80,7 +78,6 @@ class _SettingsSheetState extends State<SettingsSheet>
   late bool _securityOpen;
   late bool _loadingAccounts;
 
-  late bool _contactsOpen;
 
   late bool _customUrlOpen;
 
@@ -90,7 +87,6 @@ class _SettingsSheetState extends State<SettingsSheet>
   void initState() {
     super.initState();
 
-    _contactsOpen = false;
     _securityOpen = false;
     _loadingAccounts = false;
     _customUrlOpen = false;
@@ -119,11 +115,6 @@ class _SettingsSheetState extends State<SettingsSheet>
         _curTimeoutSetting = lockTimeout;
       });
     });
-    // Setup animation controller
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 220),
-    );
     // For security menu
     _securityController = AnimationController(
       vsync: this,
@@ -135,8 +126,6 @@ class _SettingsSheetState extends State<SettingsSheet>
       duration: const Duration(milliseconds: 220),
     );
 
-    _offsetFloat = Tween<Offset>(begin: Offset(1.1, 0), end: Offset(0, 0))
-        .animate(_controller);
     _securityOffsetFloat =
         Tween<Offset>(begin: Offset(1.1, 0), end: Offset(0, 0))
             .animate(_securityController);
@@ -153,7 +142,6 @@ class _SettingsSheetState extends State<SettingsSheet>
 
   @override
   void dispose() {
-    _controller.dispose();
     _securityController.dispose();
     _customUrlController.dispose();
     super.dispose();
@@ -447,13 +435,7 @@ class _SettingsSheetState extends State<SettingsSheet>
   }
 
   Future<bool> _onBackButtonPressed() async {
-    if (_contactsOpen) {
-      setState(() {
-        _contactsOpen = false;
-      });
-      _controller.reverse();
-      return false;
-    } else if (_securityOpen) {
+    if (_securityOpen) {
       setState(() {
         _securityOpen = false;
       });
@@ -491,9 +473,6 @@ class _SettingsSheetState extends State<SettingsSheet>
               constraints: BoxConstraints.expand(),
             ),
             buildMainSettings(context),
-            SlideTransition(
-                position: _offsetFloat,
-                child: ContactsList(_controller, _contactsOpen)),
             SlideTransition(
                 position: _securityOffsetFloat,
                 child: buildSecurityMenu(context)),
@@ -881,59 +860,6 @@ class _SettingsSheetState extends State<SettingsSheet>
                     ),
                     AppSettings.buildSettingsListItemSingleLine(
                         context,
-                        AppLocalization.of(context).contactsHeader,
-                        Typicons.contacts, onPressed: () {
-                      setState(() {
-                        _contactsOpen = true;
-                      });
-                      _controller.forward();
-                    }),
-                    Divider(
-                      height: 2,
-                      color: StateContainer.of(context).curTheme.text15,
-                    ),
-                    AppSettings.buildSettingsListItemSingleLine(
-                        context,
-                        AppLocalization.of(context).backupSecretPhrase,
-                        AppIcons.backupseed, onPressed: () async {
-                      // Authenticate
-                      AuthenticationMethod authMethod =
-                          await sl.get<SharedPrefsUtil>().getAuthMethod();
-                      bool hasBiometrics =
-                          await sl.get<BiometricUtil>().hasBiometrics();
-                      if (authMethod.method == AuthMethod.BIOMETRICS &&
-                          hasBiometrics) {
-                        try {
-                          bool authenticated = await sl
-                              .get<BiometricUtil>()
-                              .authenticateWithBiometrics(
-                                  context,
-                                  AppLocalization.of(context)
-                                      .fingerprintSeedBackup);
-                          if (authenticated) {
-                            HapticUtil.lightFeedback();
-                            try {
-                              // For backup, get seed directly from vault after biometric authentication
-                              String seed = await sl.get<Vault>().getSeed();
-                              AppSeedBackupSheet(seed).mainBottomSheet(context);
-                            } catch (e) {
-                              print("Error getting seed for backup: $e");
-                              await authenticateWithPin();
-                            }
-                          }
-                        } catch (e) {
-                          await authenticateWithPin();
-                        }
-                      } else {
-                        await authenticateWithPin();
-                      }
-                    }),
-                    Divider(
-                      height: 2,
-                      color: StateContainer.of(context).curTheme.text15,
-                    ),
-                    AppSettings.buildSettingsListItemSingleLine(
-                        context,
                         AppLocalization.of(context).customUrlHeader,
                         FontAwesome.code, onPressed: () {
                       setState(() {
@@ -1151,6 +1077,47 @@ class _SettingsSheetState extends State<SettingsSheet>
                               color:
                                   StateContainer.of(context).curTheme.text60)),
                     ),
+                    // Backup Secret Phrase
+                    Divider(
+                      height: 2,
+                      color: StateContainer.of(context).curTheme.text15,
+                    ),
+                    AppSettings.buildSettingsListItemSingleLine(
+                        context,
+                        AppLocalization.of(context).backupSecretPhrase,
+                        AppIcons.backupseed, onPressed: () async {
+                      // Authenticate
+                      AuthenticationMethod authMethod =
+                          await sl.get<SharedPrefsUtil>().getAuthMethod();
+                      bool hasBiometrics =
+                          await sl.get<BiometricUtil>().hasBiometrics();
+                      if (authMethod.method == AuthMethod.BIOMETRICS &&
+                          hasBiometrics) {
+                        try {
+                          bool authenticated = await sl
+                              .get<BiometricUtil>()
+                              .authenticateWithBiometrics(
+                                  context,
+                                  AppLocalization.of(context)
+                                      .fingerprintSeedBackup);
+                          if (authenticated) {
+                            HapticUtil.lightFeedback();
+                            try {
+                              // For backup, get seed directly from vault after biometric authentication
+                              String seed = await sl.get<Vault>().getSeed();
+                              AppSeedBackupSheet(seed).mainBottomSheet(context);
+                            } catch (e) {
+                              print("Error getting seed for backup: $e");
+                              await authenticateWithPin();
+                            }
+                          }
+                        } catch (e) {
+                          await authenticateWithPin();
+                        }
+                      } else {
+                        await authenticateWithPin();
+                      }
+                    }),
                     // Authentication Method
                     if (_hasBiometrics) ...[  
                       Divider(
@@ -1224,6 +1191,19 @@ class _SettingsSheetState extends State<SettingsSheet>
                                   widget: DisablePasswordSheet());
                             }),
                           ]),
+                    // Reset Account Seed option
+                    Divider(
+                      height: 2,
+                      color: StateContainer.of(context).curTheme.text15,
+                    ),
+                    AppSettings.buildSettingsListItemSingleLine(
+                      context,
+                      "Reset Account Seed",
+                      Icons.refresh_rounded,
+                      onPressed: () {
+                        _showResetConfirmation();
+                      },
+                    ),
                     Divider(
                         height: 2,
                         color: StateContainer.of(context).curTheme.text15),
@@ -1253,6 +1233,76 @@ class _SettingsSheetState extends State<SettingsSheet>
         ),
       ),
     );
+  }
+
+  void _showResetConfirmation() {
+    AppDialogs.showConfirmDialog(
+      context,
+      "Warning",
+      "Are you sure you want to reset your wallet? This will delete your current seed and all accounts. Make sure you have backed up your seed phrase!",
+      "Continue",
+      () {
+        // Show second confirmation
+        AppDialogs.showConfirmDialog(
+          context,
+          "Final Warning",
+          "This action cannot be undone. Your current wallet will be permanently deleted. Do you want to proceed?",
+          "Yes, Reset Wallet",
+          () {
+            // Proceed with PIN authentication
+            _authenticateForReset();
+          },
+          cancelText: "Cancel",
+        );
+      },
+      cancelText: "Cancel",
+    );
+  }
+  
+  Future<void> _authenticateForReset() async {
+    // PIN Authentication for reset
+    String? expectedPin = await sl.get<Vault>().getPin();
+    if (expectedPin == null) {
+      return;
+    }
+    
+    bool authenticated = await Navigator.of(context).push(MaterialPageRoute(builder: (BuildContext context) {
+      return PinScreen(
+        PinOverlayType.ENTER_PIN,
+        expectedPin: expectedPin,
+        description: "Enter PIN to reset wallet",
+      );
+    }));
+    
+    if (authenticated != null && authenticated) {
+      // Reset the wallet
+      await _performWalletReset();
+    }
+  }
+  
+  Future<void> _performWalletReset() async {
+    try {
+      // Clear all wallet data
+      await sl.get<DBHelper>().dropAll();
+      await sl.get<Vault>().deleteAll();
+      await sl.get<SharedPrefsUtil>().deleteAll();
+      
+      // Navigate to intro welcome screen
+      Navigator.of(context).pushNamedAndRemoveUntil(
+        '/intro_welcome',
+        (Route<dynamic> route) => false,
+      );
+    } catch (e) {
+      log.e("Error resetting wallet: $e");
+      // Show error dialog
+      AppDialogs.showConfirmDialog(
+        context,
+        "Error",
+        "Failed to reset wallet. Please try again.",
+        "OK",
+        () {},
+      );
+    }
   }
 
   Future<void> authenticateWithPin() async {

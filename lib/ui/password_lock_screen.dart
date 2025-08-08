@@ -43,7 +43,9 @@ class _AppPasswordLockScreenState extends State<AppPasswordLockScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return PopScope(
+      canPop: false, // Prevent back button from bypassing password authentication
+      child: Scaffold(
         resizeToAvoidBottomInset: false,
         body: TapOutsideUnfocus(
             child: Container(
@@ -204,7 +206,8 @@ class _AppPasswordLockScreenState extends State<AppPasswordLockScreen> {
               ],
             ),
           ),
-        )));
+        ))),
+    );
   }
 
   Future<void> validateAndDecrypt() async {

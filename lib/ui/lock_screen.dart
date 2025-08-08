@@ -204,7 +204,9 @@ class _AppLockScreenState extends State<AppLockScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return PopScope(
+      canPop: false, // Prevent back button from bypassing authentication
+      child: Scaffold(
         body: Container(
             color: StateContainer.of(context).curTheme.backgroundDark,
             width: double.infinity,
@@ -327,6 +329,7 @@ class _AppLockScreenState extends State<AppLockScreen> {
                           )
                         : SizedBox(),
                   ],
-                ))));
+                )))),
+    );
   }
 }

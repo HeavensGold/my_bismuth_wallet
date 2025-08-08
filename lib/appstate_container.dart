@@ -344,8 +344,11 @@ class StateContainerState extends State<StateContainer> {
       if (wallet != null && balance != null) {
         wallet!.accountBalance = balance;
       }
-      sl.get<DBHelper>().updateAccountBalance(
-          selectedAccount, balance?.toString() ?? '0');
+      // Only update account balance if we have a valid selected account
+      if (selectedAccount.address != null && selectedAccount.address!.isNotEmpty) {
+        sl.get<DBHelper>().updateAccountBalance(
+            selectedAccount, balance?.toString() ?? '0');
+      }
             });
   }
 
