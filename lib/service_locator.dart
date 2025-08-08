@@ -1,4 +1,4 @@
-// @dart=2.9
+
 
 // Package imports:
 import 'package:get_it/get_it.dart';
@@ -8,7 +8,6 @@ import 'package:logger/logger.dart';
 import 'package:my_bismuth_wallet/model/db/appdb.dart';
 import 'package:my_bismuth_wallet/model/vault.dart';
 import 'package:my_bismuth_wallet/service/app_service.dart';
-import 'package:my_bismuth_wallet/service/dragginator_service.dart';
 import 'package:my_bismuth_wallet/service/http_service.dart';
 import 'package:my_bismuth_wallet/util/biometrics.dart';
 import 'package:my_bismuth_wallet/util/hapticutil.dart';
@@ -31,11 +30,6 @@ void setupServiceLocator() {
     sl.unregister<HttpService>();
   }
   sl.registerLazySingleton<HttpService>(() => HttpService());
-
-  if (sl.isRegistered<DragginatorService>()) {
-    sl.unregister<DragginatorService>();
-  }
-  sl.registerLazySingleton<DragginatorService>(() => DragginatorService());
 
   if (sl.isRegistered<DBHelper>()) {
     sl.unregister<DBHelper>();

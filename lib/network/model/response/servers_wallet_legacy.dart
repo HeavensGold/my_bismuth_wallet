@@ -2,7 +2,6 @@
 //
 //     final serverWalletLegacyResponse = serverWalletLegacyResponseFromJson(jsonString);
 
-// @dart=2.9
 
 // Dart imports:
 import 'dart:convert';
@@ -18,16 +17,16 @@ String serverWalletLegacyResponseToJson(
 
 class ServerWalletLegacyResponse {
   ServerWalletLegacyResponse({
-    this.label,
-    this.ip,
-    this.port,
-    this.country,
-    this.height,
-    this.version,
-    this.active,
-    this.clients,
-    this.totalSlots,
-    this.lastActive,
+    required this.label,
+    required this.ip,
+    required this.port,
+    required this.country,
+    required this.height,
+    required this.version,
+    required this.active,
+    required this.clients,
+    required this.totalSlots,
+    required this.lastActive,
   });
 
   String label;
@@ -43,16 +42,16 @@ class ServerWalletLegacyResponse {
 
   factory ServerWalletLegacyResponse.fromJson(Map<String, dynamic> json) =>
       ServerWalletLegacyResponse(
-        label: json['label'],
-        ip: json['ip'],
-        port: json['port'],
-        country: json['country'],
-        height: json['height'],
-        version: json['version'],
-        active: json['active'],
-        clients: json['clients'],
-        totalSlots: json['total_slots'],
-        lastActive: json['last_active'],
+        label: json['label'] ?? '',
+        ip: json['ip'] ?? '',
+        port: json['port'] ?? 0,
+        country: json['country'] ?? '',
+        height: json['height'] ?? 0,
+        version: json['version'] ?? '',
+        active: json['active'] ?? false,
+        clients: json['clients'] ?? 0,
+        totalSlots: json['total_slots'] ?? 0,
+        lastActive: json['last_active'] ?? 0,
       );
 
   Map<String, dynamic> toJson() => {

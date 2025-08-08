@@ -1,4 +1,4 @@
-// @dart=2.9
+
 
 // Flutter imports:
 import 'package:flutter/material.dart';
@@ -9,12 +9,12 @@ import 'package:my_bismuth_wallet/styles.dart';
 enum AddressTextType { PRIMARY60, PRIMARY, SUCCESS }
 
 class OneOrThreeLineAddressText extends StatelessWidget {
-  String address;
-  String contactName;
-  AddressTextType type;
+  final String address;
+  final String? contactName;
+  final AddressTextType type;
 
   OneOrThreeLineAddressText(
-      {@required this.address, @required this.type, this.contactName});
+      {required this.address, required this.type, this.contactName});
 
   @override
   Widget build(BuildContext context) {

@@ -1,4 +1,4 @@
-// @dart=2.9
+
 
 // Dart imports:
 import 'dart:async';
@@ -10,11 +10,10 @@ import 'package:flutter/services.dart';
 // Package imports:
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:event_taxi/event_taxi.dart';
-import 'package:flare_flutter/base/animation/actor_animation.dart';
-import 'package:flare_flutter/flare.dart';
-import 'package:flare_flutter/flare_actor.dart';
-import 'package:flare_flutter/flare_controller.dart';
-import 'package:flutter_vibrate/flutter_vibrate.dart';
+// import 'package:flare_flutter/base/animation/actor_animation.dart'; // Removed - deprecated
+// import 'package:flare_flutter/flare.dart'; // Removed - deprecated  
+// import 'package:flare_flutter/flare_actor.dart'; // Removed - deprecated
+// import 'package:flare_flutter/flare_controller.dart'; // Removed - deprecated
 import 'package:fluttericon/font_awesome5_icons.dart';
 import 'package:fluttericon/font_awesome_icons.dart';
 import 'package:intl/intl.dart';
@@ -28,21 +27,21 @@ import 'package:my_bismuth_wallet/appstate_container.dart';
 import 'package:my_bismuth_wallet/bus/events.dart';
 import 'package:my_bismuth_wallet/dimens.dart';
 import 'package:my_bismuth_wallet/localization.dart';
-import 'package:my_bismuth_wallet/model/bis_url.dart';
+// import 'package:my_bismuth_wallet/model/bis_url.dart'; // Commented out - file deleted
 import 'package:my_bismuth_wallet/model/db/appdb.dart';
 import 'package:my_bismuth_wallet/model/db/hiveDB.dart';
 import 'package:my_bismuth_wallet/network/model/block_types.dart';
 import 'package:my_bismuth_wallet/network/model/response/address_txs_response.dart';
+import 'package:my_bismuth_wallet/service/app_service.dart';
 import 'package:my_bismuth_wallet/service/http_service.dart';
 import 'package:my_bismuth_wallet/service_locator.dart';
 import 'package:my_bismuth_wallet/styles.dart';
 import 'package:my_bismuth_wallet/ui/contacts/add_contact.dart';
 import 'package:my_bismuth_wallet/ui/popup_button.dart';
 import 'package:my_bismuth_wallet/ui/receive/receive_sheet.dart';
-import 'package:my_bismuth_wallet/ui/send/send_confirm_sheet.dart';
 import 'package:my_bismuth_wallet/ui/send/send_sheet.dart';
 import 'package:my_bismuth_wallet/ui/settings/settings_drawer.dart';
-import 'package:my_bismuth_wallet/ui/tokens/my_tokens_list.dart';
+// import 'package:my_bismuth_wallet/ui/tokens/my_tokens_list.dart'; // Commented out - file deleted
 import 'package:my_bismuth_wallet/ui/util/routes.dart';
 import 'package:my_bismuth_wallet/ui/util/ui_util.dart';
 import 'package:my_bismuth_wallet/ui/widgets/buttons.dart';
@@ -56,9 +55,9 @@ import 'package:my_bismuth_wallet/util/hapticutil.dart';
 import 'package:my_bismuth_wallet/util/sharedprefsutil.dart';
 
 class AppHomePage extends StatefulWidget {
-  PriceConversion priceConversion;
+  final PriceConversion? priceConversion;
 
-  AppHomePage({this.priceConversion}) : super();
+  const AppHomePage({super.key, this.priceConversion});
 
   @override
   _AppHomePageState createState() => _AppHomePageState();
@@ -67,67 +66,48 @@ class AppHomePage extends StatefulWidget {
 class _AppHomePageState extends State<AppHomePage>
     with
         WidgetsBindingObserver,
-        SingleTickerProviderStateMixin,
-        FlareController {
+        SingleTickerProviderStateMixin {
   final GlobalKey<ScaffoldState> _scaffoldKey = new GlobalKey<ScaffoldState>();
   final Logger log = sl.get<Logger>();
 
   // Controller for placeholder card animations
-  AnimationController _placeholderCardAnimationController;
-  Animation<double> _opacityAnimation;
-  bool _animationDisposed;
+  late AnimationController _placeholderCardAnimationController;
+  late Animation<double> _opacityAnimation;
+  late bool _animationDisposed;
 
-  bool _displayReleaseNote;
+  late bool _displayReleaseNote;
 
   int _eggPrice = 0;
 
   // Receive card instance
-  ReceiveSheet receive;
+  late ReceiveSheet receive;
 
   // A separate unfortunate instance of this list, is a little unfortunate
   // but seems the only way to handle the animations
   final Map<String, GlobalKey<AnimatedListState>> _listKeyMap = Map();
 
   // List of contacts (Store it so we only have to query the DB once for transaction cards)
-  List<Contact> _contacts = List();
+  List<Contact> _contacts = <Contact>[];
 
   // Price conversion state (BTC, app cryptocurrency, NONE)
-  PriceConversion _priceConversion;
+  late PriceConversion _priceConversion;
 
   bool _isRefreshing = false;
 
   bool _lockDisabled = false; // whether we should avoid locking the app
+  
+  Timer? _updateTimer; // Timer for periodic updates
 
   // Main card height
-  double mainCardHeight;
+  late double mainCardHeight;
   double settingsIconMarginTop = 5;
 
-  // Animation for swiping to send
-  ActorAnimation _sendSlideAnimation;
-  ActorAnimation _sendSlideReleaseAnimation;
-  double _fanimationPosition;
   bool releaseAnimation = false;
 
-  void initialize(FlutterActorArtboard actor) {
-    _fanimationPosition = 0.0;
-    _sendSlideAnimation = actor.getAnimation("pull");
-    _sendSlideReleaseAnimation = actor.getAnimation("release");
-  }
-
-  void setViewTransform(Mat2D viewTransform) {}
-
-  bool advance(FlutterActorArtboard artboard, double elapsed) {
-    if (releaseAnimation) {
-      _sendSlideReleaseAnimation.apply(
-          _sendSlideReleaseAnimation.duration * (1 - _fanimationPosition),
-          artboard,
-          1.0);
-    } else {
-      _sendSlideAnimation.apply(
-          _sendSlideAnimation.duration * _fanimationPosition, artboard, 1.0);
-    }
-    return true;
-  }
+  // Simplified animation methods (flare_flutter removed)
+  // void initialize(FlutterActorArtboard actor) - removed
+  // void setViewTransform(Mat2D viewTransform) - removed  
+  // bool advance(FlutterActorArtboard artboard, double elapsed) - removed
 
   _checkVersionApp() async {
     String versionAppCached = await sl.get<SharedPrefsUtil>().getVersionApp();
@@ -152,13 +132,13 @@ class _AppHomePageState extends State<AppHomePage>
     _checkVersionApp();
     _getEggPrice();
     _registerBus();
+    _startPeriodicUpdates();
+    
+    // Initialize receive sheet
+    receive = ReceiveSheet();
     WidgetsBinding.instance.addObserver(this);
-    if (widget.priceConversion != null) {
-      _priceConversion = widget.priceConversion;
-    } else {
-      _priceConversion = PriceConversion.BTC;
-    }
-    // Main Card Size
+    _priceConversion = widget.priceConversion ?? PriceConversion.BTC;
+      // Main Card Size
     if (_priceConversion == PriceConversion.BTC) {
       mainCardHeight = 120;
       settingsIconMarginTop = 7;
@@ -260,10 +240,13 @@ class _AppHomePageState extends State<AppHomePage>
     });
   }
 
-  StreamSubscription<HistoryHomeEvent> _historySub;
-  StreamSubscription<ContactModifiedEvent> _contactModifiedSub;
-  StreamSubscription<DisableLockTimeoutEvent> _disableLockSub;
-  StreamSubscription<AccountChangedEvent> _switchAccountSub;
+  late StreamSubscription<HistoryHomeEvent> _historySub;
+  late StreamSubscription<ContactModifiedEvent> _contactModifiedSub;
+  late StreamSubscription<DisableLockTimeoutEvent> _disableLockSub;
+  late StreamSubscription<AccountChangedEvent> _switchAccountSub;
+  late StreamSubscription<NetworkErrorEvent> _networkErrorSub;
+  late StreamSubscription<BalanceGetEvent> _balanceGetSub;
+  late StreamSubscription<TransactionsListEvent> _transactionsListSub;
 
   void _registerBus() {
     _historySub = EventTaxiImpl.singleton()
@@ -272,10 +255,11 @@ class _AppHomePageState extends State<AppHomePage>
       setState(() {
         _isRefreshing = false;
       });
-      if (StateContainer.of(context).initialDeepLink != null) {
-        handleDeepLink(StateContainer.of(context).initialDeepLink);
-        StateContainer.of(context).initialDeepLink = null;
-      }
+      // TODO: Fix deep link handling
+      // if (StateContainer.of(context).initialDeepLink != null) {
+      //   handleDeepLink(StateContainer.of(context).initialDeepLink);
+      //   StateContainer.of(context).initialDeepLink = null;
+      // }
     });
     _contactModifiedSub = EventTaxiImpl.singleton()
         .registerTo<ContactModifiedEvent>()
@@ -286,26 +270,26 @@ class _AppHomePageState extends State<AppHomePage>
     _disableLockSub = EventTaxiImpl.singleton()
         .registerTo<DisableLockTimeoutEvent>()
         .listen((event) {
-      if (event.disable) {
+      if (event.disable ?? false) {
         cancelLockEvent();
       }
-      _lockDisabled = event.disable;
+      _lockDisabled = event.disable ?? false;
     });
     // User changed account
     _switchAccountSub = EventTaxiImpl.singleton()
         .registerTo<AccountChangedEvent>()
         .listen((event) {
       setState(() {
-        StateContainer.of(context).wallet.loading = true;
-        StateContainer.of(context).wallet.historyLoading = true;
+        StateContainer.of(context).wallet?.loading = true;
+        StateContainer.of(context).wallet?.historyLoading = true;
 
         _startAnimation();
-        StateContainer.of(context).updateWallet(account: event.account);
+        StateContainer.of(context).updateWallet(account: event.account!);
 
-        StateContainer.of(context).wallet.loading = false;
-        StateContainer.of(context).wallet.historyLoading = false;
+        StateContainer.of(context).wallet?.loading = false;
+        StateContainer.of(context).wallet?.historyLoading = false;
       });
-      paintQrCode(address: event.account.address);
+      paintQrCode(address: event.account?.address ?? '');
       if (event.delayPop) {
         Future.delayed(Duration(milliseconds: 300), () {
           Navigator.of(context).popUntil(RouteUtils.withNameLike("/home"));
@@ -314,30 +298,76 @@ class _AppHomePageState extends State<AppHomePage>
         Navigator.of(context).popUntil(RouteUtils.withNameLike("/home"));
       }
     });
+    
+    // Network error handling
+    _networkErrorSub = EventTaxiImpl.singleton()
+        .registerTo<NetworkErrorEvent>()
+        .listen((event) {
+      _showNetworkError(event);
+    });
+    
+    // Balance updates
+    _balanceGetSub = EventTaxiImpl.singleton()
+        .registerTo<BalanceGetEvent>()
+        .listen((event) {
+      if (mounted && event.response != null) {
+        setState(() {
+          if (StateContainer.of(context).wallet != null) {
+            double? balance = double.tryParse(event.response!.balance);
+            if (balance != null) {
+              StateContainer.of(context).wallet!.accountBalance = balance;
+            }
+            StateContainer.of(context).wallet!.loading = false;
+          }
+        });
+      }
+    });
+    
+    // Transaction updates  
+    _transactionsListSub = EventTaxiImpl.singleton()
+        .registerTo<TransactionsListEvent>()
+        .listen((event) {
+      if (mounted && event.response != null) {
+        setState(() {
+          if (StateContainer.of(context).wallet != null) {
+            StateContainer.of(context).wallet!.history.clear();
+            
+            // Convert raw transaction data to AddressTxsResponseResult objects
+            for (var txData in event.response!) {
+              AddressTxsResponseResult tx = AddressTxsResponseResult();
+              tx.populate(txData, StateContainer.of(context).selectedAccount.address!);
+              tx.getBisToken();
+              StateContainer.of(context).wallet!.history.insert(0, tx);
+            }
+            
+            StateContainer.of(context).wallet!.historyLoading = false;
+            StateContainer.of(context).wallet!.loading = false;
+          }
+          _isRefreshing = false;
+        });
+      }
+    });
   }
 
   @override
   void dispose() {
     _destroyBus();
+    _updateTimer?.cancel();
+    lockStreamListener?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     _placeholderCardAnimationController.dispose();
     super.dispose();
   }
 
   void _destroyBus() {
-    if (_historySub != null) {
-      _historySub.cancel();
-    }
-    if (_contactModifiedSub != null) {
+    _historySub.cancel();
       _contactModifiedSub.cancel();
-    }
-    if (_disableLockSub != null) {
       _disableLockSub.cancel();
-    }
-    if (_switchAccountSub != null) {
       _switchAccountSub.cancel();
+      _networkErrorSub.cancel();
+      _balanceGetSub.cancel();
+      _transactionsListSub.cancel();
     }
-  }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
@@ -350,10 +380,10 @@ class _AppHomePageState extends State<AppHomePage>
         break;
       case AppLifecycleState.resumed:
         cancelLockEvent();
-        if (!StateContainer.of(context).wallet.loading &&
-            StateContainer.of(context).initialDeepLink != null) {
-          handleDeepLink(StateContainer.of(context).initialDeepLink);
-          StateContainer.of(context).initialDeepLink = null;
+        if (!(StateContainer.of(context).wallet?.loading ?? false) &&
+            false) {
+          // TODO: Fix deep link handling
+          // handleDeepLink(StateContainer.of(context).initialDeepLink);
         }
         super.didChangeAppLifecycleState(state);
         break;
@@ -364,16 +394,14 @@ class _AppHomePageState extends State<AppHomePage>
   }
 
   // To lock and unlock the app
-  StreamSubscription<dynamic> lockStreamListener;
+  StreamSubscription<dynamic>? lockStreamListener;
 
   Future<void> setAppLockEvent() async {
     if (((await sl.get<SharedPrefsUtil>().getLock()) ||
             StateContainer.of(context).encryptedSecret != null) &&
         !_lockDisabled) {
-      if (lockStreamListener != null) {
-        lockStreamListener.cancel();
-      }
-      Future<dynamic> delayed = new Future.delayed(
+      lockStreamListener?.cancel();
+          Future<dynamic> delayed = new Future.delayed(
           (await sl.get<SharedPrefsUtil>().getLockTimeout()).getDuration());
       delayed.then((_) {
         return true;
@@ -393,8 +421,79 @@ class _AppHomePageState extends State<AppHomePage>
   }
 
   Future<void> cancelLockEvent() async {
-    if (lockStreamListener != null) {
-      lockStreamListener.cancel();
+    lockStreamListener?.cancel();
+    }
+
+  // Show user-friendly network error messages with retry option
+  void _showNetworkError(NetworkErrorEvent event) {
+    if (!mounted) return;
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(Icons.error_outline, color: Colors.white),
+            SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    event.operation ?? "Network Error",
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  Text(event.message ?? "Network connection failed"),
+                ],
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: Colors.red.shade600,
+        duration: Duration(seconds: event.canRetry ? 6 : 4),
+        action: event.canRetry ? SnackBarAction(
+          label: "Retry",
+          textColor: Colors.white,
+          onPressed: () {
+            _retryNetworkOperation(event.errorType);
+          },
+        ) : null,
+      ),
+    );
+  }
+
+  // Retry network operations based on error type
+  void _retryNetworkOperation(NetworkErrorType errorType) {
+    switch (errorType) {
+      case NetworkErrorType.BALANCE_FETCH_FAILED:
+        // Retry balance fetch
+        sl.get<AppService>().getBalanceGetResponse(
+          StateContainer.of(context).selectedAccount.address ?? '', 
+          true
+        );
+        break;
+      case NetworkErrorType.TRANSACTION_HISTORY_FAILED:
+        // Retry transaction history
+        sl.get<AppService>().getAddressTxsResponse(
+          StateContainer.of(context).selectedAccount.address ?? '', 
+          100
+        );
+        break;
+      case NetworkErrorType.SEND_TRANSACTION_FAILED:
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Please try sending the transaction again"),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        break;
+      default:
+        // Generic retry - refresh the wallet state
+        sl.get<AppService>().getBalanceGetResponse(
+          StateContainer.of(context).selectedAccount.address ?? '', 
+          true
+        );
+        break;
     }
   }
 
@@ -402,24 +501,24 @@ class _AppHomePageState extends State<AppHomePage>
   Widget _buildItem(
       BuildContext context, int index, Animation<double> animation) {
     String displayName = smallScreen(context)
-        ? StateContainer.of(context).wallet.history[index].getShorterString()
-        : StateContainer.of(context).wallet.history[index].getShortString();
+        ? StateContainer.of(context).wallet?.history[index].getShorterString() ?? ""
+        : StateContainer.of(context).wallet?.history[index].getShortString() ?? "";
     _contacts.forEach((contact) {
-      if (StateContainer.of(context).wallet.history[index].type ==
+      if (StateContainer.of(context).wallet?.history[index].type ==
           BlockTypes.RECEIVE) {
         if (contact.address ==
-            StateContainer.of(context).wallet.history[index].from) {
-          displayName = contact.name;
+            StateContainer.of(context).wallet?.history[index].from) {
+          displayName = contact.name ?? "";
         }
       } else {
         if (contact.address ==
-            StateContainer.of(context).wallet.history[index].recipient) {
-          displayName = contact.name;
+            StateContainer.of(context).wallet?.history[index].recipient) {
+          displayName = contact.name ?? "";
         }
       }
     });
     return _buildTransactionCard(
-        StateContainer.of(context).wallet.history[index],
+        StateContainer.of(context).wallet?.history[index] ?? AddressTxsResponseResult(),
         animation,
         displayName,
         context);
@@ -427,8 +526,7 @@ class _AppHomePageState extends State<AppHomePage>
 
   // Return widget for list
   Widget _getListWidget(BuildContext context) {
-    if (StateContainer.of(context).wallet == null ||
-        StateContainer.of(context).wallet.historyLoading) {
+    if (StateContainer.of(context).wallet?.historyLoading ?? false) {
       // Loading Animation
       return ReactiveRefreshIndicator(
           backgroundColor: StateContainer.of(context).curTheme.backgroundDark,
@@ -459,7 +557,7 @@ class _AppHomePageState extends State<AppHomePage>
                   "Sent", "1,00000", "123456789121234", context),
             ],
           ));
-    } else if (StateContainer.of(context).wallet.history.length == 0) {
+    } else if (StateContainer.of(context).wallet?.history.length == 0) {
       _disposeAnimation();
       return ReactiveRefreshIndicator(
         backgroundColor: StateContainer.of(context).curTheme.backgroundDark,
@@ -490,9 +588,9 @@ class _AppHomePageState extends State<AppHomePage>
     return ReactiveRefreshIndicator(
       backgroundColor: StateContainer.of(context).curTheme.backgroundDark,
       child: AnimatedList(
-        key: _listKeyMap[StateContainer.of(context).wallet.address],
+        key: _listKeyMap[StateContainer.of(context).wallet?.address],
         padding: EdgeInsetsDirectional.fromSTEB(0, 5.0, 0, 15.0),
-        initialItemCount: StateContainer.of(context).wallet.history.length,
+        initialItemCount: StateContainer.of(context).wallet?.history.length ?? 0,
         itemBuilder: _buildItem,
       ),
       onRefresh: _refresh,
@@ -500,12 +598,32 @@ class _AppHomePageState extends State<AppHomePage>
     );
   }
 
+  // Start periodic updates every 30 seconds
+  void _startPeriodicUpdates() {
+    // Cancel existing timer if any
+    _updateTimer?.cancel();
+    
+    // Start new timer for periodic updates
+    _updateTimer = Timer.periodic(Duration(seconds: 30), (timer) {
+      if (mounted && StateContainer.of(context).wallet?.address != null) {
+        StateContainer.of(context).requestUpdate();
+      }
+    });
+    
+    // Also request an initial update
+    Future.delayed(Duration(seconds: 2), () {
+      if (mounted) {
+        StateContainer.of(context).requestUpdate();
+      }
+    });
+  }
+
   // Refresh list
   Future<void> _refresh() async {
     setState(() {
       _isRefreshing = true;
     });
-    sl.get<HapticUtil>().feedback(FeedbackType.success);
+    HapticUtil.lightFeedback();
     StateContainer.of(context).requestUpdate();
 
     // Hide refresh indicator after 3 seconds if no server response
@@ -517,27 +635,33 @@ class _AppHomePageState extends State<AppHomePage>
   }
 
   Future<void> handleDeepLink(String link) async {
-    BisUrl bisUrl = await new BisUrl().getInfo(Uri.decodeFull(link));
+    // TODO: Implement BisUrl parsing for deep links
+    // BisUrl bisUrl = await new BisUrl().getInfo(Uri.decodeFull(link));
+    print("Deep link handling disabled: $link");
+    return;
 
     // Remove any other screens from stack
     Navigator.of(context).popUntil(RouteUtils.withNameLike('/home'));
 
     // Go to send confirm with amount
-    Sheets.showAppHeightNineSheet(
-        context: context,
-        widget: SendConfirmSheet(
-            amountRaw: bisUrl.amount,
-            operation: bisUrl.operation,
-            openfield: bisUrl.openfield,
-            comment: bisUrl.comment,
-            destination: bisUrl.address,
-            contactName: bisUrl.contactName));
+    // Deep link handling disabled - commenting out for now
+    // Sheets.showAppHeightNineSheet(
+    //     context: context,
+    //     widget: SendConfirmSheet(
+    //         amountRaw: bisUrl.amount,
+    //         operation: bisUrl.operation,
+    //         openfield: bisUrl.openfield,
+    //         comment: bisUrl.comment,
+    //         destination: bisUrl.address,
+    //         contactName: bisUrl.contactName,
+    //         localCurrency: "",
+    //         title: AppLocalization.of(context).sending));
   }
 
-  void paintQrCode({String address}) {
+  void paintQrCode({required String address}) {
     QrPainter painter = QrPainter(
       data:
-          address == null ? StateContainer.of(context).wallet.address : address,
+          address.isEmpty ? StateContainer.of(context).wallet?.address ?? "" : address,
       version: 6,
       gapless: false,
       errorCorrectionLevel: QrErrorCorrectLevel.Q,
@@ -547,7 +671,7 @@ class _AppHomePageState extends State<AppHomePage>
         receive = ReceiveSheet(
           qrWidget: Container(
               width: MediaQuery.of(context).size.width / 2.675,
-              child: Image.memory(byteData.buffer.asUint8List())),
+              child: Image.memory(byteData?.buffer.asUint8List() ?? Uint8List(0))),
         );
       });
     });
@@ -559,10 +683,6 @@ class _AppHomePageState extends State<AppHomePage>
         ? WidgetsBinding.instance
             .addPostFrameCallback((_) => displayReleaseNote())
         : null;
-    // Create QR ahead of time because it improves performance this way
-    if (receive == null && StateContainer.of(context).wallet != null) {
-      paintQrCode();
-    }
 
     return Scaffold(
       drawerEdgeDragWidth: 200,
@@ -682,6 +802,7 @@ class _AppHomePageState extends State<AppHomePage>
                     children: <Widget>[
                       Container(
                         decoration: BoxDecoration(
+                          color: StateContainer.of(context).curTheme.primary,
                           borderRadius: BorderRadius.circular(100),
                           boxShadow: [
                             StateContainer.of(context).curTheme.boxShadowButton
@@ -702,47 +823,12 @@ class _AppHomePageState extends State<AppHomePage>
                             stepGranularity: 0.5,
                           ),
                           onPressed: () {
-                            if (receive == null) {
-                              return;
-                            }
                             Sheets.showAppHeightEightSheet(
                                 context: context, widget: receive);
                           },
                         ),
                       ),
-                      StateContainer.of(context).wallet == null ||
-                              StateContainer.of(context).wallet.tokens == null
-                          ? SizedBox()
-                          : Container(
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(100),
-                                boxShadow: [
-                                  StateContainer.of(context)
-                                      .curTheme
-                                      .boxShadowButton
-                                ],
-                              ),
-                              height: 55,
-                              width:
-                                  (MediaQuery.of(context).size.width - 158) / 3,
-                              margin: EdgeInsetsDirectional.only(
-                                  start: 7, top: 0.0, end: 7.0),
-                              child: TextButton(
-                                child: Icon(Icons.scatter_plot_rounded,
-                                    color: StateContainer.of(context)
-                                        .curTheme
-                                        .background,
-                                    size: 40),
-                                onPressed: () {
-                                  Sheets.showAppHeightEightSheet(
-                                      context: context,
-                                      widget: MyTokensList(
-                                          StateContainer.of(context)
-                                              .wallet
-                                              .tokens));
-                                },
-                              ),
-                            ),
+                      Expanded(child: Container()),
                       AppPopupButton(),
                     ],
                   ),
@@ -784,8 +870,7 @@ class _AppHomePageState extends State<AppHomePage>
       delegate: SlidableScrollDelegate(),
       actionExtentRatio: 0.35,
       movementDuration: Duration(milliseconds: 300),
-      enabled: StateContainer.of(context).wallet != null &&
-          StateContainer.of(context).wallet.accountBalance > 0,
+      enabled: (StateContainer.of(context).wallet?.accountBalance ?? 0) > 0,
       onTriggered: (preempt) {
         if (preempt) {
           setState(() {
@@ -793,7 +878,7 @@ class _AppHomePageState extends State<AppHomePage>
           });
         } else {
           // See if a contact
-          sl.get<DBHelper>().getContactWithAddress(item.from).then((contact) {
+          sl.get<DBHelper>().getContactWithAddress(item.from ?? '').then((contact) {
             // Go to send with address
             Sheets.showAppHeightNineSheet(
                 context: context,
@@ -809,7 +894,6 @@ class _AppHomePageState extends State<AppHomePage>
       },
       onAnimationChanged: (animation) {
         if (animation != null) {
-          _fanimationPosition = animation.value;
           if (animation.value == 0.0 && releaseAnimation) {
             setState(() {
               releaseAnimation = false;
@@ -830,11 +914,17 @@ class _AppHomePageState extends State<AppHomePage>
             child: Container(
               alignment: AlignmentDirectional(-0.5, 0),
               constraints: BoxConstraints.expand(),
-              child: FlareActor("assets/pulltosend_animation.flr",
-                  animation: "pull",
-                  fit: BoxFit.contain,
-                  controller: this,
-                  color: StateContainer.of(context).curTheme.primary),
+              child: Container(
+                  decoration: BoxDecoration(
+                    color: StateContainer.of(context).curTheme.primary.withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    Icons.swipe,
+                    color: StateContainer.of(context).curTheme.primary,
+                    size: 24,
+                  ),
+                ),
             ),
           ),
         ),
@@ -897,7 +987,7 @@ class _AppHomePageState extends State<AppHomePage>
                                 DateFormat.yMd(Localizations.localeOf(context)
                                         .languageCode)
                                     .add_Hms()
-                                    .format(item.timestamp)
+                                    .format(item.timestamp ?? DateTime.now())
                                     .toString(),
                                 style:
                                     AppStyles.textStyleTransactionUnit(context),
@@ -914,9 +1004,9 @@ class _AppHomePageState extends State<AppHomePage>
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
-                                double.tryParse(item
+                                (double.tryParse(item
                                             .getFormattedAmount()
-                                            .replaceAll(",", "")) >
+                                            .replaceAll(",", "")) ?? 0) >
                                         0
                                     ? Container(
                                         child: RichText(
@@ -964,18 +1054,18 @@ class _AppHomePageState extends State<AppHomePage>
                                                                 .tokensQuantity
                                                                 .toString() +
                                                             " " +
-                                                            item
+                                                            (item
                                                                 .getBisToken()
-                                                                .tokenName
+                                                                .tokenName ?? '')
                                                         : "+ " +
                                                             item
                                                                 .getBisToken()
                                                                 .tokensQuantity
                                                                 .toString() +
                                                             " " +
-                                                            item
+                                                            (item
                                                                 .getBisToken()
-                                                                .tokenName,
+                                                                .tokenName ?? ''),
                                                 style: item.type ==
                                                         BlockTypes.SEND
                                                     ? AppStyles
@@ -1025,8 +1115,8 @@ class _AppHomePageState extends State<AppHomePage>
                                                 children: [
                                                   TextSpan(
                                                     text: item.openfield
-                                                        .replaceAll(
-                                                            "alias=", ""),
+                                                        ?.replaceAll(
+                                                            "alias=", "") ?? '',
                                                     style: AppStyles
                                                         .textStyleTransactionTypeBlue(
                                                             context),
@@ -1109,9 +1199,9 @@ class _AppHomePageState extends State<AppHomePage>
                                                               ),
                                                               TextSpan(
                                                                 text: "   " +
-                                                                    item.operation
-                                                                        .split(
-                                                                            ":")[1],
+                                                                    (item.operation
+                                                                        ?.split(
+                                                                            ":")[1] ?? ''),
                                                                 style: AppStyles
                                                                     .textStyleTransactionTypeBlue(
                                                                         context),
@@ -1277,8 +1367,7 @@ class _AppHomePageState extends State<AppHomePage>
   // Welcome Card
   TextSpan _getExampleHeaderSpan(BuildContext context) {
     String workingStr;
-    if (StateContainer.of(context).selectedAccount == null ||
-        StateContainer.of(context).selectedAccount.index == 0) {
+    if (StateContainer.of(context).selectedAccount.index == 0) {
       workingStr = AppLocalization.of(context).exampleCardIntro;
     } else {
       workingStr = AppLocalization.of(context).newAccountIntro;
@@ -1611,7 +1700,7 @@ class _AppHomePageState extends State<AppHomePage>
                                 context,
                                 StateContainer.of(context)
                                     .selectedAccount
-                                    .address);
+                                    .address ?? '');
                           }));
                         },
                         child: CircleAvatar(
@@ -1629,14 +1718,14 @@ class _AppHomePageState extends State<AppHomePage>
                                 ? UIUtil.getRobohashURL(
                                     StateContainer.of(context)
                                         .selectedAccount
-                                        .address)
+                                        .address ?? '')
                                 : UIUtil.getDragginatorURL(
                                     StateContainer.of(context)
                                         .selectedAccount
-                                        .dragginatorDna,
+                                        .dragginatorDna ?? '',
                                     StateContainer.of(context)
                                         .selectedAccount
-                                        .dragginatorStatus),
+                                        .dragginatorStatus ?? ''),
                           ),
                           radius: 50.0,
                         ),
@@ -1654,8 +1743,7 @@ class _AppHomePageState extends State<AppHomePage>
 
   // Get balance display
   Widget _getBalanceWidget() {
-    if (StateContainer.of(context).wallet == null ||
-        StateContainer.of(context).wallet.loading) {
+    if (StateContainer.of(context).wallet?.loading ?? false) {
       // Placeholder for balance text
       return Container(
         child: Column(
@@ -1836,10 +1924,10 @@ class _AppHomePageState extends State<AppHomePage>
                         ? Text(
                             StateContainer.of(context)
                                 .wallet
-                                .getLocalCurrencyPrice(
+                                ?.getLocalCurrencyPrice(
                                     StateContainer.of(context).curCurrency,
                                     locale: StateContainer.of(context)
-                                        .currencyLocale),
+                                        .currencyLocale ?? '') ?? '0.00',
                             textAlign: TextAlign.center,
                             style: AppStyles.textStyleCurrencyAlt(context))
                         : SizedBox(height: 0),
@@ -1858,9 +1946,9 @@ class _AppHomePageState extends State<AppHomePage>
                                 children: [
                                   // Main balance text
                                   TextSpan(
-                                    text: StateContainer.of(context)
+                                    text: (StateContainer.of(context)
                                             .wallet
-                                            .getAccountBalanceDisplay() +
+                                            ?.getAccountBalanceDisplay() ?? '0.00') +
                                         " BIS",
                                     style: _priceConversion ==
                                             PriceConversion.BTC
@@ -1903,7 +1991,7 @@ class _AppHomePageState extends State<AppHomePage>
                                               .curTheme
                                               .text60,
                                   size: 14),
-                              Text(StateContainer.of(context).wallet.btcPrice,
+                              Text(StateContainer.of(context).wallet?.btcPrice ?? '0.00',
                                   textAlign: TextAlign.center,
                                   style:
                                       AppStyles.textStyleCurrencyAlt(context)),
@@ -1919,9 +2007,9 @@ class _AppHomePageState extends State<AppHomePage>
 }
 
 class TransactionDetailsSheet extends StatefulWidget {
-  final AddressTxsResponseResult item;
-  final String address;
-  final String displayName;
+  final AddressTxsResponseResult? item;
+  final String? address;
+  final String? displayName;
 
   TransactionDetailsSheet({this.item, this.address, this.displayName})
       : super();
@@ -1934,7 +2022,7 @@ class _TransactionDetailsSheetState extends State<TransactionDetailsSheet> {
   // Current state references
   bool _addressCopied = false;
   // Timer reference so we can cancel repeated events
-  Timer _addressCopiedTimer;
+  late Timer _addressCopiedTimer;
 
   @override
   Widget build(BuildContext context) {
@@ -2013,14 +2101,14 @@ class _TransactionDetailsSheetState extends State<TransactionDetailsSheet> {
                                   SizedBox(height: 20),
                                   Text(AppLocalization.of(context)
                                       .transactionDetailBlock),
-                                  widget.item.blockHeight == -1
+                                  (widget.item?.blockHeight ?? 0) == -1
                                       ? SizedBox()
-                                      : SelectableText(widget.item.blockHash,
+                                      : SelectableText(widget.item?.blockHash ?? '',
                                           style: AppStyles
                                               .textStyleTransactionUnit(
                                                   context),
                                           textAlign: TextAlign.center),
-                                  widget.item.blockHeight == -1
+                                  (widget.item?.blockHeight ?? 0) == -1
                                       ? Text(
                                           "(" +
                                               AppLocalization.of(context)
@@ -2031,7 +2119,7 @@ class _TransactionDetailsSheetState extends State<TransactionDetailsSheet> {
                                                   context))
                                       : Text(
                                           "(" +
-                                              widget.item.blockHeight
+                                              (widget.item?.blockHeight ?? 0)
                                                   .toString() +
                                               ")",
                                           style: AppStyles
@@ -2045,26 +2133,26 @@ class _TransactionDetailsSheetState extends State<TransactionDetailsSheet> {
                                               Localizations.localeOf(context)
                                                   .languageCode)
                                           .add_Hms()
-                                          .format(widget.item.timestamp)
+                                          .format(widget.item?.timestamp ?? DateTime.now())
                                           .toString(),
                                       style: AppStyles.textStyleTransactionUnit(
                                           context)),
                                   SizedBox(height: 10),
                                   Text(AppLocalization.of(context)
                                       .transactionDetailFrom),
-                                  SelectableText(widget.item.from,
+                                  SelectableText(widget.item?.from ?? '',
                                       style: AppStyles.textStyleTransactionUnit(
                                           context)),
                                   SizedBox(height: 10),
                                   Text(AppLocalization.of(context)
                                       .transactionDetailTo),
-                                  SelectableText(widget.item.recipient,
+                                  SelectableText(widget.item?.recipient ?? '',
                                       style: AppStyles.textStyleTransactionUnit(
                                           context)),
                                   SizedBox(height: 10),
                                   Text(AppLocalization.of(context)
                                       .transactionDetailTxId),
-                                  SelectableText(widget.item.hash,
+                                  SelectableText(widget.item?.hash ?? '',
                                       style: AppStyles.textStyleTransactionUnit(
                                           context),
                                       textAlign: TextAlign.center),
@@ -2072,12 +2160,12 @@ class _TransactionDetailsSheetState extends State<TransactionDetailsSheet> {
                                   Text(AppLocalization.of(context)
                                       .transactionDetailAmount),
                                   Text(
-                                      widget.item.type == BlockTypes.SEND
+                                      (widget.item?.type ?? BlockTypes.RECEIVE) == BlockTypes.SEND
                                           ? "- " +
-                                              widget.item.getFormattedAmount() +
+                                              (widget.item?.getFormattedAmount() ?? '0.00') +
                                               " BIS"
                                           : "+ " +
-                                              widget.item.getFormattedAmount() +
+                                              (widget.item?.getFormattedAmount() ?? '0.00') +
                                               " BIS",
                                       style: AppStyles.textStyleTransactionUnit(
                                           context)),
@@ -2086,32 +2174,32 @@ class _TransactionDetailsSheetState extends State<TransactionDetailsSheet> {
                                       .transactionDetailFee),
                                   Text(
                                       "- " +
-                                          widget.item.fee.toString() +
+                                          (widget.item?.fee ?? 0).toString() +
                                           " BIS",
                                       style: AppStyles.textStyleTransactionUnit(
                                           context)),
                                   SizedBox(height: 10),
                                   Text(AppLocalization.of(context)
                                       .transactionDetailReward),
-                                  Text(widget.item.reward.toString() + " BIS",
+                                  Text((widget.item?.reward ?? 0).toString() + " BIS",
                                       style: AppStyles.textStyleTransactionUnit(
                                           context)),
                                   SizedBox(height: 10),
                                   Text(AppLocalization.of(context)
                                       .transactionDetailSignature),
-                                  SelectableText(widget.item.signature,
+                                  SelectableText(widget.item?.signature ?? '',
                                       style: AppStyles.textStyleTransactionUnit(
                                           context)),
                                   SizedBox(height: 10),
                                   Text(AppLocalization.of(context)
                                       .transactionDetailOperation),
-                                  SelectableText(widget.item.operation,
+                                  SelectableText(widget.item?.operation ?? '',
                                       style: AppStyles.textStyleTransactionUnit(
                                           context)),
                                   SizedBox(height: 10),
                                   Text(AppLocalization.of(context)
                                       .transactionDetailOpenfield),
-                                  SelectableText(widget.item.openfield,
+                                  SelectableText(widget.item?.openfield ?? '',
                                       style: AppStyles.textStyleTransactionUnit(
                                           context),
                                       textAlign: TextAlign.center),
@@ -2149,18 +2237,15 @@ class _TransactionDetailsSheetState extends State<TransactionDetailsSheet> {
                                                   onPressed: () {
                                                 Clipboard.setData(
                                                     new ClipboardData(
-                                                        text: widget.address));
+                                                        text: widget.address ?? ""));
                                                 if (mounted) {
                                                   setState(() {
                                                     // Set copied style
                                                     _addressCopied = true;
                                                   });
                                                 }
-                                                if (_addressCopiedTimer !=
-                                                    null) {
-                                                  _addressCopiedTimer.cancel();
-                                                }
-                                                _addressCopiedTimer = new Timer(
+                                                _addressCopiedTimer.cancel();
+                                                                                              _addressCopiedTimer = new Timer(
                                                     const Duration(
                                                         milliseconds: 800), () {
                                                   if (mounted) {
@@ -2190,8 +2275,8 @@ class _TransactionDetailsSheetState extends State<TransactionDetailsSheet> {
                                                   height: 55,
                                                   width: 55,
                                                   // Add Contact Button
-                                                  child: !widget.displayName
-                                                          .startsWith("@")
+                                                  child: !(widget.displayName
+                                                          ?.startsWith("@") ?? false)
                                                       ? TextButton(
                                                           onPressed: () {
                                                             Navigator.of(
@@ -2247,10 +2332,10 @@ class _TransactionDetailsSheetState extends State<TransactionDetailsSheet> {
 /// drop shadow is not clipped.
 ///
 class _SizeTransitionNoClip extends AnimatedWidget {
-  final Widget child;
+  final Widget? child;
 
   const _SizeTransitionNoClip(
-      {@required Animation<double> sizeFactor, this.child})
+      {required Animation<double> sizeFactor, this.child})
       : super(listenable: sizeFactor);
 
   @override

@@ -1,10 +1,10 @@
-// @dart=2.9
+
 
 class SimplePriceResponse {
   SimplePriceResponse({
-    this.currency,
-    this.btcPrice,
-    this.localCurrencyPrice,
+    required this.currency,
+    required this.btcPrice,
+    required this.localCurrencyPrice,
   });
 
   String currency;

@@ -1,4 +1,4 @@
-// @dart=2.9
+
 
 // Flutter imports:
 import 'package:flutter/material.dart';
@@ -109,7 +109,7 @@ class _IntroBackupConfirmState extends State<IntroBackupConfirm> {
                             PinOverlayType.NEW_PIN,
                           );
                         }));
-                        if (pin != null && pin.length > 5) {
+                        if (pin.length > 5) {
                           _pinEnteredCallback(pin);
                         }
                       }),

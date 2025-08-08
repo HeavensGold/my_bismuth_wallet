@@ -1,4 +1,4 @@
-// @dart=2.9
+
 
 // Dart imports:
 import 'dart:async';
@@ -29,7 +29,7 @@ class CustomUrl extends StatefulWidget {
   final AnimationController tokensListController;
   bool tokensListOpen;
 
-  CustomUrl(this.tokensListController, this.tokensListOpen);
+  CustomUrl(this.tokensListController, this.tokensListOpen, {super.key});
 
   _CustomUrlState createState() => _CustomUrlState();
 }
@@ -37,27 +37,27 @@ class CustomUrl extends StatefulWidget {
 class _CustomUrlState extends State<CustomUrl> {
   final Logger log = sl.get<Logger>();
 
-  WStatusGetResponse wStatusGetResponse;
+  late WStatusGetResponse wStatusGetResponse;
 
   // Subscriptions
-  StreamSubscription<ConnStatusEvent> _connStatusEventSub;
+  late StreamSubscription<ConnStatusEvent> _connStatusEventSub;
 
-  bool walletServerOk;
-  bool tokenApiOk;
+  late bool walletServerOk;
+  late bool tokenApiOk;
 
-  FocusNode _walletServerFocusNode;
-  FocusNode _tokenApiFocusNode;
-  FocusNode _explorerUrlFocusNode;
-  TextEditingController _walletServerController;
-  TextEditingController _tokenApiController;
-  TextEditingController _explorerUrlController;
+  late FocusNode _walletServerFocusNode;
+  late FocusNode _tokenApiFocusNode;
+  late FocusNode _explorerUrlFocusNode;
+  late TextEditingController _walletServerController;
+  late TextEditingController _tokenApiController;
+  late TextEditingController _explorerUrlController;
 
-  bool useCustomWalletServer;
-  bool useCustomExplorerUrl;
+  late bool useCustomWalletServer;
+  late bool useCustomExplorerUrl;
 
-  String _walletServerHint = "";
-  String _tokenApiHint = "";
-  String _explorerUrlHint = "";
+  String? _walletServerHint = "";
+  String? _tokenApiHint = "";
+  String? _explorerUrlHint = "";
   String _walletServerValidationText = "";
   String _tokenApiValidationText = "";
   String _explorerUrlValidationText = "";
@@ -95,7 +95,7 @@ class _CustomUrlState extends State<CustomUrl> {
     await sl.get<SharedPrefsUtil>().setTokensApi(_tokenApiController.text);
     tokenApiOk = await sl
         .get<HttpService>()
-        .isTokensBalance(StateContainer.of(context).selectedAccount.address);
+        .isTokensBalance(StateContainer.of(context).selectedAccount?.address ?? '');
     setState(() {});
   }
 
@@ -166,10 +166,8 @@ class _CustomUrlState extends State<CustomUrl> {
   }
 
   void _destroyBus() {
-    if (_connStatusEventSub != null) {
-      _connStatusEventSub.cancel();
+    _connStatusEventSub.cancel();
     }
-  }
 
   void _registerBus() {
     _connStatusEventSub =
@@ -473,7 +471,7 @@ class _CustomUrlState extends State<CustomUrl> {
             });
           },
           textInputAction: TextInputAction.next,
-          maxLines: null,
+          maxLines: 1,
           autocorrect: false,
           hintText: _walletServerHint == null
               ? ""
@@ -536,7 +534,7 @@ class _CustomUrlState extends State<CustomUrl> {
             });
           },
           textInputAction: TextInputAction.next,
-          maxLines: null,
+          maxLines: 1,
           autocorrect: false,
           hintText: _tokenApiHint == null
               ? ""
@@ -592,7 +590,7 @@ class _CustomUrlState extends State<CustomUrl> {
             });
           },
           textInputAction: TextInputAction.next,
-          maxLines: null,
+          maxLines: 1,
           autocorrect: false,
           hintText: _explorerUrlHint == null
               ? ""

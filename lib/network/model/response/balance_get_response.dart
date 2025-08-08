@@ -2,7 +2,6 @@
 //
 //     final balanceGetResponse = balanceGetResponseFromJson(jsonString);
 
-// @dart=2.9
 
 // Dart imports:
 import 'dart:convert';
@@ -15,13 +14,13 @@ String balanceGetResponseToJson(BalanceGetResponse data) =>
 
 class BalanceGetResponse {
   BalanceGetResponse({
-    this.address,
-    this.balance,
-    this.totalCredits,
-    this.totalDebits,
-    this.totalFees,
-    this.totalRewards,
-    this.balanceNoMempool,
+    required this.address,
+    required this.balance,
+    required this.totalCredits,
+    required this.totalDebits,
+    required this.totalFees,
+    required this.totalRewards,
+    required this.balanceNoMempool,
   });
 
   String address;
@@ -34,12 +33,13 @@ class BalanceGetResponse {
 
   factory BalanceGetResponse.fromJson(Map<String, dynamic> json) =>
       BalanceGetResponse(
-        balance: json['balance'],
-        totalCredits: json['total_credits'],
-        totalDebits: json['total_debits'],
-        totalFees: json['total_fees'],
-        totalRewards: json['total_rewards'],
-        balanceNoMempool: json['balance_no_mempool'],
+        address: json['address'] ?? '',
+        balance: json['balance'] ?? '',
+        totalCredits: json['total_credits'] ?? '',
+        totalDebits: json['total_debits'] ?? '',
+        totalFees: json['total_fees'] ?? '',
+        totalRewards: json['total_rewards'] ?? '',
+        balanceNoMempool: json['balance_no_mempool'] ?? '',
       );
 
   Map<String, dynamic> toJson() => {

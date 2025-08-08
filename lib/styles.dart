@@ -1,4 +1,4 @@
-// @dart=2.9
+
 
 // Dart imports:
 import 'dart:ui' as ui;
@@ -77,7 +77,7 @@ class AppStyles {
         fontFamily: "Roboto",
         fontSize: AppFontSizes._large,
         fontWeight: FontWeight.w700,
-        color: StateContainer.of(context).curTheme.background.withOpacity(0.6));
+        color: StateContainer.of(context).curTheme.background.withValues(alpha: 0.6));
   }
 
   // Green primary button
@@ -224,7 +224,7 @@ class AppStyles {
         fontWeight: FontWeight.w600,
         foreground: Paint()
           ..shader = ui.Gradient.linear(Offset.zero, Offset(0, 60),
-              [Colors.green[200], Colors.green[800]]));
+              [Colors.green[200]!, Colors.green[800]!]));
   }
 
   static TextStyle textStyleTransactionTypeBlue(BuildContext context) {
@@ -234,7 +234,7 @@ class AppStyles {
         fontWeight: FontWeight.w600,
         foreground: Paint()
           ..shader = ui.Gradient.linear(Offset.zero, Offset(0, 60),
-              [Colors.blue[200], Colors.blue[800]]));
+              [Colors.blue[200]!, Colors.blue[800]!]));
   }
 
   static TextStyle textStyleTransactionTypeRed(BuildContext context) {
@@ -244,7 +244,7 @@ class AppStyles {
         fontWeight: FontWeight.w600,
         foreground: Paint()
           ..shader = ui.Gradient.linear(
-              Offset.zero, Offset(0, 60), [Colors.red[200], Colors.red[800]]));
+              Offset.zero, Offset(0, 60), [Colors.red[200]!, Colors.red[800]!]));
   }
 
   // Amount

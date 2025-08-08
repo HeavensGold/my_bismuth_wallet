@@ -1,21 +1,17 @@
-// @dart=2.9
+
 
 // Flutter imports:
 import 'package:flutter/material.dart';
 
 // Project imports:
 import 'package:my_bismuth_wallet/appstate_container.dart';
-import 'package:my_bismuth_wallet/localization.dart';
 import 'package:my_bismuth_wallet/styles.dart';
 import 'package:my_bismuth_wallet/ui/widgets/app_simpledialog.dart';
 
 class AppDialogs {
   static void showConfirmDialog(
       var context, var title, var content, var buttonText, Function onPressed,
-      {String cancelText, Function cancelAction}) {
-    if (cancelText == null) {
-      cancelText = AppLocalization.of(context).cancel.toUpperCase();
-    }
+      {String? cancelText, Function? cancelAction}) {
     showAppDialog(
       context: context,
       builder: (BuildContext context) {
@@ -30,16 +26,14 @@ class AppDialogs {
               child: Container(
                 constraints: BoxConstraints(maxWidth: 100),
                 child: Text(
-                  cancelText,
+                  cancelText ?? "Cancel",
                   style: AppStyles.textStyleDialogButtonText(context),
                 ),
               ),
               onPressed: () {
                 Navigator.of(context).pop();
-                if (cancelAction != null) {
-                  cancelAction();
-                }
-              },
+                cancelAction?.call();
+                            },
             ),
             TextButton(
               child: Container(
@@ -67,7 +61,7 @@ enum AnimationType {
 
 class AnimationLoadingOverlay extends ModalRoute<void> {
   AnimationType type;
-  Function onPoppedCallback;
+  Function? onPoppedCallback;
   Color overlay85;
   Color overlay70;
 
@@ -89,17 +83,15 @@ class AnimationLoadingOverlay extends ModalRoute<void> {
   }
 
   @override
-  String get barrierLabel => null;
+  String? get barrierLabel => null;
 
   @override
   bool get maintainState => false;
 
   @override
   void didComplete(void result) {
-    if (this.onPoppedCallback != null) {
-      this.onPoppedCallback();
-    }
-    super.didComplete(result);
+    this.onPoppedCallback?.call();
+      super.didComplete(result);
   }
 
   @override

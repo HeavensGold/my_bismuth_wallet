@@ -1,7 +1,6 @@
-// @dart=2.9
+
 
 // Flutter imports:
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 // Package imports:
@@ -13,6 +12,7 @@ import 'package:my_bismuth_wallet/dimens.dart';
 import 'package:my_bismuth_wallet/localization.dart';
 import 'package:my_bismuth_wallet/styles.dart';
 import 'package:my_bismuth_wallet/ui/widgets/buttons.dart';
+import 'package:my_bismuth_wallet/util/app_ffi/keys/seeds.dart';
 
 class IntroWelcomePage extends StatefulWidget {
   @override
@@ -81,8 +81,10 @@ class _IntroWelcomePageState extends State<IntroWelcomePage> {
                           AppButtonType.PRIMARY,
                           AppLocalization.of(context).newWallet,
                           Dimens.BUTTON_TOP_DIMENS, onPressed: () {
+                        // Generate a new seed for the wallet
+                        String newSeed = AppSeeds.generateSeed();
                         Navigator.of(context)
-                            .pushNamed('/intro_password_on_launch');
+                            .pushNamed('/intro_password_on_launch', arguments: newSeed);
                       }),
                     ],
                   ),

@@ -1,12 +1,10 @@
-// @dart=2.9
+
 
 // Dart imports:
 import 'dart:async';
-import 'dart:typed_data';
 
 // Flutter imports:
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 
 // Package imports:
@@ -21,7 +19,7 @@ import 'package:my_bismuth_wallet/ui/util/ui_util.dart';
 import 'package:my_bismuth_wallet/ui/widgets/buttons.dart';
 
 class ReceiveSheet extends StatefulWidget {
-  final Widget qrWidget;
+  final Widget? qrWidget;
 
   ReceiveSheet({this.qrWidget}) : super();
 
@@ -29,15 +27,15 @@ class ReceiveSheet extends StatefulWidget {
 }
 
 class _ReceiveSheetStateState extends State<ReceiveSheet> {
-  GlobalKey shareCardKey;
-  ByteData shareImageData;
+  GlobalKey shareCardKey = GlobalKey();
+  ByteData? shareImageData;
 
   // Address copied items
   // Current state references
-  bool _showShareCard;
-  bool _addressCopied;
+  bool _showShareCard = false;
+  bool _addressCopied = false;
   // Timer reference so we can cancel repeated events
-  Timer _addressCopiedTimer;
+  Timer? _addressCopiedTimer;
 
   @override
   void initState() {
@@ -83,7 +81,7 @@ class _ReceiveSheetStateState extends State<ReceiveSheet> {
                     Container(
                       margin: EdgeInsets.only(top: 15.0),
                       child: UIUtil.threeLineAddressText(
-                          context, StateContainer.of(context).wallet.address,
+                          context, StateContainer.of(context).wallet?.address ?? "",
                           type: ThreeLineAddressTextType.PRIMARY60),
                     ),
                   ],
@@ -196,14 +194,14 @@ class _ReceiveSheetStateState extends State<ReceiveSheet> {
                                 ? UIUtil.getRobohashURL(
                                     StateContainer.of(context)
                                         .selectedAccount
-                                        .address)
+                                        .address ?? '')
                                 : UIUtil.getDragginatorURL(
                                     StateContainer.of(context)
                                         .selectedAccount
-                                        .dragginatorDna,
+                                        .dragginatorDna ?? '',
                                     StateContainer.of(context)
                                         .selectedAccount
-                                        .dragginatorStatus),
+                                        .dragginatorStatus ?? ''),
                           ),
                           radius: 50.0,
                         ),
@@ -230,15 +228,13 @@ class _ReceiveSheetStateState extends State<ReceiveSheet> {
                             : AppLocalization.of(context).copyAddress,
                         Dimens.BUTTON_TOP_DIMENS, onPressed: () {
                       Clipboard.setData(new ClipboardData(
-                          text: StateContainer.of(context).wallet.address));
+                          text: StateContainer.of(context).wallet?.address ?? ''));
                       setState(() {
                         // Set copied style
                         _addressCopied = true;
                       });
-                      if (_addressCopiedTimer != null) {
-                        _addressCopiedTimer.cancel();
-                      }
-                      _addressCopiedTimer =
+                      _addressCopiedTimer?.cancel();
+                                          _addressCopiedTimer =
                           new Timer(const Duration(milliseconds: 800), () {
                         setState(() {
                           _addressCopied = false;

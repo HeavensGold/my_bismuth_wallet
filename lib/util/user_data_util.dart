@@ -1,4 +1,4 @@
-// @dart=2.9
+
 
 // Dart imports:
 import 'dart:async';
@@ -10,7 +10,6 @@ import 'package:flutter/services.dart';
 // Package imports:
 import 'package:barcode_scan2/barcode_scan2.dart';
 import 'package:logger/logger.dart';
-import 'package:quiver/strings.dart';
 import 'package:validators/validators.dart';
 
 // Project imports:
@@ -36,10 +35,9 @@ class QRScanErrs {
 class UserDataUtil {
   static final Logger log = sl.get<Logger>();
 
-  static const MethodChannel _channel = const MethodChannel('fappchannel');
-  static StreamSubscription<dynamic> setStream;
+  static StreamSubscription<dynamic>? setStream;
 
-  static String _parseData(String data, DataType type) {
+  static String? _parseData(String data, DataType type) {
     data = data.trim();
     if (type == DataType.RAW) {
       return data;
@@ -63,20 +61,20 @@ class UserDataUtil {
     return null;
   }
 
-  static Future<String> getClipboardText(DataType type) async {
-    ClipboardData data = await Clipboard.getData("text/plain");
-    if (data == null || data.text == null) {
+  static Future<String?> getClipboardText(DataType type) async {
+    ClipboardData? data = await Clipboard.getData("text/plain");
+    if (data?.text == null) {
       return null;
     }
-    return _parseData(data.text, type);
+    return _parseData(data!.text!, type);
   }
 
-  static Future<String> getQRData(DataType type, BuildContext context) async {
+  static Future<String?> getQRData(DataType type, BuildContext context) async {
     UIUtil.cancelLockEvent();
     try {
       final ScanResult scanResult = await BarcodeScanner.scan();
       final String data = scanResult.rawContent;
-      if (isEmpty(data)) {
+      if (data.isEmpty) {
         return null;
       }
       return _parseData(data, type);

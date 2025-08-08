@@ -1,4 +1,4 @@
-// @dart=2.9
+
 
 // Flutter imports:
 import 'package:flutter/material.dart';
@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 // Package imports:
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:hex/hex.dart';
-import 'package:keyboard_avoider/keyboard_avoider.dart';
+// import 'package:keyboard_avoider/keyboard_avoider.dart'; // Replaced
 
 // Project imports:
 import 'package:my_bismuth_wallet/appstate_container.dart';
@@ -28,14 +28,14 @@ class SetPasswordSheet extends StatefulWidget {
 }
 
 class _SetPasswordSheetState extends State<SetPasswordSheet> {
-  FocusNode createPasswordFocusNode;
-  TextEditingController createPasswordController;
-  FocusNode confirmPasswordFocusNode;
-  TextEditingController confirmPasswordController;
+  late FocusNode createPasswordFocusNode;
+  late TextEditingController createPasswordController;
+  late FocusNode confirmPasswordFocusNode;
+  late TextEditingController confirmPasswordController;
 
-  String passwordError;
+  String? passwordError;
 
-  bool passwordsMatch;
+  late bool passwordsMatch;
 
   @override
   void initState() {
@@ -106,10 +106,8 @@ class _SetPasswordSheetState extends State<SetPasswordSheet> {
                     ),
                   ),
                   Expanded(
-                      child: KeyboardAvoider(
-                          duration: Duration(milliseconds: 0),
-                          autoScroll: true,
-                          focusPadding: 40,
+                      child: SingleChildScrollView(
+                          padding: EdgeInsets.all(40),
                           child: Column(
                               crossAxisAlignment: CrossAxisAlignment.center,
                               children: <Widget>[
@@ -124,12 +122,10 @@ class _SetPasswordSheetState extends State<SetPasswordSheet> {
                                   maxLines: 1,
                                   autocorrect: false,
                                   onChanged: (String newText) {
-                                    if (passwordError != null) {
-                                      setState(() {
-                                        passwordError = null;
-                                      });
-                                    }
-                                    if (confirmPasswordController.text ==
+                                    setState(() {
+                                      passwordError = null;
+                                    });
+                                                                      if (confirmPasswordController.text ==
                                         createPasswordController.text) {
                                       if (mounted) {
                                         setState(() {
@@ -176,12 +172,10 @@ class _SetPasswordSheetState extends State<SetPasswordSheet> {
                                   maxLines: 1,
                                   autocorrect: false,
                                   onChanged: (String newText) {
-                                    if (passwordError != null) {
-                                      setState(() {
-                                        passwordError = null;
-                                      });
-                                    }
-                                    if (confirmPasswordController.text ==
+                                    setState(() {
+                                      passwordError = null;
+                                    });
+                                                                      if (confirmPasswordController.text ==
                                         createPasswordController.text) {
                                       if (mounted) {
                                         setState(() {
@@ -221,7 +215,7 @@ class _SetPasswordSheetState extends State<SetPasswordSheet> {
                                   child: Text(
                                       this.passwordError == null
                                           ? ""
-                                          : passwordError,
+                                          : (passwordError ?? ""),
                                       style: TextStyle(
                                         fontSize: 14.0,
                                         color: StateContainer.of(context)
@@ -287,7 +281,7 @@ class _SetPasswordSheetState extends State<SetPasswordSheet> {
           passwordError = AppLocalization.of(context).passwordsDontMatch;
         });
       }
-    } else if (seed == null || !AppSeeds.isValidSeed(seed)) {
+    } else if (!AppSeeds.isValidSeed(seed)) {
       Navigator.pop(context);
       UIUtil.showSnackbar(
           AppLocalization.of(context).encryptionFailedError, context);

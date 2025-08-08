@@ -1,12 +1,12 @@
-// @dart=2.9
+
 
 // Dart imports:
 import 'dart:core';
 
 // Object to represent an account address or address URI, and provide useful utilities
 class Address {
-  String _address;
-  String _amount;
+  late String _address;
+  String _amount = '';
 
   Address(String value) {
     _address = value;
@@ -17,7 +17,6 @@ class Address {
   String get amount => _amount;
 
   String getShortString() {
-    if (_address == null) return "";
     if (_address.length < 21) {
       return _address;
     } else {
@@ -28,7 +27,6 @@ class Address {
   }
 
   String getShortString2() {
-    if (_address == null) return "";
     if (_address.length < 21) {
       return _address;
     } else {
@@ -39,7 +37,6 @@ class Address {
   }
 
   String getShorterString() {
-    if (_address == null) return "";
     if (_address.length < 21) {
       return _address;
     } else {
@@ -50,6 +47,6 @@ class Address {
   }
 
   bool isValid() {
-    return _address == null ? false : true;
+    return _address.isNotEmpty;
   }
 }

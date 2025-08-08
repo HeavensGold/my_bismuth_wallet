@@ -83,7 +83,7 @@ class MessageLookup extends MessageLookupByLibrary {
         "enterExplorerUrl":
             MessageLookupByLibrary.simpleMessage("Enter a custom url explorer"),
         "enterExplorerUrlInfo": MessageLookupByLibrary.simpleMessage(
-            "(ex: https://bismuth.online/search?quicksearch=%1\n\'%1\' will be replaced by BIS address)"),
+            "(ex: https://bismuth.im/search?quicksearch=%1\n\'%1\' will be replaced by BIS address)"),
         "enterExplorerUrlSwitch":
             MessageLookupByLibrary.simpleMessage("Use a custom explorer url"),
         "enterOpenfield":

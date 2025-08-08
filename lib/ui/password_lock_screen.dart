@@ -1,11 +1,11 @@
-// @dart=2.9
+
 
 // Flutter imports:
 import 'package:flutter/material.dart';
 
 // Package imports:
 import 'package:hex/hex.dart';
-import 'package:keyboard_avoider/keyboard_avoider.dart';
+// import 'package:keyboard_avoider/keyboard_avoider.dart'; // Replaced
 
 // Project imports:
 import 'package:my_bismuth_wallet/app_icons.dart';
@@ -19,7 +19,6 @@ import 'package:my_bismuth_wallet/ui/widgets/app_text_field.dart';
 import 'package:my_bismuth_wallet/ui/widgets/buttons.dart';
 import 'package:my_bismuth_wallet/ui/widgets/dialog.dart';
 import 'package:my_bismuth_wallet/ui/widgets/tap_outside_unfocus.dart';
-import 'package:my_bismuth_wallet/util/app_ffi/apputil.dart';
 import 'package:my_bismuth_wallet/util/app_ffi/encrypt/crypter.dart';
 import 'package:my_bismuth_wallet/util/caseconverter.dart';
 import 'package:my_bismuth_wallet/util/sharedprefsutil.dart';
@@ -30,10 +29,10 @@ class AppPasswordLockScreen extends StatefulWidget {
 }
 
 class _AppPasswordLockScreenState extends State<AppPasswordLockScreen> {
-  FocusNode enterPasswordFocusNode;
-  TextEditingController enterPasswordController;
+  late FocusNode enterPasswordFocusNode;
+  late TextEditingController enterPasswordController;
 
-  String passwordError;
+  String? passwordError;
 
   @override
   void initState() {
@@ -136,10 +135,8 @@ class _AppPasswordLockScreenState extends State<AppPasswordLockScreen> {
                       margin: EdgeInsets.only(top: 10),
                     ),
                     Expanded(
-                        child: KeyboardAvoider(
-                            duration: Duration(milliseconds: 0),
-                            autoScroll: true,
-                            focusPadding: 40,
+                        child: SingleChildScrollView(
+                            padding: EdgeInsets.all(40),
                             child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.center,
                                 children: <Widget>[
@@ -153,12 +150,10 @@ class _AppPasswordLockScreenState extends State<AppPasswordLockScreen> {
                                     textInputAction: TextInputAction.go,
                                     autofocus: true,
                                     onChanged: (String newText) {
-                                      if (passwordError != null) {
-                                        setState(() {
-                                          passwordError = null;
-                                        });
-                                      }
-                                    },
+                                      setState(() {
+                                        passwordError = null;
+                                      });
+                                                                        },
                                     onSubmitted: (value) async {
                                       FocusScope.of(context).unfocus();
                                       await validateAndDecrypt();
@@ -182,9 +177,7 @@ class _AppPasswordLockScreenState extends State<AppPasswordLockScreen> {
                                     alignment: AlignmentDirectional(0, 0),
                                     margin: EdgeInsets.only(top: 3),
                                     child: Text(
-                                        this.passwordError == null
-                                            ? ""
-                                            : this.passwordError,
+                                        this.passwordError ?? "",
                                         style: TextStyle(
                                           fontSize: 14.0,
                                           color: StateContainer.of(context)
@@ -231,10 +224,6 @@ class _AppPasswordLockScreenState extends State<AppPasswordLockScreen> {
   }
 
   Future<void> _goHome() async {
-    if (StateContainer.of(context).wallet == null) {
-      await AppUtil()
-          .loginAccount(await StateContainer.of(context).getSeed(), context);
-    }
     StateContainer.of(context).requestUpdate();
     PriceConversion conversion =
         await sl.get<SharedPrefsUtil>().getPriceConversion();

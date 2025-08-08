@@ -1,4 +1,4 @@
-// @dart=2.9
+
 
 // Dart imports:
 import 'dart:io';
@@ -7,30 +7,21 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 
 // Project imports:
-import 'package:my_bismuth_wallet/appstate_container.dart';
 import 'package:my_bismuth_wallet/ui/util/routes.dart';
 
 class Sheets {
   //App Ninty Height Sheet
-  static Future<T> showAppHeightNineSheet<T>(
-      {@required BuildContext context,
-      @required Widget widget,
-      Color color,
+  static Future<T?> showAppHeightNineSheet<T>(
+      {required BuildContext context,
+      required Widget widget,
+      Color? color,
       double radius = 30.0,
-      Color bgColor,
+      Color? bgColor,
       int animationDurationMs = 250,
       bool removeUntilHome = false,
       bool closeOnTap = false,
-      Function onDisposed}) {
-    assert(context != null);
-    assert(widget != null);
-    assert(radius != null && radius > 0.0);
-    if (color == null) {
-      color = StateContainer.of(context).curTheme.backgroundDark;
-    }
-    if (bgColor == null) {
-      bgColor = StateContainer.of(context).curTheme.overlay70;
-    }
+      Function? onDisposed}) {
+    assert(radius > 0.0);
     var route = _AppHeightNineModalRoute<T>(
         builder: (BuildContext context) {
           return widget;
@@ -51,22 +42,14 @@ class Sheets {
   }
 
   //App Height Eigth Sheet
-  static Future<T> showAppHeightEightSheet<T>(
-      {@required BuildContext context,
-      @required Widget widget,
-      Color color,
+  static Future<T?> showAppHeightEightSheet<T>(
+      {required BuildContext context,
+      required Widget widget,
+      Color? color,
       double radius = 30.0,
-      Color bgColor,
+      Color? bgColor,
       int animationDurationMs = 225}) {
-    assert(context != null);
-    assert(widget != null);
-    assert(radius != null && radius > 0.0);
-    if (color == null) {
-      color = StateContainer.of(context).curTheme.backgroundDark;
-    }
-    if (bgColor == null) {
-      bgColor = StateContainer.of(context).curTheme.overlay70;
-    }
+    assert(radius > 0.0);
     return Navigator.push<T>(
         context,
         _AppHeightEightModalRoute<T>(
@@ -124,27 +107,27 @@ class _AppHeightNineSheetLayout extends SingleChildLayoutDelegate {
 
 class _AppHeightNineModalRoute<T> extends PopupRoute<T> {
   _AppHeightNineModalRoute(
-      {this.builder,
-      this.barrierLabel,
+      {required this.builder,
+      required this.barrierLabel,
       this.color,
-      this.radius,
-      RouteSettings settings,
+      required this.radius,
+      RouteSettings? settings,
       this.bgColor,
-      this.animationDurationMs,
-      this.closeOnTap,
+      required this.animationDurationMs,
+      required this.closeOnTap,
       this.onDisposed})
       : super(settings: settings);
 
   final WidgetBuilder builder;
   final double radius;
-  final Color color;
-  final Color bgColor;
+  final Color? color;
+  final Color? bgColor;
   final int animationDurationMs;
   final bool closeOnTap;
-  final Function onDisposed;
+  final Function? onDisposed;
 
   @override
-  Color get barrierColor => bgColor;
+  Color? get barrierColor => bgColor;
 
   @override
   bool get barrierDismissible => true;
@@ -153,21 +136,18 @@ class _AppHeightNineModalRoute<T> extends PopupRoute<T> {
   String barrierLabel;
 
   @override
-  void didComplete(T result) {
-    if (onDisposed != null) {
-      onDisposed();
-    }
+  void didComplete(T? result) {
+    onDisposed?.call();
     super.didComplete(result);
   }
 
-  AnimationController _animationController;
-  CurvedAnimation appSheetAnimation;
+  late AnimationController _animationController;
+  late CurvedAnimation appSheetAnimation;
 
   @override
   AnimationController createAnimationController() {
-    assert(_animationController == null);
     _animationController =
-        BottomSheet.createAnimationController(navigator.overlay);
+        BottomSheet.createAnimationController(navigator!.overlay!);
     _animationController.duration = Duration(milliseconds: animationDurationMs);
     this.appSheetAnimation = CurvedAnimation(
         parent: _animationController,
@@ -273,23 +253,23 @@ class _AppHeightEightSheetLayout extends SingleChildLayoutDelegate {
 
 class _AppHeightEightModalRoute<T> extends PopupRoute<T> {
   _AppHeightEightModalRoute(
-      {this.builder,
-      this.barrierLabel,
+      {required this.builder,
+      required this.barrierLabel,
       this.color,
-      this.radius,
-      RouteSettings settings,
+      required this.radius,
+      RouteSettings? settings,
       this.bgColor,
-      this.animationDurationMs})
+      required this.animationDurationMs})
       : super(settings: settings);
 
   final WidgetBuilder builder;
   final double radius;
-  final Color color;
-  final Color bgColor;
+  final Color? color;
+  final Color? bgColor;
   final int animationDurationMs;
 
   @override
-  Color get barrierColor => bgColor;
+  Color? get barrierColor => bgColor;
 
   @override
   bool get barrierDismissible => true;
@@ -297,14 +277,13 @@ class _AppHeightEightModalRoute<T> extends PopupRoute<T> {
   @override
   String barrierLabel;
 
-  AnimationController _animationController;
-  CurvedAnimation appSheetAnimation;
+  late AnimationController _animationController;
+  late CurvedAnimation appSheetAnimation;
 
   @override
   AnimationController createAnimationController() {
-    assert(_animationController == null);
     _animationController =
-        BottomSheet.createAnimationController(navigator.overlay);
+        BottomSheet.createAnimationController(navigator!.overlay!);
     _animationController.duration = Duration(milliseconds: animationDurationMs);
     this.appSheetAnimation = CurvedAnimation(
         parent: _animationController,

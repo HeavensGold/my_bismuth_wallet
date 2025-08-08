@@ -1,3 +1,0 @@
-- Add Dragginator features
-- Change "openfield" label by "data"
-- Cat avatar could be changed by an egg or a draggoon

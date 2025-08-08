@@ -1,4 +1,4 @@
-// @dart=2.9
+
 
 // Dart imports:
 import 'dart:async';
@@ -14,30 +14,31 @@ import 'package:my_bismuth_wallet/bus/events.dart';
 import 'package:my_bismuth_wallet/styles.dart';
 
 class SyncInfoView extends StatefulWidget {
-  const SyncInfoView({Key key}) : super(key: key);
+  const SyncInfoView({Key? key}) : super(key: key);
 
   @override
   _SyncInfoViewState createState() => _SyncInfoViewState();
 }
 
 class _SyncInfoViewState extends State<SyncInfoView> {
-  bool connected;
+  late bool connected;
   String serverName = "";
 
   // Subscriptions
-  StreamSubscription<ConnStatusEvent> _connStatusEventSub;
+  late StreamSubscription<ConnStatusEvent> _connStatusEventSub;
 
   @override
   void initState() {
-    _registerBus();
     super.initState();
+    connected = false; // Initialize with default value
+    _registerBus();
   }
 
   void _registerBus() {
     _connStatusEventSub =
         EventTaxiImpl.singleton().registerTo<ConnStatusEvent>().listen((event) {
       setState(() {
-        serverName = event.server;
+        serverName = event.server ?? "";
         if (event.status == ConnectionStatus.CONNECTED) {
           connected = true;
         } else {
@@ -54,10 +55,8 @@ class _SyncInfoViewState extends State<SyncInfoView> {
   }
 
   void _destroyBus() {
-    if (_connStatusEventSub != null) {
-      _connStatusEventSub.cancel();
+    _connStatusEventSub.cancel();
     }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -70,7 +69,7 @@ class _SyncInfoViewState extends State<SyncInfoView> {
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Text(serverName, style: AppStyles.textStyleTiny(context)),
-        connected == null || connected == false
+        connected == false
             ? Icon(Icons.signal_cellular_alt_rounded, color: Colors.red)
             : Icon(Icons.signal_cellular_alt_rounded, color: Colors.green),
       ],

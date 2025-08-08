@@ -5,7 +5,6 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 // Package imports:
-import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
 // Project imports:
@@ -118,7 +117,7 @@ class DBHelper {
     final Box<Account> box = await Hive.openBox<Account>(_accountsTable);
     final List<Account> accounts = box.values.toList();
     accounts.forEach((a) {
-      a.address = AppUtil().seedToAddress(seed, a.index);
+      a.address = AppUtil().seedToAddress(seed, a.index ?? 0);
     });
     return accounts;
   }
@@ -131,7 +130,7 @@ class DBHelper {
         .sort((Account a, Account b) => a.lastAccess!.compareTo(b.lastAccess!));
 
     for (int i = 0; i < accounts.length; i++) {
-      accounts[i].address = AppUtil().seedToAddress(seed, accounts[i].index);
+      accounts[i].address = AppUtil().seedToAddress(seed, accounts[i].index ?? 0);
       if (i + 1 == limit) {
         break;
       }
@@ -229,7 +228,7 @@ class DBHelper {
       if (_account.selected!) {
         accountSelected = _account;
         accountSelected.address =
-            AppUtil().seedToAddress(seed, accountSelected.index);
+            AppUtil().seedToAddress(seed, accountSelected.index ?? 0);
       }
     }
     return accountSelected;
@@ -241,7 +240,7 @@ class DBHelper {
     Account? account;
     for (Account _account in accountsList) {
       if (_account.index! == 0) {
-        _account.address = AppUtil().seedToAddress(seed, _account.index);
+        _account.address = AppUtil().seedToAddress(seed, _account.index ?? 0);
         _account.selected = true;
         account = _account;
         break;

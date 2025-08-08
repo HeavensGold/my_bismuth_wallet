@@ -1,10 +1,9 @@
-// @dart=2.9
+
 
 // Flutter imports:
 import 'package:flutter/material.dart';
 
 // Package imports:
-import 'package:meta/meta.dart';
 
 /// Keeps a Dart List in sync with an AnimatedList.
 ///
@@ -14,21 +13,20 @@ import 'package:meta/meta.dart';
 /// [AnimatedListState.insertItem] and [AnimatedList.removeItem].
 class ListModel<E> {
   ListModel({
-    @required this.listKey,
-    Iterable<E> initialItems,
-  })  : assert(listKey != null),
-        _items = List<E>.from(initialItems ?? <E>[]);
+    required this.listKey,
+    Iterable<E>? initialItems,
+  })  : _items = List<E>.from(initialItems ?? <E>[]);
 
   final GlobalKey<AnimatedListState> listKey;
   final List<E> _items;
 
   List<E> get items => _items;
 
-  AnimatedListState get _animatedList => listKey.currentState;
+  AnimatedListState? get _animatedList => listKey.currentState;
 
   void insertAtTop(E item) {
     _items.insert(0, item);
-    _animatedList.insertItem(0);
+    _animatedList?.insertItem(0);
   }
 
   int get length => _items.length;

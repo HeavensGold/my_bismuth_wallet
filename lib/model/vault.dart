@@ -1,4 +1,4 @@
-// @dart=2.9
+
 
 // Flutter imports:
 import 'package:flutter/services.dart';
@@ -35,7 +35,7 @@ class Vault {
     return value;
   }
 
-  Future<String> _read(String key, {String defaultValue}) async {
+  Future<String> _read(String key, {required String defaultValue}) async {
     if (await legacy()) {
       return await getEncrypted(key);
     }
@@ -56,7 +56,7 @@ class Vault {
 
   // Specific keys
   Future<String> getSeed() async {
-    return await _read(seedKey);
+    return await _read(seedKey, defaultValue: '');
   }
 
   Future<String> setSeed(String seed) async {
@@ -72,7 +72,7 @@ class Vault {
   }
 
   Future<String> getEncryptionPhrase() async {
-    return await _read(encryptionKey);
+    return await _read(encryptionKey, defaultValue: '');
   }
 
   Future<String> writeEncryptionPhrase(String secret) async {
@@ -81,10 +81,7 @@ class Vault {
 
   /// Used to keep the seed in-memory in the session without being plaintext
   Future<String> getSessionKey() async {
-    String key = await _read(sessionKey);
-    if (key == null) {
-      key = await updateSessionKey();
-    }
+    String key = await _read(sessionKey, defaultValue: '');
     return key;
   }
 
@@ -107,7 +104,7 @@ class Vault {
   }
 
   Future<String> getPin() async {
-    return await _read(pinKey);
+    return await _read(pinKey, defaultValue: '');
   }
 
   Future<String> writePin(String pin) async {
@@ -125,7 +122,6 @@ class Vault {
   // For encrypted data
   Future<void> setEncrypted(String key, String value) async {
     String secret = await getSecret();
-    if (secret == null) return null;
     // Decrypt and return
     Salsa20Encryptor encrypter = new Salsa20Encryptor(
         secret.substring(0, secret.length - 8),
@@ -137,14 +133,12 @@ class Vault {
 
   Future<String> getEncrypted(String key) async {
     String secret = await getSecret();
-    if (secret == null) return null;
     // Decrypt and return
     Salsa20Encryptor encrypter = new Salsa20Encryptor(
         secret.substring(0, secret.length - 8),
         secret.substring(secret.length - 8));
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    String encrypted = prefs.get(key);
-    if (encrypted == null) return null;
+    String encrypted = prefs.get(key) as String;
     return encrypter.decrypt(encrypted);
   }
 

@@ -1,11 +1,10 @@
-// @dart=2.9
+
 
 // Flutter imports:
 import 'package:flutter/material.dart';
 
 // Package imports:
 import 'package:auto_size_text/auto_size_text.dart';
-import 'package:flutter_vibrate/flutter_vibrate.dart';
 
 // Project imports:
 import 'package:my_bismuth_wallet/app_icons.dart';
@@ -36,7 +35,7 @@ class _AppPopupButtonState extends State<AppPopupButton> {
   bool isSendButtonColorPrimary = true;
   Color popupColor = Colors.transparent;
 
-  bool animationOpen;
+  late bool animationOpen;
 
   @override
   void initState() {
@@ -54,39 +53,38 @@ class _AppPopupButtonState extends State<AppPopupButton> {
     } else if (!QRScanErrs.ERROR_LIST.contains(scanResult)) {
       // Is a URI
       Address address = Address(scanResult);
-      if (address.address == null) {
-        UIUtil.showSnackbar(
-            AppLocalization.of(context).qrInvalidAddress, context);
+      // See if this address belongs to a contact
+      Contact? contact =
+          await sl.get<DBHelper>().getContactWithAddress(address.address);
+      // If amount is present, fill it and go to SendConfirm
+      double amount =
+          address.amount != null ? (double.tryParse(address.amount) ?? 0.0) : 0.0;
+      if ((StateContainer.of(context).wallet?.accountBalance ?? 0) > amount) {
+        // Go to confirm sheet
+        Sheets.showAppHeightNineSheet(
+            context: context,
+            widget: SendConfirmSheet(
+                amountRaw: address.amount,
+                destination:
+                    contact?.address ?? address.address,
+                contactName: contact?.name,
+                localCurrency: StateContainer.of(context).curCurrency.getDisplayName(context),
+                openfield: "",
+                operation: "",
+                comment: "",
+                title: "Send Confirmation"));
       } else {
-        // See if this address belongs to a contact
-        Contact contact =
-            await sl.get<DBHelper>().getContactWithAddress(address.address);
-        // If amount is present, fill it and go to SendConfirm
-        double amount =
-            address.amount != null ? double.tryParse(address.amount) : null;
-        if (amount != null &&
-            StateContainer.of(context).wallet.accountBalance > amount) {
-          // Go to confirm sheet
-          Sheets.showAppHeightNineSheet(
-              context: context,
-              widget: SendConfirmSheet(
-                  amountRaw: address.amount,
-                  destination:
-                      contact != null ? contact.address : address.address,
-                  contactName: contact != null ? contact.name : null));
-        } else {
-          // Go to send sheet
-          Sheets.showAppHeightNineSheet(
-              context: context,
-              widget: SendSheet(
-                  sendATokenActive: true,
-                  localCurrency: StateContainer.of(context).curCurrency,
-                  contact: contact,
-                  address:
-                      contact != null ? contact.address : address.address));
-        }
+        // Go to send sheet
+        Sheets.showAppHeightNineSheet(
+            context: context,
+            widget: SendSheet(
+                sendATokenActive: true,
+                localCurrency: StateContainer.of(context).curCurrency,
+                contact: contact,
+                address:
+                    contact?.address ?? address.address));
       }
-    }
+        }
   }
 
   @override
@@ -114,16 +112,14 @@ class _AppPopupButtonState extends State<AppPopupButton> {
         ),
         // Send Button
         GestureDetector(
-          onVerticalDragStart: (StateContainer.of(context).wallet != null &&
-                  StateContainer.of(context).wallet.accountBalance > 0)
+          onVerticalDragStart: ((StateContainer.of(context).wallet?.accountBalance ?? 0) > 0)
               ? (value) {
                   setState(() {
                     popupColor = StateContainer.of(context).curTheme.primary;
                   });
                 }
               : (value) {},
-          onVerticalDragEnd: (StateContainer.of(context).wallet != null &&
-                  StateContainer.of(context).wallet.accountBalance > 0)
+          onVerticalDragEnd: ((StateContainer.of(context).wallet?.accountBalance ?? 0) > 0)
               ? (value) {
                   isSendButtonColorPrimary = true;
                   firstTime = true;
@@ -139,13 +135,12 @@ class _AppPopupButtonState extends State<AppPopupButton> {
                   });
                 }
               : (value) {},
-          onVerticalDragUpdate: (StateContainer.of(context).wallet != null &&
-                  StateContainer.of(context).wallet.accountBalance > 0)
+          onVerticalDragUpdate: ((StateContainer.of(context).wallet?.accountBalance ?? 0) > 0)
               ? (dragUpdateDetails) {
                   if (dragUpdateDetails.localPosition.dy < -60) {
                     isScrolledUpEnough = true;
                     if (firstTime) {
-                      sl.get<HapticUtil>().feedback(FeedbackType.success);
+                      HapticUtil.lightFeedback();
                     }
                     firstTime = false;
                     setState(() {
@@ -180,6 +175,7 @@ class _AppPopupButtonState extends State<AppPopupButton> {
           child: AnimatedContainer(
             duration: Duration(milliseconds: 100),
             decoration: BoxDecoration(
+              color: StateContainer.of(context).curTheme.primary,
               borderRadius: BorderRadius.circular(100),
               boxShadow: [StateContainer.of(context).curTheme.boxShadowButton],
             ),
@@ -196,8 +192,7 @@ class _AppPopupButtonState extends State<AppPopupButton> {
                 stepGranularity: 0.5,
               ),
               onPressed: () {
-                if (StateContainer.of(context).wallet != null &&
-                    StateContainer.of(context).wallet.accountBalance > 0) {
+                if ((StateContainer.of(context).wallet?.accountBalance ?? 0) > 0) {
                   Sheets.showAppHeightNineSheet(
                       context: context,
                       widget: SendSheet(

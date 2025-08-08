@@ -1,4 +1,4 @@
-// @dart=2.9
+
 
 // Dart imports:
 import 'dart:async';
@@ -9,7 +9,6 @@ import 'package:flutter/material.dart';
 // Package imports:
 import 'package:diacritic/diacritic.dart';
 import 'package:event_taxi/event_taxi.dart';
-import 'package:flutter_vibrate/flutter_vibrate.dart';
 
 // Project imports:
 import 'package:my_bismuth_wallet/appstate_container.dart';
@@ -41,7 +40,7 @@ import 'package:my_bismuth_wallet/util/sharedprefsutil.dart';
 class SendConfirmSheet extends StatefulWidget {
   final String amountRaw;
   final String destination;
-  final String contactName;
+  final String? contactName;
   final String localCurrency;
   final bool maxSend;
   final String openfield;
@@ -50,27 +49,27 @@ class SendConfirmSheet extends StatefulWidget {
   final String title;
 
   SendConfirmSheet(
-      {this.amountRaw,
-      this.destination,
+      {required this.amountRaw,
+      required this.destination,
       this.contactName,
-      this.localCurrency,
-      this.openfield,
-      this.operation,
-      this.comment,
+      required this.localCurrency,
+      required this.openfield,
+      required this.operation,
+      required this.comment,
       this.maxSend = false,
-      this.title})
+      required this.title})
       : super();
 
   _SendConfirmSheetState createState() => _SendConfirmSheetState();
 }
 
 class _SendConfirmSheetState extends State<SendConfirmSheet> {
-  String amount;
-  String destinationAltered;
-  bool animationOpen;
+  late String amount;
+  late String destinationAltered;
+  late bool animationOpen;
 
-  StreamSubscription<AuthenticatedEvent> _authSub;
-  StreamSubscription<TransactionSendEvent> _sendTxSub;
+  late StreamSubscription<AuthenticatedEvent> _authSub;
+  late StreamSubscription<TransactionSendEvent> _sendTxSub;
 
   void _registerBus() {
     _authSub = EventTaxiImpl.singleton()
@@ -83,7 +82,7 @@ class _SendConfirmSheetState extends State<SendConfirmSheet> {
 
     _sendTxSub = EventTaxiImpl.singleton()
         .registerTo<TransactionSendEvent>()
-        .listen((event) {
+        .listen((event) async {
       //print("listen TransactionSendEvent");
       //print("result : " + event.response);
       if (event.response != "Success") {
@@ -92,20 +91,20 @@ class _SendConfirmSheetState extends State<SendConfirmSheet> {
           Navigator.of(context).pop();
         }
         UIUtil.showSnackbar(
-            AppLocalization.of(context).sendError + " (" + event.response + ")",
+            AppLocalization.of(context).sendError + " (" + (event.response ?? "") + ")",
             context);
         Navigator.of(context).pop();
       } else {
-        StateContainer.of(context).wallet.accountBalance -=
-            double.parse(widget.amountRaw);
+        if (StateContainer.of(context).wallet != null) {
+          StateContainer.of(context).wallet!.accountBalance -=
+              double.parse(widget.amountRaw);
+        }
 
         // Show complete
-        Contact contact;
-        sl
+        Contact? contact = await sl
             .get<DBHelper>()
-            .getContactWithAddress(widget.destination)
-            .then((value) => contact);
-        String contactName = contact == null ? null : contact.name;
+            .getContactWithAddress(widget.destination);
+        String? contactName = contact?.name;
         Navigator.of(context).popUntil(RouteUtils.withNameLike('/home'));
         StateContainer.of(context).requestUpdate();
         Sheets.showAppHeightNineSheet(
@@ -123,13 +122,9 @@ class _SendConfirmSheetState extends State<SendConfirmSheet> {
   }
 
   void _destroyBus() {
-    if (_authSub != null) {
-      _authSub.cancel();
-    }
-    if (_sendTxSub != null) {
+    _authSub.cancel();
       _sendTxSub.cancel();
     }
-  }
 
   @override
   void initState() {
@@ -219,7 +214,7 @@ class _SendConfirmSheetState extends State<SendConfirmSheet> {
 
                     child: Column(
                       children: [
-                        double.tryParse(amount.replaceAll(",", "")) > 0
+                        (double.tryParse(amount.replaceAll(",", "")) ?? 0) > 0
                             ? RichText(
                                 textAlign: TextAlign.center,
                                 text: TextSpan(
@@ -593,9 +588,7 @@ class _SendConfirmSheetState extends State<SendConfirmSheet> {
                                         .sendAmountConfirm
                                         .replaceAll("%1", amount));
                             if (authenticated) {
-                              sl
-                                  .get<HapticUtil>()
-                                  .feedback(FeedbackType.success);
+                              HapticUtil.lightFeedback();
                               EventTaxiImpl.singleton().fire(
                                   AuthenticatedEvent(AUTH_EVENT_TYPE.SEND));
                             }
@@ -643,13 +636,13 @@ class _SendConfirmSheetState extends State<SendConfirmSheet> {
         openfield += ':{"Message":"' + widget.comment + '"}';
       }
       String seed = await StateContainer.of(context).getSeed();
-      int index = StateContainer.of(context).selectedAccount.index;
+      int index = StateContainer.of(context).selectedAccount.index ?? 0;
       String publicKeyBase64 =
           await AppUtil().seedToPublicKeyBase64(seed, index);
       String privateKey = await AppUtil().seedToPrivateKey(seed, index);
       //print("send tx");
       sl.get<AppService>().sendTx(
-          StateContainer.of(context).wallet.address,
+          StateContainer.of(context).wallet?.address ?? "",
           widget.amountRaw,
           destinationAltered,
           openfield,
@@ -678,7 +671,7 @@ class _SendConfirmSheetState extends State<SendConfirmSheet> {
       );
     }));
     //print("authenticateWithPin - auth : " + auth.toString());
-    if (auth != null && auth) {
+    if (auth) {
       await Future.delayed(Duration(milliseconds: 200));
       //print("authenticateWithPin - fire AuthenticatedEvent");
       EventTaxiImpl.singleton().fire(AuthenticatedEvent(AUTH_EVENT_TYPE.SEND));

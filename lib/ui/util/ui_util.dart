@@ -1,4 +1,4 @@
-// @dart=2.9
+
 
 // Dart imports:
 import 'dart:async';
@@ -24,7 +24,7 @@ enum OneLineAddressTextType { PRIMARY60, PRIMARY, SUCCESS }
 class UIUtil {
   static Widget threeLineAddressText(BuildContext context, String address,
       {ThreeLineAddressTextType type = ThreeLineAddressTextType.PRIMARY,
-      String contactName}) {
+      String? contactName}) {
     String stringPartOne = "";
     String stringPartTwo = "";
     String stringPartThree = "";
@@ -363,7 +363,7 @@ class UIUtil {
   }
 
   static Widget threeLineSeedText(BuildContext context, String address,
-      {TextStyle textStyle}) {
+      {TextStyle? textStyle}) {
     textStyle = textStyle ?? AppStyles.textStyleSeed(context);
     String stringPartOne = address.substring(0, 22);
     String stringPartTwo = address.substring(22, 44);
@@ -392,9 +392,10 @@ class UIUtil {
         future: AppLocalization.of(context).getAccountExplorerUrl(account),
         builder: (BuildContext context, AsyncSnapshot snapshot) {
           if (snapshot.hasData && snapshot.data != null) {
-            return WebView(
-              initialUrl: snapshot.data,
-              gestureNavigationEnabled: true,
+            return WebViewWidget(
+              controller: WebViewController()
+                ..loadRequest(Uri.parse(snapshot.data))
+                ..setJavaScriptMode(JavaScriptMode.unrestricted),
             );
           } else {
             return Center(child: CircularProgressIndicator());
@@ -403,17 +404,19 @@ class UIUtil {
   }
 
   static Widget showWebview(BuildContext context, String url, String title) {
-    return WebView(
-      initialUrl: url,
-      gestureNavigationEnabled: true,
+    return WebViewWidget(
+      controller: WebViewController()
+        ..loadRequest(Uri.parse(url))
+        ..setJavaScriptMode(JavaScriptMode.unrestricted),
     );
   }
 
   static Widget showDragginatorHelp(BuildContext context) {
     cancelLockEvent();
-    return WebView(
-      initialUrl: AppLocalization.of(context).getDragginatorHelp(),
-      gestureNavigationEnabled: true,
+    return WebViewWidget(
+      controller: WebViewController()
+        ..loadRequest(Uri.parse(AppLocalization.of(context).getDragginatorHelp()))
+        ..setJavaScriptMode(JavaScriptMode.unrestricted),
     );
   }
 
@@ -457,14 +460,12 @@ class UIUtil {
     );
   }
 
-  static StreamSubscription<dynamic> _lockDisableSub;
+  static StreamSubscription<dynamic>? _lockDisableSub;
 
   static Future<void> cancelLockEvent() async {
     // Cancel auto-lock event, usually if we are launching another intent
-    if (_lockDisableSub != null) {
-      _lockDisableSub.cancel();
-    }
-    EventTaxiImpl.singleton().fire(DisableLockTimeoutEvent(disable: true));
+    _lockDisableSub?.cancel();
+      EventTaxiImpl.singleton().fire(DisableLockTimeoutEvent(disable: true));
     Future<dynamic> delayed = Future.delayed(Duration(seconds: 10));
     delayed.then((_) {
       return true;
@@ -482,12 +483,8 @@ class UIUtil {
   }
 
   static String getRobohashURL(String address) {
-    if (address == null) {
-      return "https://robohash.org/bismuth?set=set4";
-    } else {
-      return "https://robohash.org/$address?set=set4";
+    return "https://robohash.org/$address?set=set4";
     }
-  }
 
   static String getDragginatorURL(String dna, String status) {
     if (status == "egg") {

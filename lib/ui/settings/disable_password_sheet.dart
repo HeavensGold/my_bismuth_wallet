@@ -1,4 +1,4 @@
-// @dart=2.9
+
 
 // Flutter imports:
 import 'package:flutter/material.dart';
@@ -7,7 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:get_it/get_it.dart';
 import 'package:hex/hex.dart';
-import 'package:keyboard_avoider/keyboard_avoider.dart';
+// import 'package:keyboard_avoider/keyboard_avoider.dart'; // Replaced
 
 // Project imports:
 import 'package:my_bismuth_wallet/appstate_container.dart';
@@ -29,10 +29,10 @@ class DisablePasswordSheet extends StatefulWidget {
 }
 
 class _DisablePasswordSheetState extends State<DisablePasswordSheet> {
-  FocusNode passwordFocusNode;
-  TextEditingController passwordController;
+  late FocusNode passwordFocusNode;
+  late TextEditingController passwordController;
 
-  String passwordError;
+  String? passwordError;
 
   @override
   void initState() {
@@ -101,10 +101,8 @@ class _DisablePasswordSheetState extends State<DisablePasswordSheet> {
                   ),
                   // Text field
                   Expanded(
-                      child: KeyboardAvoider(
-                          duration: Duration(milliseconds: 0),
-                          autoScroll: true,
-                          focusPadding: 40,
+                      child: SingleChildScrollView(
+                          padding: EdgeInsets.all(40),
                           child: Column(
                               crossAxisAlignment: CrossAxisAlignment.center,
                               children: <Widget>[
@@ -118,12 +116,10 @@ class _DisablePasswordSheetState extends State<DisablePasswordSheet> {
                                   maxLines: 1,
                                   autocorrect: false,
                                   onChanged: (String newText) {
-                                    if (passwordError != null) {
-                                      setState(() {
-                                        passwordError = null;
-                                      });
-                                    }
-                                  },
+                                    setState(() {
+                                      passwordError = null;
+                                    });
+                                                                    },
                                   hintText: AppLocalization.of(context)
                                       .enterPasswordHint,
                                   keyboardType: TextInputType.text,
@@ -144,7 +140,7 @@ class _DisablePasswordSheetState extends State<DisablePasswordSheet> {
                                   child: Text(
                                       this.passwordError == null
                                           ? ""
-                                          : passwordError,
+                                          : (passwordError ?? ""),
                                       style: TextStyle(
                                         fontSize: 14.0,
                                         color: StateContainer.of(context)

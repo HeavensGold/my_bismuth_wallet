@@ -1,4 +1,4 @@
-// @dart=2.9
+
 
 // Dart imports:
 import 'dart:async';
@@ -31,7 +31,7 @@ class ContactsList extends StatefulWidget {
   final AnimationController contactsController;
   bool contactsOpen;
 
-  ContactsList(this.contactsController, this.contactsOpen);
+  ContactsList(this.contactsController, this.contactsOpen, {super.key});
 
   _ContactsListState createState() => _ContactsListState();
 }
@@ -39,30 +39,26 @@ class ContactsList extends StatefulWidget {
 class _ContactsListState extends State<ContactsList> {
   final Logger log = sl.get<Logger>();
 
-  List<Contact> _contacts;
-  String documentsDirectory;
+  List<Contact> _contacts = [];
+  String documentsDirectory = '';
   @override
   void initState() {
     super.initState();
     _registerBus();
     // Initial contacts list
-    _contacts = List();
+    _contacts = <Contact>[];
     _updateContacts();
   }
 
   @override
   void dispose() {
-    if (_contactAddedSub != null) {
-      _contactAddedSub.cancel();
-    }
-    if (_contactRemovedSub != null) {
-      _contactRemovedSub.cancel();
-    }
+    _contactAddedSub?.cancel();
+    _contactRemovedSub?.cancel();
     super.dispose();
   }
 
-  StreamSubscription<ContactAddedEvent> _contactAddedSub;
-  StreamSubscription<ContactRemovedEvent> _contactRemovedSub;
+  StreamSubscription<ContactAddedEvent>? _contactAddedSub;
+  StreamSubscription<ContactRemovedEvent>? _contactRemovedSub;
 
   void _registerBus() {
     // Contact added bus event
@@ -70,10 +66,10 @@ class _ContactsListState extends State<ContactsList> {
         .registerTo<ContactAddedEvent>()
         .listen((event) {
       setState(() {
-        _contacts.add(event.contact);
+        if (event.contact != null) _contacts.add(event.contact!);
         //Sort by name
         _contacts.sort(
-            (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+            (a, b) => (a.name ?? "").toLowerCase().compareTo((b.name ?? "").toLowerCase()));
       });
       // Full update
       _updateContacts();
@@ -100,7 +96,7 @@ class _ContactsListState extends State<ContactsList> {
       // Re-sort list
       setState(() {
         _contacts.sort(
-            (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+            (a, b) => (a.name ?? "").toLowerCase().compareTo((b.name ?? "").toLowerCase()));
       });
     });
   }
@@ -265,7 +261,7 @@ class _ContactsListState extends State<ContactsList> {
                   child: CircleAvatar(
                     backgroundColor: StateContainer.of(context).curTheme.text05,
                     backgroundImage:
-                        NetworkImage(UIUtil.getRobohashURL(contact.address)),
+                        NetworkImage(UIUtil.getRobohashURL(contact.address ?? "")),
                     radius: 50.0,
                   ),
                 ),
@@ -280,11 +276,11 @@ class _ContactsListState extends State<ContactsList> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
                       //Contact name
-                      Text(contact.name,
+                      Text(contact.name ?? "",
                           style: AppStyles.textStyleSettingItemHeader(context)),
                       //Contact address
                       Text(
-                        Address(contact.address).getShortString(),
+                        Address(contact.address ?? "").getShortString(),
                         style: AppStyles.textStyleTransactionAddress(context),
                       ),
                     ],

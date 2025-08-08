@@ -1,4 +1,4 @@
-// @dart=2.9
+
 
 // Dart imports:
 import 'dart:math';
@@ -8,7 +8,6 @@ import 'package:flutter/material.dart';
 
 // Package imports:
 import 'package:auto_size_text/auto_size_text.dart';
-import 'package:flutter_vibrate/flutter_vibrate.dart';
 
 // Project imports:
 import 'package:my_bismuth_wallet/app_icons.dart';
@@ -33,7 +32,7 @@ class PinScreen extends StatefulWidget {
   final PinOverlayType type;
   final String expectedPin;
   final String description;
-  final Color pinScreenBackgroundColor;
+  final Color? pinScreenBackgroundColor;
 
   PinScreen(this.type,
       {this.description = "",
@@ -55,17 +54,16 @@ class _PinScreenState extends State<PinScreen>
   String pinCreateTitle = "";
 
   // Stateful data
-  List<IconData> _dotStates;
-  String _pin;
-  String _pinConfirmed;
-  bool
-      _awaitingConfirmation; // true if pin has been entered once, false if not entered once
-  String _header;
+  List<IconData> _dotStates = [];
+  String _pin = '';
+  String _pinConfirmed = '';
+  bool _awaitingConfirmation = false; // true if pin has been entered once, false if not entered once
+  String _header = '';
   int _failedAttempts = 0;
 
   // Invalid animation
-  AnimationController _controller;
-  Animation<double> _animation;
+  AnimationController? _controller;
+  Animation<double>? _animation;
 
   @override
   void initState() {
@@ -90,8 +88,8 @@ class _PinScreenState extends State<PinScreen>
     // Set animation
     _controller = AnimationController(
         duration: const Duration(milliseconds: 350), vsync: this);
-    final Animation curve =
-        CurvedAnimation(parent: _controller, curve: ShakeCurve());
+    final Animation<double> curve =
+        CurvedAnimation(parent: _controller!, curve: ShakeCurve());
     _animation = Tween(begin: 0.0, end: 25.0).animate(curve)
       ..addStatusListener((status) {
         if (status == AnimationStatus.completed) {
@@ -100,7 +98,7 @@ class _PinScreenState extends State<PinScreen>
               _failedAttempts++;
               if (_failedAttempts >= MAX_ATTEMPTS) {
                 setState(() {
-                  _controller.value = 0;
+                  _controller!.value = 0;
                 });
                 sl.get<SharedPrefsUtil>().updateLockDate().then((_) {
                   Navigator.of(context).pushNamedAndRemoveUntil(
@@ -112,7 +110,7 @@ class _PinScreenState extends State<PinScreen>
                   _pin = "";
                   _header = AppLocalization.of(context).pinInvalid;
                   _dotStates = List.filled(_pinLength, AppIcons.dotemtpy);
-                  _controller.value = 0;
+                  _controller!.value = 0;
                 });
               }
             });
@@ -123,7 +121,7 @@ class _PinScreenState extends State<PinScreen>
               _pin = "";
               _pinConfirmed = "";
               _header = AppLocalization.of(context).pinConfirmError;
-              _controller.value = 0;
+              _controller!.value = 0;
             });
           }
         }
@@ -137,7 +135,7 @@ class _PinScreenState extends State<PinScreen>
 
   @override
   void dispose() {
-    _controller.dispose();
+    _controller?.dispose();
     super.dispose();
   }
 
@@ -169,24 +167,26 @@ class _PinScreenState extends State<PinScreen>
 
   void _backSpace() {
     if (_dotStates[0] != AppIcons.dotemtpy) {
-      int lastFilledIndex;
+      int lastFilledIndex = -1;
       for (int i = 0; i < _dotStates.length; i++) {
         if (_dotStates[i] == AppIcons.dotfilled) {
-          if (i == _dotStates.length ||
+          if (i == _dotStates.length - 1 ||
               _dotStates[i + 1] == AppIcons.dotemtpy) {
             lastFilledIndex = i;
             break;
           }
         }
       }
-      setState(() {
-        _dotStates[lastFilledIndex] = AppIcons.dotemtpy;
-        if (_awaitingConfirmation) {
-          _pinConfirmed = _pinConfirmed.substring(0, _pinConfirmed.length - 1);
-        } else {
-          _pin = _pin.substring(0, _pin.length - 1);
-        }
-      });
+      if (lastFilledIndex >= 0) {
+        setState(() {
+          _dotStates[lastFilledIndex] = AppIcons.dotemtpy;
+          if (_awaitingConfirmation) {
+            _pinConfirmed = _pinConfirmed.substring(0, _pinConfirmed.length - 1);
+          } else {
+            _pin = _pin.substring(0, _pin.length - 1);
+          }
+        });
+      }
     }
   }
 
@@ -200,8 +200,8 @@ class _PinScreenState extends State<PinScreen>
         splashColor: StateContainer.of(context).curTheme.primary30,
         onTap: () {},
         onTapDown: (details) {
-          if (_controller.status == AnimationStatus.forward ||
-              _controller.status == AnimationStatus.reverse) {
+          if (_controller?.status == AnimationStatus.forward ||
+              _controller?.status == AnimationStatus.reverse) {
             return;
           }
           if (_setCharacter(buttonText)) {
@@ -210,8 +210,8 @@ class _PinScreenState extends State<PinScreen>
               if (widget.type == PinOverlayType.ENTER_PIN) {
                 // Pin is not what was expected
                 if (_pin != widget.expectedPin) {
-                  sl.get<HapticUtil>().feedback(FeedbackType.error);
-                  _controller.forward();
+                  HapticUtil.mediumFeedback();
+                  _controller?.forward();
                 } else {
                   sl.get<SharedPrefsUtil>().resetLockAttempts().then((_) {
                     Navigator.of(context).pop(true);
@@ -230,8 +230,8 @@ class _PinScreenState extends State<PinScreen>
                   if (_pin == _pinConfirmed) {
                     Navigator.of(context).pop(_pin);
                   } else {
-                    sl.get<HapticUtil>().feedback(FeedbackType.error);
-                    _controller.forward();
+                    HapticUtil.mediumFeedback();
+                    _controller?.forward();
                   }
                 }
               }
@@ -256,7 +256,7 @@ class _PinScreenState extends State<PinScreen>
   }
 
   List<Widget> _buildPinDots() {
-    List<Widget> ret = List();
+    List<Widget> ret = <Widget>[];
     for (int i = 0; i < _pinLength; i++) {
       ret.add(Icon(_dotStates[i],
           color: StateContainer.of(context).curTheme.primary, size: 20.0));
@@ -326,9 +326,9 @@ class _PinScreenState extends State<PinScreen>
                     Container(
                       margin: EdgeInsetsDirectional.only(
                         start: MediaQuery.of(context).size.width * 0.25 +
-                            _animation.value,
+                            (_animation?.value ?? 0.0),
                         end: MediaQuery.of(context).size.width * 0.25 -
-                            _animation.value,
+                            (_animation?.value ?? 0.0),
                         top: MediaQuery.of(context).size.height * 0.02,
                       ),
                       child: Row(

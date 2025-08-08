@@ -1,4 +1,4 @@
-// @dart=2.9
+
 
 // Dart imports:
 import 'dart:async';
@@ -38,7 +38,7 @@ class ContactDetailsSheet {
   // State variables
   bool _addressCopied = false;
   // Timer reference so we can cancel repeated events
-  Timer _addressCopiedTimer;
+  Timer? _addressCopiedTimer;
 
   mainBottomSheet(BuildContext context) {
     AppSheets.showAppHeightEightSheet(
@@ -73,7 +73,7 @@ class ContactDetailsSheet {
                                             .removeContact,
                                         AppLocalization.of(context)
                                             .removeContactConfirmation
-                                            .replaceAll('%1', contact.name),
+                                            .replaceAll('%1', contact.name ?? ""),
                                         CaseChange.toUpperCase(
                                             AppLocalization.of(context).yes,
                                             context), () {
@@ -90,7 +90,7 @@ class ContactDetailsSheet {
                                         UIUtil.showSnackbar(
                                             AppLocalization.of(context)
                                                 .contactRemoved
-                                                .replaceAll("%1", contact.name),
+                                                .replaceAll("%1", contact.name ?? ""),
                                             context);
                                         Navigator.of(context).pop();
                                       });
@@ -137,7 +137,7 @@ class ContactDetailsSheet {
                               Navigator.of(context).push(MaterialPageRoute(
                                   builder: (BuildContext context) {
                                 return UIUtil.showAccountWebview(
-                                    context, contact.address);
+                                    context, contact.address ?? "");
                               }));
                             },
                             child: Icon(AppIcons.search,
@@ -163,7 +163,7 @@ class ContactDetailsSheet {
                                 backgroundColor:
                                     StateContainer.of(context).curTheme.text05,
                                 backgroundImage: NetworkImage(
-                                  UIUtil.getRobohashURL(contact.address),
+                                  UIUtil.getRobohashURL(contact.address ?? ""),
                                 ),
                                 radius: 50.0,
                               ),
@@ -187,7 +187,7 @@ class ContactDetailsSheet {
                                 borderRadius: BorderRadius.circular(25),
                               ),
                               child: Text(
-                                contact.name,
+                                contact.name ?? "",
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
                                   fontWeight: FontWeight.w600,
@@ -203,14 +203,12 @@ class ContactDetailsSheet {
                             GestureDetector(
                               onTap: () {
                                 Clipboard.setData(
-                                    new ClipboardData(text: contact.address));
+                                    new ClipboardData(text: contact.address ?? ""));
                                 setState(() {
                                   _addressCopied = true;
                                 });
-                                if (_addressCopiedTimer != null) {
-                                  _addressCopiedTimer.cancel();
-                                }
-                                _addressCopiedTimer = new Timer(
+                                _addressCopiedTimer?.cancel();
+                                _addressCopiedTimer = Timer(
                                     const Duration(milliseconds: 800), () {
                                   setState(() {
                                     _addressCopied = false;
@@ -234,7 +232,7 @@ class ContactDetailsSheet {
                                   borderRadius: BorderRadius.circular(25),
                                 ),
                                 child: UIUtil.threeLineAddressText(
-                                    context, contact.address,
+                                    context, contact.address ?? "",
                                     type: _addressCopied
                                         ? ThreeLineAddressTextType.SUCCESS_FULL
                                         : ThreeLineAddressTextType.PRIMARY),
@@ -274,9 +272,9 @@ class ContactDetailsSheet {
                                   AppButtonType.PRIMARY,
                                   AppLocalization.of(context).send,
                                   Dimens.BUTTON_TOP_DIMENS,
-                                  disabled: StateContainer.of(context)
+                                  disabled: (StateContainer.of(context)
                                           .wallet
-                                          .accountBalance ==
+                                          ?.accountBalance ?? BigInt.zero) ==
                                       BigInt.zero, onPressed: () {
                                 Navigator.of(context).pop();
                                 Sheets.showAppHeightNineSheet(

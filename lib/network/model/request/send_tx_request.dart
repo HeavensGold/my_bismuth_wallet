@@ -2,7 +2,6 @@
 //
 //     final sendTxRequest = sendTxRequestFromJson(jsonString);
 
-// @dart=2.9
 
 // Dart imports:
 import 'dart:convert';
@@ -16,12 +15,12 @@ import 'package:pointycastle/signers/ecdsa_signer.dart';
 
 class SendTxRequest {
   SendTxRequest({
-    this.id,
-    this.tx,
-    this.buffer,
-    this.signature,
-    this.publicKey,
-    this.websocketCommand,
+    required this.id,
+    required this.tx,
+    required this.buffer,
+    required this.signature,
+    required this.publicKey,
+    required this.websocketCommand,
   });
 
   int id;
@@ -42,7 +41,7 @@ class SendTxRequest {
   }
 
   String signString(String privateKey, String msgToSign) {
-    final ECDSASigner signer = Signer('SHA-256/ECDSA');
+    final ECDSASigner signer = Signer('SHA-256/ECDSA') as ECDSASigner;
 
     final _privateKey = ECPrivateKey(
       BigInt.parse(privateKey, radix: 16),
@@ -60,7 +59,7 @@ class SendTxRequest {
 
     signer.reset();
     signer.init(true, new ParametersWithRandom(privParams, rnd));
-    ECSignature sig = signer.generateSignature(utf8.encode(msgToSign));
+    ECSignature sig = signer.generateSignature(utf8.encode(msgToSign)) as ECSignature;
     sig = sig.normalize(ECDomainParameters('secp256k1'));
 
     var topLevel = new asn1lib.ASN1Sequence();
@@ -112,12 +111,12 @@ class SendTxRequest {
 
 class Tx {
   Tx({
-    this.timestamp,
-    this.address,
-    this.recipient,
-    this.amount,
-    this.operation,
-    this.openfield,
+    required this.timestamp,
+    required this.address,
+    required this.recipient,
+    required this.amount,
+    required this.operation,
+    required this.openfield,
   });
 
   String timestamp;

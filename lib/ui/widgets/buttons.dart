@@ -1,4 +1,4 @@
-// @dart=2.9
+
 
 // Flutter imports:
 import 'package:flutter/material.dart';
@@ -23,12 +23,13 @@ class AppButton {
   // Primary button builder
   static Widget buildAppButton(BuildContext context, AppButtonType type,
       String buttonText, List<double> dimens,
-      {Function onPressed, bool disabled = false}) {
+      {Function? onPressed, bool disabled = false}) {
     switch (type) {
       case AppButtonType.PRIMARY:
         return Expanded(
           child: Container(
             decoration: BoxDecoration(
+              color: StateContainer.of(context).curTheme.primary,
               borderRadius: BorderRadius.circular(100),
               boxShadow: [StateContainer.of(context).curTheme.boxShadowButton],
             ),
@@ -42,7 +43,7 @@ class AppButton {
                   maxLines: 1,
                   stepGranularity: 0.5),
               onPressed: () {
-                if (onPressed != null && !disabled) {
+                if (!disabled && onPressed != null) {
                   onPressed();
                 }
                 return;
@@ -55,6 +56,10 @@ class AppButton {
           child: Container(
             decoration: BoxDecoration(
               color: StateContainer.of(context).curTheme.backgroundDark,
+              border: Border.all(
+                color: StateContainer.of(context).curTheme.primary,
+                width: 2.0,
+              ),
               borderRadius: BorderRadius.circular(100),
               boxShadow: [StateContainer.of(context).curTheme.boxShadowButton],
             ),
@@ -72,7 +77,7 @@ class AppButton {
                 stepGranularity: 0.5,
               ),
               onPressed: () {
-                if (onPressed != null && !disabled) {
+                if (!disabled && onPressed != null) {
                   onPressed();
                 }
                 return;
@@ -84,6 +89,7 @@ class AppButton {
         return Expanded(
           child: Container(
             decoration: BoxDecoration(
+              color: StateContainer.of(context).curTheme.success,
               borderRadius: BorderRadius.circular(100),
               boxShadow: [StateContainer.of(context).curTheme.boxShadowButton],
             ),
@@ -99,7 +105,7 @@ class AppButton {
                 stepGranularity: 0.5,
               ),
               onPressed: () {
-                if (onPressed != null && !disabled) {
+                if (!disabled && onPressed != null) {
                   onPressed();
                 }
                 return;
@@ -112,6 +118,10 @@ class AppButton {
           child: Container(
             decoration: BoxDecoration(
               color: StateContainer.of(context).curTheme.backgroundDark,
+              border: Border.all(
+                color: StateContainer.of(context).curTheme.success,
+                width: 2.0,
+              ),
               borderRadius: BorderRadius.circular(100),
               boxShadow: [StateContainer.of(context).curTheme.boxShadowButton],
             ),
@@ -140,6 +150,10 @@ class AppButton {
           child: Container(
             decoration: BoxDecoration(
               color: StateContainer.of(context).curTheme.backgroundDark,
+              border: Border.all(
+                color: StateContainer.of(context).curTheme.text60,
+                width: 1.0,
+              ),
               borderRadius: BorderRadius.circular(100),
               boxShadow: [StateContainer.of(context).curTheme.boxShadowButton],
             ),

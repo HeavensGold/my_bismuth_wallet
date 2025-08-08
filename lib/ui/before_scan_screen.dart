@@ -1,4 +1,4 @@
-// @dart=2.9
+
 
 // Dart imports:
 import 'dart:async';
@@ -19,7 +19,7 @@ class _BeforeScanScreenState extends State<BeforeScanScreen> {
   void initState() {
     super.initState();
     Future.delayed(Duration(milliseconds: 150), () async {
-      String scanResult;
+      String? scanResult;
       Navigator.pop(context, scanResult);
     });
   }

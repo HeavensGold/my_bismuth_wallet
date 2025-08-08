@@ -2,7 +2,6 @@
 //
 //     final simplePriceEurResponse = simplePriceEurResponseFromJson(jsonString);
 
-// @dart=2.9
 
 // Dart imports:
 import 'dart:convert';
@@ -15,14 +14,14 @@ String simplePriceEurResponseToJson(SimplePriceEurResponse data) =>
 
 class SimplePriceEurResponse {
   SimplePriceEurResponse({
-    this.bismuth,
+    required this.bismuth,
   });
 
   Bismuth bismuth;
 
   factory SimplePriceEurResponse.fromJson(Map<String, dynamic> json) =>
       SimplePriceEurResponse(
-        bismuth: Bismuth.fromJson(json['bismuth']),
+        bismuth: Bismuth.fromJson(json['bismuth'] ?? {}),
       );
 
   Map<String, dynamic> toJson() => {
@@ -32,13 +31,13 @@ class SimplePriceEurResponse {
 
 class Bismuth {
   Bismuth({
-    this.eur,
+    required this.eur,
   });
 
   double eur;
 
   factory Bismuth.fromJson(Map<String, dynamic> json) => Bismuth(
-        eur: json["eur"].toDouble(),
+        eur: (json["eur"] ?? 0.0).toDouble(),
       );
 
   Map<String, dynamic> toJson() => {

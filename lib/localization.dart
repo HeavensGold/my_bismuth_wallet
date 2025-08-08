@@ -1,4 +1,4 @@
-// @dart=2.9
+
 
 // Dart imports:
 import 'dart:async';
@@ -32,7 +32,7 @@ class AppLocalization {
   }
 
   static AppLocalization of(BuildContext context) {
-    return Localizations.of<AppLocalization>(context, AppLocalization);
+    return Localizations.of<AppLocalization>(context, AppLocalization) ?? AppLocalization();
   }
 
   /// -- GENERIC ITEMS
@@ -322,7 +322,7 @@ class AppLocalization {
 
   String get enterExplorerUrlInfo {
     return Intl.message(
-        '(ex: https://bismuth.online/search?quicksearch=%1\n"%1" will be replaced by BIS address)',
+        '(ex: https://bismuth.im/search?quicksearch=%1\n"%1" will be replaced by BIS address)',
         desc: '',
         name: 'enterExplorerUrlInfo');
   }
@@ -1307,7 +1307,7 @@ class AppLocalization {
   }
 
   String get explorerUrlByDefault {
-    return 'https://bismuth.online/search?quicksearch=%1';
+    return 'https://bismuth.im/search?quicksearch=%1';
   }
 
   /// -- END NON-TRANSLATABLE ITEMS
@@ -1320,7 +1320,7 @@ class AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalization> {
 
   @override
   bool isSupported(Locale locale) {
-    return languageSetting != null;
+    return true;
   }
 
   @override

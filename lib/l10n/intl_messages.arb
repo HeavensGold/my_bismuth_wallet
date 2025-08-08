@@ -406,7 +406,7 @@
     "placeholders_order": [],
     "placeholders": {}
   },
-  "enterExplorerUrlInfo": "(ex: https://bismuth.online/search?quicksearch=%1\n\"%1\" will be replaced by BIS address)",
+  "enterExplorerUrlInfo": "(ex: https://bismuth.im/search?quicksearch=%1\n\"%1\" will be replaced by BIS address)",
   "@enterExplorerUrlInfo": {
     "description": "",
     "type": "text",

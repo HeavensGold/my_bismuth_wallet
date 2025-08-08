@@ -1,4 +1,4 @@
-// @dart=2.9
+
 
 // Dart imports:
 import 'dart:async';
@@ -8,7 +8,6 @@ import 'package:flutter/material.dart';
 
 // Package imports:
 import 'package:event_taxi/event_taxi.dart';
-import 'package:flutter_vibrate/flutter_vibrate.dart';
 import 'package:fluttericon/font_awesome5_icons.dart';
 import 'package:fluttericon/font_awesome_icons.dart';
 import 'package:fluttericon/iconic_icons.dart';
@@ -25,16 +24,17 @@ import 'package:my_bismuth_wallet/model/authentication_method.dart';
 import 'package:my_bismuth_wallet/model/available_currency.dart';
 import 'package:my_bismuth_wallet/model/available_language.dart';
 import 'package:my_bismuth_wallet/model/db/appdb.dart';
+import 'package:my_bismuth_wallet/model/db/hiveDB.dart';
 import 'package:my_bismuth_wallet/model/device_lock_timeout.dart';
 import 'package:my_bismuth_wallet/model/device_unlock_option.dart';
 import 'package:my_bismuth_wallet/model/vault.dart';
-import 'package:my_bismuth_wallet/service/dragginator_service.dart';
+// import 'package:my_bismuth_wallet/service/dragginator_service.dart'; // Deleted
 import 'package:my_bismuth_wallet/service_locator.dart';
 import 'package:my_bismuth_wallet/styles.dart';
 import 'package:my_bismuth_wallet/ui/accounts/accountdetails_sheet.dart';
 import 'package:my_bismuth_wallet/ui/accounts/accounts_sheet.dart';
-import 'package:my_bismuth_wallet/ui/dragginator/my_dragginator_breeding_list.dart';
-import 'package:my_bismuth_wallet/ui/dragginator/my_dragginator_merging.dart';
+// import 'package:my_bismuth_wallet/ui/dragginator/my_dragginator_breeding_list.dart'; // Deleted
+// import 'package:my_bismuth_wallet/ui/dragginator/my_dragginator_merging.dart'; // Deleted
 import 'package:my_bismuth_wallet/ui/send/send_confirm_sheet.dart';
 import 'package:my_bismuth_wallet/ui/settings/backupseed_sheet.dart';
 import 'package:my_bismuth_wallet/ui/settings/contacts_widget.dart';
@@ -42,7 +42,7 @@ import 'package:my_bismuth_wallet/ui/settings/custom_url_widget.dart';
 import 'package:my_bismuth_wallet/ui/settings/disable_password_sheet.dart';
 import 'package:my_bismuth_wallet/ui/settings/set_password_sheet.dart';
 import 'package:my_bismuth_wallet/ui/settings/settings_list_item.dart';
-import 'package:my_bismuth_wallet/ui/settings/tokens_widget.dart';
+// import 'package:my_bismuth_wallet/ui/settings/tokens_widget.dart'; // Deleted
 import 'package:my_bismuth_wallet/ui/util/ui_util.dart';
 import 'package:my_bismuth_wallet/ui/widgets/app_simpledialog.dart';
 import 'package:my_bismuth_wallet/ui/widgets/security.dart';
@@ -50,8 +50,6 @@ import 'package:my_bismuth_wallet/ui/widgets/sheet_util.dart';
 import 'package:my_bismuth_wallet/util/biometrics.dart';
 import 'package:my_bismuth_wallet/util/hapticutil.dart';
 import 'package:my_bismuth_wallet/util/sharedprefsutil.dart';
-import '../../appstate_container.dart';
-import '../../util/sharedprefsutil.dart';
 
 class SettingsSheet extends StatefulWidget {
   final int eggPrice;
@@ -62,16 +60,12 @@ class SettingsSheet extends StatefulWidget {
 
 class _SettingsSheetState extends State<SettingsSheet>
     with TickerProviderStateMixin, WidgetsBindingObserver {
-  AnimationController _controller;
-  Animation<Offset> _offsetFloat;
-  AnimationController _securityController;
-  Animation<Offset> _securityOffsetFloat;
-  AnimationController _tokensListController;
-  Animation<Offset> _tokensListOffsetFloat;
-  AnimationController _customUrlController;
-  Animation<Offset> _customUrlOffsetFloat;
-  AnimationController _dragginatorController;
-  Animation<Offset> _dragginatorOffsetFloat;
+  late AnimationController _controller;
+  late Animation<Offset> _offsetFloat;
+  late AnimationController _securityController;
+  late Animation<Offset> _securityOffsetFloat;
+  late AnimationController _customUrlController;
+  late Animation<Offset> _customUrlOffsetFloat;
 
   String versionString = "";
 
@@ -83,16 +77,12 @@ class _SettingsSheetState extends State<SettingsSheet>
   LockTimeoutSetting _curTimeoutSetting =
       LockTimeoutSetting(LockTimeoutOption.ONE);
 
-  bool _securityOpen;
-  bool _loadingAccounts;
+  late bool _securityOpen;
+  late bool _loadingAccounts;
 
-  bool _contactsOpen;
+  late bool _contactsOpen;
 
-  bool _tokensListOpen;
-
-  bool _customUrlOpen;
-
-  bool _dragginatorOpen;
+  late bool _customUrlOpen;
 
   bool notNull(Object o) => o != null;
 
@@ -101,11 +91,9 @@ class _SettingsSheetState extends State<SettingsSheet>
     super.initState();
 
     _contactsOpen = false;
-    _tokensListOpen = false;
     _securityOpen = false;
     _loadingAccounts = false;
     _customUrlOpen = false;
-    _dragginatorOpen = false;
     // Determine if they have face or fingerprint enrolled, if not hide the setting
     sl.get<BiometricUtil>().hasBiometrics().then((bool hasBiometrics) {
       setState(() {
@@ -141,15 +129,6 @@ class _SettingsSheetState extends State<SettingsSheet>
       vsync: this,
       duration: const Duration(milliseconds: 220),
     );
-    _dragginatorController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 220),
-    );
-    // For token list menu
-    _tokensListController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 220),
-    );
     // For customUrl menu
     _customUrlController = AnimationController(
       vsync: this,
@@ -161,12 +140,6 @@ class _SettingsSheetState extends State<SettingsSheet>
     _securityOffsetFloat =
         Tween<Offset>(begin: Offset(1.1, 0), end: Offset(0, 0))
             .animate(_securityController);
-    _dragginatorOffsetFloat =
-        Tween<Offset>(begin: Offset(1.1, 0), end: Offset(0, 0))
-            .animate(_dragginatorController);
-    _tokensListOffsetFloat =
-        Tween<Offset>(begin: Offset(1.1, 0), end: Offset(0, 0))
-            .animate(_tokensListController);
     _customUrlOffsetFloat =
         Tween<Offset>(begin: Offset(1.1, 0), end: Offset(0, 0))
             .animate(_customUrlController);
@@ -182,8 +155,6 @@ class _SettingsSheetState extends State<SettingsSheet>
   void dispose() {
     _controller.dispose();
     _securityController.dispose();
-    _dragginatorController.dispose();
-    _tokensListController.dispose();
     _customUrlController.dispose();
     super.dispose();
   }
@@ -260,6 +231,8 @@ class _SettingsSheetState extends State<SettingsSheet>
           });
         });
         break;
+      case null:
+        break;
     }
   }
 
@@ -314,11 +287,13 @@ class _SettingsSheetState extends State<SettingsSheet>
           });
         });
         break;
+      case null:
+        break;
     }
   }
 
   List<Widget> _buildCurrencyOptions() {
-    List<Widget> ret = new List();
+    List<Widget> ret = <Widget>[];
     AvailableCurrencyEnum.values.forEach((AvailableCurrencyEnum value) {
       ret.add(SimpleDialogOption(
         onPressed: () {
@@ -337,7 +312,7 @@ class _SettingsSheetState extends State<SettingsSheet>
   }
 
   Future<void> _currencyDialog() async {
-    AvailableCurrencyEnum selection =
+    AvailableCurrencyEnum? selection =
         await showAppDialog<AvailableCurrencyEnum>(
             context: context,
             builder: (BuildContext context) {
@@ -367,10 +342,10 @@ class _SettingsSheetState extends State<SettingsSheet>
         }
       });
     }
-  }
+    }
 
   List<Widget> _buildLanguageOptions() {
-    List<Widget> ret = new List();
+    List<Widget> ret = <Widget>[];
     AvailableLanguage.values.forEach((AvailableLanguage value) {
       ret.add(SimpleDialogOption(
         onPressed: () {
@@ -389,7 +364,7 @@ class _SettingsSheetState extends State<SettingsSheet>
   }
 
   Future<void> _languageDialog() async {
-    AvailableLanguage selection = await showAppDialog<AvailableLanguage>(
+    AvailableLanguage? selection = await showAppDialog<AvailableLanguage>(
         context: context,
         builder: (BuildContext context) {
           return AppSimpleDialog(
@@ -416,10 +391,10 @@ class _SettingsSheetState extends State<SettingsSheet>
         }
       });
     }
-  }
+    }
 
   List<Widget> _buildLockTimeoutOptions() {
-    List<Widget> ret = new List();
+    List<Widget> ret = <Widget>[];
     LockTimeoutOption.values.forEach((LockTimeoutOption value) {
       ret.add(SimpleDialogOption(
         onPressed: () {
@@ -438,7 +413,7 @@ class _SettingsSheetState extends State<SettingsSheet>
   }
 
   Future<void> _lockTimeoutDialog() async {
-    LockTimeoutOption selection = await showAppDialog<LockTimeoutOption>(
+    LockTimeoutOption? selection = await showAppDialog<LockTimeoutOption>(
         context: context,
         builder: (BuildContext context) {
           return AppSimpleDialog(
@@ -452,21 +427,23 @@ class _SettingsSheetState extends State<SettingsSheet>
             children: _buildLockTimeoutOptions(),
           );
         });
-    sl
-        .get<SharedPrefsUtil>()
-        .setLockTimeout(LockTimeoutSetting(selection))
-        .then((result) {
-      if (_curTimeoutSetting.setting != selection) {
-        sl
-            .get<SharedPrefsUtil>()
-            .setLockTimeout(LockTimeoutSetting(selection))
-            .then((_) {
-          setState(() {
-            _curTimeoutSetting = LockTimeoutSetting(selection);
+    if (selection != null) {
+      sl
+          .get<SharedPrefsUtil>()
+          .setLockTimeout(LockTimeoutSetting(selection))
+          .then((result) {
+        if (_curTimeoutSetting.setting != selection) {
+          sl
+              .get<SharedPrefsUtil>()
+              .setLockTimeout(LockTimeoutSetting(selection))
+              .then((_) {
+            setState(() {
+              _curTimeoutSetting = LockTimeoutSetting(selection);
+            });
           });
-        });
-      }
-    });
+        }
+      });
+    }
   }
 
   Future<bool> _onBackButtonPressed() async {
@@ -481,18 +458,6 @@ class _SettingsSheetState extends State<SettingsSheet>
         _securityOpen = false;
       });
       _securityController.reverse();
-      return false;
-    } else if (_dragginatorOpen) {
-      setState(() {
-        _dragginatorOpen = false;
-      });
-      _dragginatorController.reverse();
-      return false;
-    } else if (_tokensListOpen) {
-      setState(() {
-        _tokensListOpen = false;
-      });
-      _tokensListController.reverse();
       return false;
     } else if (_customUrlOpen) {
       setState(() {
@@ -509,8 +474,15 @@ class _SettingsSheetState extends State<SettingsSheet>
     // Drawer in flutter doesn't have a built-in way to push/pop elements
     // on top of it like our Android counterpart. So we can override back button
     // presses and replace the main settings widget with contacts based on a bool
-    return new WillPopScope(
-      onWillPop: _onBackButtonPressed,
+    return new PopScope(
+      onPopInvokedWithResult: (didPop, result) async {
+        if (!didPop) {
+          bool shouldPop = await _onBackButtonPressed();
+          if (shouldPop && context.mounted) {
+            Navigator.of(context).pop();
+          }
+        }
+      },
       child: ClipRect(
         child: Stack(
           children: <Widget>[
@@ -525,12 +497,6 @@ class _SettingsSheetState extends State<SettingsSheet>
             SlideTransition(
                 position: _securityOffsetFloat,
                 child: buildSecurityMenu(context)),
-            SlideTransition(
-                position: _dragginatorOffsetFloat,
-                child: buildDragginatorMenu(context)),
-            SlideTransition(
-                position: _tokensListOffsetFloat,
-                child: TokensList(_tokensListController, _tokensListOpen)),
             SlideTransition(
                 position: _customUrlOffsetFloat,
                 child: CustomUrl(_customUrlController, _customUrlOpen)),
@@ -587,23 +553,23 @@ class _SettingsSheetState extends State<SettingsSheet>
                                   backgroundImage: NetworkImage(
                                     StateContainer.of(context)
                                                     .selectedAccount
-                                                    .dragginatorDna ==
+                                                    ?.dragginatorDna ==
                                                 null ||
                                             StateContainer.of(context)
                                                     .selectedAccount
-                                                    .dragginatorDna ==
+                                                    ?.dragginatorDna ==
                                                 ""
                                         ? UIUtil.getRobohashURL(
                                             StateContainer.of(context)
                                                 .selectedAccount
-                                                .address)
+                                                ?.address ?? "")
                                         : UIUtil.getDragginatorURL(
                                             StateContainer.of(context)
                                                 .selectedAccount
-                                                .dragginatorDna,
+                                                ?.dragginatorDna ?? "",
                                             StateContainer.of(context)
                                                 .selectedAccount
-                                                .dragginatorStatus),
+                                                ?.dragginatorStatus ?? ""),
                                   ),
                                   radius: 50.0,
                                 ),
@@ -650,23 +616,23 @@ class _SettingsSheetState extends State<SettingsSheet>
                                             backgroundImage: NetworkImage(
                                               StateContainer.of(context)
                                                               .recentLast
-                                                              .dragginatorDna ==
+                                                              ?.dragginatorDna ==
                                                           null ||
                                                       StateContainer.of(context)
                                                               .recentLast
-                                                              .dragginatorDna ==
+                                                              ?.dragginatorDna ==
                                                           ""
                                                   ? UIUtil.getRobohashURL(
                                                       StateContainer.of(context)
                                                           .recentLast
-                                                          .address)
+                                                          ?.address ?? "")
                                                   : UIUtil.getDragginatorURL(
                                                       StateContainer.of(context)
                                                           .recentLast
-                                                          .dragginatorDna,
+                                                          ?.dragginatorDna ?? "",
                                                       StateContainer.of(context)
                                                           .recentLast
-                                                          .dragginatorStatus),
+                                                          ?.dragginatorStatus ?? ""),
                                             ),
                                             radius: 50.0,
                                           ),
@@ -683,7 +649,7 @@ class _SettingsSheetState extends State<SettingsSheet>
                                                   .get<DBHelper>()
                                                   .changeAccount(
                                                       StateContainer.of(context)
-                                                          .recentLast)
+                                                          .recentLast!)
                                                   .then((_) {
                                                 EventTaxiImpl.singleton().fire(
                                                     AccountChangedEvent(
@@ -723,23 +689,23 @@ class _SettingsSheetState extends State<SettingsSheet>
                                             backgroundImage: NetworkImage(
                                               StateContainer.of(context)
                                                               .recentSecondLast
-                                                              .dragginatorDna ==
+                                                              ?.dragginatorDna ==
                                                           null ||
                                                       StateContainer.of(context)
                                                               .recentSecondLast
-                                                              .dragginatorDna ==
+                                                              ?.dragginatorDna ==
                                                           ""
                                                   ? UIUtil.getRobohashURL(
                                                       StateContainer.of(context)
                                                           .recentSecondLast
-                                                          .address)
+                                                          ?.address ?? "")
                                                   : UIUtil.getDragginatorURL(
                                                       StateContainer.of(context)
                                                           .recentSecondLast
-                                                          .dragginatorDna,
+                                                          ?.dragginatorDna ?? "",
                                                       StateContainer.of(context)
                                                           .recentSecondLast
-                                                          .dragginatorStatus),
+                                                          ?.dragginatorStatus ?? ""),
                                             ),
                                             radius: 50.0,
                                           ),
@@ -756,7 +722,7 @@ class _SettingsSheetState extends State<SettingsSheet>
                                                   .get<DBHelper>()
                                                   .changeAccount(
                                                       StateContainer.of(context)
-                                                          .recentSecondLast)
+                                                          .recentSecondLast!)
                                                   .then((_) {
                                                 EventTaxiImpl.singleton().fire(
                                                     AccountChangedEvent(
@@ -787,25 +753,31 @@ class _SettingsSheetState extends State<SettingsSheet>
                               shape: BoxShape.circle,
                             ),
                             child: TextButton(
-                              onPressed: () {
+                              onPressed: () async {
                                 if (!_loadingAccounts) {
                                   setState(() {
                                     _loadingAccounts = true;
                                   });
-                                  StateContainer.of(context)
-                                      .getSeed()
-                                      .then((seed) {
-                                    sl
-                                        .get<DBHelper>()
-                                        .getAccounts(seed)
-                                        .then((accounts) {
-                                      setState(() {
-                                        _loadingAccounts = false;
-                                      });
-                                      AppAccountsSheet(accounts)
-                                          .mainBottomSheet(context);
+                                  try {
+                                    String seed;
+                                    try {
+                                      seed = await StateContainer.of(context).getSeed();
+                                    } catch (e) {
+                                      seed = await sl.get<Vault>().getSeed();
+                                    }
+                                    
+                                    List<Account> accounts = await sl.get<DBHelper>().getAccounts(seed);
+                                    setState(() {
+                                      _loadingAccounts = false;
                                     });
-                                  });
+                                    AppAccountsSheet(accounts).mainBottomSheet(context);
+                                  } catch (e) {
+                                    setState(() {
+                                      _loadingAccounts = false;
+                                    });
+                                    // Handle error - could show a message to user
+                                    print("Error loading accounts: $e");
+                                  }
                                 }
                               },
                               child: Icon(Typicons.users_outline,
@@ -838,7 +810,7 @@ class _SettingsSheetState extends State<SettingsSheet>
                           // Main account name
                           Container(
                             child: Text(
-                              StateContainer.of(context).selectedAccount.name,
+                              StateContainer.of(context).selectedAccount?.name ?? "",
                               style: TextStyle(
                                 fontFamily: "Roboto",
                                 fontWeight: FontWeight.w600,
@@ -850,12 +822,11 @@ class _SettingsSheetState extends State<SettingsSheet>
                           // Main account address
                           Container(
                             child: Text(
-                              StateContainer.of(context).wallet != null &&
-                                      StateContainer.of(context)
+                              StateContainer.of(context)
                                               .wallet
-                                              .address !=
+                                              ?.address !=
                                           null
-                                  ? StateContainer.of(context).wallet?.address
+                                  ? StateContainer.of(context).wallet?.address ?? ""
                                   : "",
                               style: TextStyle(
                                 fontFamily: "OverpassMono",
@@ -890,46 +861,6 @@ class _SettingsSheetState extends State<SettingsSheet>
                               color:
                                   StateContainer.of(context).curTheme.text60)),
                     ),
-                    Divider(
-                      height: 2,
-                      color: StateContainer.of(context).curTheme.text15,
-                    ),
-                    AppSettings.buildSettingsListItemSingleLine(
-                        context,
-                        AppLocalization.of(context).tokensListHeader,
-                        Iconic.list_nested, onPressed: () {
-                      setState(() {
-                        _tokensListOpen = true;
-                      });
-                      _tokensListController.forward();
-                    }),
-                    Divider(
-                      height: 2,
-                      color: StateContainer.of(context).curTheme.text15,
-                    ),
-                    Container(
-                      margin: EdgeInsetsDirectional.only(
-                          start: 30.0, top: 20.0, bottom: 10.0),
-                      child: Text(AppLocalization.of(context).letsPlay,
-                          style: TextStyle(
-                              fontSize: 16.0,
-                              fontWeight: FontWeight.w100,
-                              color:
-                                  StateContainer.of(context).curTheme.text60)),
-                    ),
-                    Divider(
-                      height: 2,
-                      color: StateContainer.of(context).curTheme.text15,
-                    ),
-                    AppSettings.buildSettingsListItemSingleLine(
-                        context,
-                        AppLocalization.of(context).dragginatorHeader,
-                        FontAwesome5.dragon, onPressed: () {
-                      setState(() {
-                        _dragginatorOpen = true;
-                      });
-                      _dragginatorController.forward();
-                    }),
                     Divider(
                       height: 2,
                       color: StateContainer.of(context).curTheme.text15,
@@ -980,10 +911,15 @@ class _SettingsSheetState extends State<SettingsSheet>
                                   AppLocalization.of(context)
                                       .fingerprintSeedBackup);
                           if (authenticated) {
-                            sl.get<HapticUtil>().feedback(FeedbackType.success);
-                            StateContainer.of(context).getSeed().then((seed) {
+                            HapticUtil.lightFeedback();
+                            try {
+                              // For backup, get seed directly from vault after biometric authentication
+                              String seed = await sl.get<Vault>().getSeed();
                               AppSeedBackupSheet(seed).mainBottomSheet(context);
-                            });
+                            } catch (e) {
+                              print("Error getting seed for backup: $e");
+                              await authenticateWithPin();
+                            }
                           }
                         } catch (e) {
                           await authenticateWithPin();
@@ -1147,212 +1083,6 @@ class _SettingsSheetState extends State<SettingsSheet>
     );
   }
 
-  Widget buildDragginatorMenu(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: StateContainer.of(context).curTheme.backgroundDark,
-        boxShadow: [
-          BoxShadow(
-              color: StateContainer.of(context).curTheme.overlay30,
-              offset: Offset(-5, 0),
-              blurRadius: 20),
-        ],
-      ),
-      child: SafeArea(
-        minimum: EdgeInsets.only(
-          top: 60,
-        ),
-        child: Column(
-          children: <Widget>[
-            // Back button
-            Container(
-              margin: EdgeInsets.only(bottom: 10.0, top: 5),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: <Widget>[
-                  Row(
-                    children: <Widget>[
-                      //Back button
-                      Container(
-                        height: 40,
-                        width: 40,
-                        margin: EdgeInsets.only(right: 10, left: 10),
-                        child: TextButton(
-                            onPressed: () {
-                              setState(() {
-                                _dragginatorOpen = false;
-                              });
-                              _dragginatorController.reverse();
-                            },
-                            child: Icon(AppIcons.back,
-                                color: StateContainer.of(context).curTheme.text,
-                                size: 24)),
-                      ),
-                      Text(
-                        AppLocalization.of(context).dragginatorHeader,
-                        style: AppStyles.textStyleSettingsHeader(context),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            Expanded(
-                child: Stack(
-              children: <Widget>[
-                ListView(
-                  padding: EdgeInsets.only(top: 15.0),
-                  children: <Widget>[
-                    Container(
-                      margin:
-                          EdgeInsetsDirectional.only(start: 30.0, bottom: 10),
-                      child: Text(AppLocalization.of(context).manage,
-                          style: TextStyle(
-                              fontSize: 16.0,
-                              fontWeight: FontWeight.w100,
-                              color:
-                                  StateContainer.of(context).curTheme.text60)),
-                    ),
-                    Divider(
-                      height: 2,
-                      color: StateContainer.of(context).curTheme.text15,
-                    ),
-                    AppSettings.buildSettingsListItemSingleLine(
-                        context,
-                        AppLocalization.of(context)
-                            .dragginatorBreedingListHeader,
-                        FontAwesome5.list, onPressed: () {
-                      Sheets.showAppHeightNineSheet(
-                          context: context,
-                          widget: MyDragginatorBreedingList(
-                              StateContainer.of(context)
-                                  .selectedAccount
-                                  .address));
-                    }),
-                    Divider(
-                      height: 2,
-                      color: StateContainer.of(context).curTheme.text15,
-                    ),
-                    AppSettings.buildSettingsListItemSingleLine(
-                        context,
-                        AppLocalization.of(context).dragginatorMergingHeader,
-                        Typicons.flow_merge, onPressed: () {
-                      Sheets.showAppHeightNineSheet(
-                          context: context,
-                          widget: MyDragginatorMerging(
-                              StateContainer.of(context)
-                                  .selectedAccount
-                                  .address));
-                    }),
-                    sl.get<DragginatorService>().isEggOwner(
-                                StateContainer.of(context).wallet.tokens) ==
-                            false
-                        ? SizedBox()
-                        : Divider(
-                            height: 2,
-                            color: StateContainer.of(context).curTheme.text15,
-                          ),
-                    sl.get<DragginatorService>().isEggOwner(
-                                StateContainer.of(context).wallet.tokens) ==
-                            false
-                        ? SizedBox()
-                        : AppSettings.buildSettingsListItemSingleLine(
-                            context,
-                            AppLocalization.of(context)
-                                .dragginatorGetEggWithEggHeader,
-                            FontAwesome5.egg, onPressed: () {
-                            Sheets.showAppHeightNineSheet(
-                                context: context,
-                                widget: SendConfirmSheet(
-                                    title: AppLocalization.of(context)
-                                        .dragginatorGetEggWithEggHeader,
-                                    amountRaw: "0",
-                                    operation: "token:transfer",
-                                    openfield: "egg:1",
-                                    comment: "",
-                                    destination: AppLocalization.of(context)
-                                        .dragginatorAddress,
-                                    contactName: ""));
-                          }),
-                    Divider(
-                      height: 2,
-                      color: StateContainer.of(context).curTheme.text15,
-                    ),
-                    AppSettings.buildSettingsListItemSingleLine(
-                        context,
-                        AppLocalization.of(context)
-                            .dragginatorGetEggWithBisHeader
-                            .replaceAll('%1', widget.eggPrice.toString()),
-                        FontAwesome5.money_bill_wave, onPressed: () {
-                      Sheets.showAppHeightNineSheet(
-                          context: context,
-                          widget: SendConfirmSheet(
-                              title: AppLocalization.of(context)
-                                  .dragginatorGetEggWithBisHeader
-                                  .replaceAll('%1', widget.eggPrice.toString()),
-                              amountRaw: widget.eggPrice.toString(),
-                              operation: "",
-                              openfield: "",
-                              comment: "",
-                              destination: AppLocalization.of(context)
-                                  .dragginatorAddress,
-                              contactName: ""));
-                    }),
-                    /*Divider(
-                      height: 2,
-                      color: StateContainer.of(context).curTheme.text15,
-                    ),
-                    AppSettings.buildSettingsListItemSingleLineWithInfos(
-                        context,
-                        AppLocalization.of(context).dragginatorMarketPlace,
-                        "It's a virtual marketplace where Egg owners can freely (as in beer) list their eggs to be sold. Other users then can buy those eggs, and Dragginator acts as an Escrow service.",
-                        FontAwesome5.shopping_cart, onPressed: () {
-                      AppDialogs.showInfoDialog(
-                        context,
-                        AppLocalization.of(context).dragginatorMarketPlace,
-                        "Soon...",
-                      );
-                    }),*/
-                    Divider(
-                      height: 2,
-                      color: StateContainer.of(context).curTheme.text15,
-                    ),
-                    AppSettings.buildSettingsListItemSingleLine(
-                        context,
-                        AppLocalization.of(context).dragginatorHelp,
-                        FontAwesome.help_circled, onPressed: () {
-                      Navigator.of(context).push(
-                          MaterialPageRoute(builder: (BuildContext context) {
-                        return UIUtil.showDragginatorHelp(context);
-                      }));
-                    }),
-                  ].where(notNull).toList(),
-                ),
-                //List Top Gradient End
-                Align(
-                  alignment: Alignment.topCenter,
-                  child: Container(
-                    height: 20.0,
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          StateContainer.of(context).curTheme.backgroundDark,
-                          StateContainer.of(context).curTheme.backgroundDark00
-                        ],
-                        begin: AlignmentDirectional(0.5, -1.0),
-                        end: AlignmentDirectional(0.5, 1.0),
-                      ),
-                    ),
-                  ),
-                ), //List Top Gradient End
-              ],
-            )),
-          ],
-        ),
-      ),
-    );
-  }
 
   Widget buildSecurityMenu(BuildContext context) {
     return Container(
@@ -1422,20 +1152,18 @@ class _SettingsSheetState extends State<SettingsSheet>
                                   StateContainer.of(context).curTheme.text60)),
                     ),
                     // Authentication Method
-                    _hasBiometrics
-                        ? Divider(
-                            height: 2,
-                            color: StateContainer.of(context).curTheme.text15,
-                          )
-                        : null,
-                    _hasBiometrics
-                        ? AppSettings.buildSettingsListItemDoubleLine(
-                            context,
-                            AppLocalization.of(context).authMethod,
-                            _curAuthMethod,
-                            AppIcons.fingerprint,
-                            _authMethodDialog)
-                        : null,
+                    if (_hasBiometrics) ...[  
+                      Divider(
+                        height: 2,
+                        color: StateContainer.of(context).curTheme.text15,
+                      ),
+                      AppSettings.buildSettingsListItemDoubleLine(
+                          context,
+                          AppLocalization.of(context).authMethod,
+                          _curAuthMethod,
+                          AppIcons.fingerprint,
+                          _authMethodDialog),
+                    ],
                     // Authenticate on Launch
                     StateContainer.of(context).encryptedSecret == null
                         ? Column(children: <Widget>[
@@ -1538,12 +1266,23 @@ class _SettingsSheetState extends State<SettingsSheet>
         description: AppLocalization.of(context).pinSeedBackup,
       );
     }));
-    if (auth != null && auth) {
+    if (auth) {
       await Future.delayed(Duration(milliseconds: 200));
       Navigator.of(context).pop();
-      StateContainer.of(context).getSeed().then((seed) {
+      try {
+        // For backup, get seed directly from vault after PIN authentication
+        String seed = await sl.get<Vault>().getSeed();
         AppSeedBackupSheet(seed).mainBottomSheet(context);
-      });
+      } catch (e) {
+        print("Error getting seed for backup: $e");
+        // Show error dialog if seed retrieval fails
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Error accessing wallet seed. Please try again."),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 }

@@ -1,8 +1,7 @@
-// @dart=2.9
+
 
 // Flutter imports:
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 
 // Package imports:
 import 'package:auto_size_text/auto_size_text.dart';
@@ -69,9 +68,9 @@ class _AppShareCardState extends State<AppShareCard> {
                       child: Container(
                         height: 60,
                         width: 60,
-                        child: QrImage(
+                        child: QrImageView(
                           padding: EdgeInsets.all(0.0),
-                          data: StateContainer.of(context).wallet.address,
+                          data: StateContainer.of(context).wallet?.address ?? '',
                           version: 6,
                           gapless: false,
                           errorCorrectionLevel: QrErrorCorrectLevel.Q,
@@ -130,7 +129,7 @@ class _AppShareCardState extends State<AppShareCard> {
                           backgroundImage: NetworkImage(
                             UIUtil.getRobohashURL(StateContainer.of(context)
                                 .selectedAccount
-                                .address),
+                                ?.address ?? ''),
                           ),
                           radius: 50.0,
                         ),
@@ -203,9 +202,9 @@ class _AppShareCardState extends State<AppShareCard> {
                               children: [
                                 // Primary part of the first row
                                 TextSpan(
-                                  text: StateContainer.of(context)
+                                  text: (StateContainer.of(context)
                                       .wallet
-                                      .address
+                                      ?.address ?? '')
                                       .substring(0, 12),
                                   style: TextStyle(
                                     color: StateContainer.of(context)
@@ -218,9 +217,9 @@ class _AppShareCardState extends State<AppShareCard> {
                                   ),
                                 ),
                                 TextSpan(
-                                  text: StateContainer.of(context)
+                                  text: (StateContainer.of(context)
                                       .wallet
-                                      .address
+                                      ?.address ?? '')
                                       .substring(12, 16),
                                   style: TextStyle(
                                     color: StateContainer.of(context)
@@ -249,9 +248,9 @@ class _AppShareCardState extends State<AppShareCard> {
                         Container(
                           width: 97,
                           child: AutoSizeText(
-                            StateContainer.of(context)
+                            (StateContainer.of(context)
                                 .wallet
-                                .address
+                                ?.address ?? '')
                                 .substring(16, 32),
                             minFontSize: 1.0,
                             stepGranularity: 0.1,
@@ -270,9 +269,9 @@ class _AppShareCardState extends State<AppShareCard> {
                         Container(
                           width: 97,
                           child: AutoSizeText(
-                            StateContainer.of(context)
+                            (StateContainer.of(context)
                                 .wallet
-                                .address
+                                ?.address ?? '')
                                 .substring(32, 48),
                             minFontSize: 1.0,
                             stepGranularity: 0.1,
@@ -295,9 +294,9 @@ class _AppShareCardState extends State<AppShareCard> {
                               children: [
                                 // Text colored part of the last row
                                 TextSpan(
-                                  text: StateContainer.of(context)
+                                  text: (StateContainer.of(context)
                                       .wallet
-                                      .address
+                                      ?.address ?? '')
                                       .substring(48, 59),
                                   style: TextStyle(
                                     color: StateContainer.of(context)
@@ -311,9 +310,9 @@ class _AppShareCardState extends State<AppShareCard> {
                                 ),
                                 // Primary colored part of the last row
                                 TextSpan(
-                                  text: StateContainer.of(context)
+                                  text: (StateContainer.of(context)
                                       .wallet
-                                      .address
+                                      ?.address ?? '')
                                       .substring(59),
                                   style: TextStyle(
                                     color: StateContainer.of(context)

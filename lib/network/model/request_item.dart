@@ -1,4 +1,4 @@
-// @dart=2.9
+
 
 // Dart imports:
 import 'dart:convert';
@@ -12,10 +12,10 @@ class RequestItem<T> {
   // After this time a request will expire
   static const int EXPIRE_TIME_S = 15;
 
-  DateTime _expireDt;
-  bool _isProcessing;
-  T _request;
-  bool fromTransfer;
+  late DateTime _expireDt;
+  late bool _isProcessing;
+  late T _request;
+  late bool fromTransfer;
 
   RequestItem(T request, {bool fromTransfer = false}) {
     _expireDt = DateTime.now().add(new Duration(seconds: EXPIRE_TIME_S));

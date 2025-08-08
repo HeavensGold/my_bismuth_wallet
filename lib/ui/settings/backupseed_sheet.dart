@@ -1,4 +1,4 @@
-// @dart=2.9
+
 
 // Dart imports:
 import 'dart:async';
@@ -24,14 +24,14 @@ import 'package:my_bismuth_wallet/util/app_ffi/keys/mnemonics.dart';
 import 'package:my_bismuth_wallet/util/caseconverter.dart';
 
 class AppSeedBackupSheet {
-  String _seed;
-  List<String> _mnemonic;
-  List<String> mnemonic;
-  bool showMnemonic;
-  bool _seedCopied;
-  Timer _seedCopiedTimer;
-  bool _mnemonicCopied;
-  Timer _mnemonicCopiedTimer;
+  String _seed = '';
+  List<String> _mnemonic = [];
+  List<String> mnemonic = [];
+  bool showMnemonic = false;
+  bool _seedCopied = false;
+  Timer? _seedCopiedTimer;
+  bool _mnemonicCopied = false;
+  Timer? _mnemonicCopiedTimer;
 
   AppSeedBackupSheet(String seed) {
     this._seed = seed;
@@ -177,10 +177,8 @@ class AppSeedBackupSheet {
                                     // Set copied style
                                     _mnemonicCopied = true;
                                   });
-                                  if (_mnemonicCopiedTimer != null) {
-                                    _mnemonicCopiedTimer.cancel();
-                                  }
-                                  _mnemonicCopiedTimer = new Timer(
+                                  _mnemonicCopiedTimer?.cancel();
+                                                                  _mnemonicCopiedTimer = new Timer(
                                       const Duration(milliseconds: 1000), () {
                                     try {
                                       setState(() {
@@ -211,10 +209,8 @@ class AppSeedBackupSheet {
                                     // Set copied style
                                     _seedCopied = true;
                                   });
-                                  if (_seedCopiedTimer != null) {
-                                    _seedCopiedTimer.cancel();
-                                  }
-                                  _seedCopiedTimer = new Timer(
+                                  _seedCopiedTimer?.cancel();
+                                                                  _seedCopiedTimer = new Timer(
                                       const Duration(milliseconds: 1000), () {
                                     setState(() {
                                       _seedCopied = false;

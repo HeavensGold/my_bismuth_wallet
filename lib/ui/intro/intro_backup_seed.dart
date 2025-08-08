@@ -1,4 +1,4 @@
-// @dart=2.9
+
 
 // Flutter imports:
 import 'package:flutter/material.dart';
@@ -26,36 +26,27 @@ import 'package:my_bismuth_wallet/util/app_ffi/keys/mnemonics.dart';
 class IntroBackupSeedPage extends StatefulWidget {
   final String encryptedSeed;
 
-  IntroBackupSeedPage({this.encryptedSeed}) : super();
+  IntroBackupSeedPage({required this.encryptedSeed}) : super();
 
   @override
   _IntroBackupSeedState createState() => _IntroBackupSeedState();
 }
 
 class _IntroBackupSeedState extends State<IntroBackupSeedPage> {
-  String _seed;
-  List<String> _mnemonic;
-  bool _showMnemonic;
+  late String _seed;
+  late List<String> _mnemonic;
+  late bool _showMnemonic;
 
   @override
   void initState() {
     super.initState();
-    if (widget.encryptedSeed == null) {
-      sl.get<Vault>().getSeed().then((seed) {
-        setState(() {
-          _seed = seed;
-          _mnemonic = AppMnemomics.seedToMnemonic(seed);
-        });
+    sl.get<Vault>().getSessionKey().then((key) {
+      setState(() {
+        _seed = HEX.encode(AppCrypt.decrypt(widget.encryptedSeed, key));
+        _mnemonic = AppMnemomics.seedToMnemonic(_seed);
       });
-    } else {
-      sl.get<Vault>().getSessionKey().then((key) {
-        setState(() {
-          _seed = HEX.encode(AppCrypt.decrypt(widget.encryptedSeed, key));
-          _mnemonic = AppMnemomics.seedToMnemonic(_seed);
-        });
-      });
-    }
-    _showMnemonic = true;
+    });
+      _showMnemonic = true;
   }
 
   @override
@@ -151,7 +142,7 @@ class _IntroBackupSeedState extends State<IntroBackupSeedPage> {
                       ),
                     ),
                     // Mnemonic word list
-                    _seed != null && _mnemonic != null
+                    _mnemonic != null
                         ? _showMnemonic
                             ? MnemonicDisplay(wordList: _mnemonic)
                             : PlainSeedDisplay(seed: _seed)

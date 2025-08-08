@@ -1,4 +1,4 @@
-// @dart=2.9
+
 
 // Dart imports:
 import 'dart:async';
@@ -35,9 +35,7 @@ import 'package:my_bismuth_wallet/ui/intro/intro_welcome.dart';
 import 'package:my_bismuth_wallet/ui/lock_screen.dart';
 import 'package:my_bismuth_wallet/ui/password_lock_screen.dart';
 import 'package:my_bismuth_wallet/ui/util/routes.dart';
-import 'package:my_bismuth_wallet/ui/widgets/dialog.dart';
 import 'package:my_bismuth_wallet/util/app_ffi/apputil.dart';
-import 'package:my_bismuth_wallet/util/caseconverter.dart';
 import 'package:my_bismuth_wallet/util/helpers.dart';
 import 'package:my_bismuth_wallet/util/sharedprefsutil.dart';
 
@@ -86,13 +84,14 @@ class _AppState extends State<App> {
         debugShowCheckedModeBanner: false,
         title: 'my Bismuth Wallet',
         theme: ThemeData(
-          dialogBackgroundColor:
-              StateContainer.of(context).curTheme.backgroundDark,
           primaryColor: StateContainer.of(context).curTheme.primary,
-          accentColor: StateContainer.of(context).curTheme.primary10,
-          backgroundColor: StateContainer.of(context).curTheme.backgroundDark,
           fontFamily: 'Roboto',
           brightness: Brightness.dark,
+          colorScheme: ColorScheme.fromSwatch(brightness: Brightness.dark).copyWith(
+            secondary: StateContainer.of(context).curTheme.primary10,
+            surface: StateContainer.of(context).curTheme.backgroundDark,
+          ),
+          dialogTheme: DialogThemeData(backgroundColor: StateContainer.of(context).curTheme.backgroundDark),
         ),
         localizationsDelegates: [
           AppLocalizationsDelegate(StateContainer.of(context).curLanguage),
@@ -100,8 +99,7 @@ class _AppState extends State<App> {
           GlobalCupertinoLocalizations.delegate,
           GlobalWidgetsLocalizations.delegate
         ],
-        locale: StateContainer.of(context).curLanguage == null ||
-                StateContainer.of(context).curLanguage.language ==
+        locale: StateContainer.of(context).curLanguage.language ==
                     AvailableLanguage.DEFAULT
             ? null
             : StateContainer.of(context).curLanguage.getLocale(),
@@ -179,13 +177,13 @@ class _AppState extends State<App> {
             case '/home':
               return NoTransitionRoute(
                 builder: (_) =>
-                    AppHomePage(priceConversion: settings.arguments),
+                    AppHomePage(priceConversion: settings.arguments as PriceConversion?),
                 settings: settings,
               );
             case '/home_transition':
               return NoPopTransitionRoute(
                 builder: (_) =>
-                    AppHomePage(priceConversion: settings.arguments),
+                    AppHomePage(priceConversion: settings.arguments as PriceConversion?),
                 settings: settings,
               );
             case '/intro_welcome':
@@ -195,18 +193,18 @@ class _AppState extends State<App> {
               );
             case '/intro_password_on_launch':
               return MaterialPageRoute(
-                builder: (_) => IntroPasswordOnLaunch(seed: settings.arguments),
+                builder: (_) => IntroPasswordOnLaunch(seed: settings.arguments as String),
                 settings: settings,
               );
             case '/intro_password':
               return MaterialPageRoute(
-                builder: (_) => IntroPassword(seed: settings.arguments),
+                builder: (_) => IntroPassword(seed: settings.arguments as String? ?? ""),
                 settings: settings,
               );
             case '/intro_backup':
               return MaterialPageRoute(
                 builder: (_) =>
-                    IntroBackupSeedPage(encryptedSeed: settings.arguments),
+                    IntroBackupSeedPage(encryptedSeed: settings.arguments as String? ?? ""),
                 settings: settings,
               );
             case '/intro_backup_safety':
@@ -262,13 +260,10 @@ class Splash extends StatefulWidget {
 }
 
 class SplashState extends State<Splash> with WidgetsBindingObserver {
-  bool _hasCheckedLoggedIn;
-  bool _retried;
+  bool _hasCheckedLoggedIn = false;
+  bool _retried = false;
 
   bool seedIsEncrypted(String seed) {
-    if (seed == null) {
-      return false;
-    }
     try {
       String salted = AppHelpers.bytesToUtf8String(
           AppHelpers.hexToBytes(seed.substring(0, 16)));
@@ -328,22 +323,17 @@ class SplashState extends State<Splash> with WidgetsBindingObserver {
       }
       await sl.get<SharedPrefsUtil>().setFirstLaunch();
       // See if logged in already
-      bool isLoggedIn = false;
       bool isEncrypted = false;
       var seed = await sl.get<Vault>().getSeed();
       var pin = await sl.get<Vault>().getPin();
       // If we have a seed set, but not a pin - or vice versa
       // Then delete the seed and pin from device and start over.
       // This would mean user did not complete the intro screen completely.
-      if (seed != null && pin != null) {
-        isLoggedIn = true;
+      bool isLoggedIn = seed != null && seed.isNotEmpty && pin != null && pin.isNotEmpty;
+      if (isLoggedIn) {
         isEncrypted = seedIsEncrypted(seed);
-      } else if (seed != null && pin == null) {
-        await sl.get<Vault>().deleteSeed();
-      } else if (pin != null && seed == null) {
-        await sl.get<Vault>().deletePin();
       }
-
+    
       if (isLoggedIn) {
         if (isEncrypted) {
           Navigator.of(context).pushReplacementNamed('/password_lock_screen');
@@ -358,6 +348,7 @@ class SplashState extends State<Splash> with WidgetsBindingObserver {
               .pushReplacementNamed('/home', arguments: conversion);
         }
       } else {
+        // No valid seed/pin found, go to intro welcome page
         Navigator.of(context).pushReplacementNamed('/intro_welcome');
       }
     } catch (e) {

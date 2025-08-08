@@ -1,4 +1,4 @@
-// @dart=2.9
+
 
 // Dart imports:
 import 'dart:async';
@@ -23,7 +23,7 @@ class PlainSeedDisplay extends StatefulWidget {
   final bool showButton;
 
   PlainSeedDisplay(
-      {@required this.seed, this.obscureSeed = false, this.showButton = true});
+      {required this.seed, this.obscureSeed = false, this.showButton = true});
 
   _PlainSeedDisplayState createState() => _PlainSeedDisplayState();
 }
@@ -31,9 +31,9 @@ class PlainSeedDisplay extends StatefulWidget {
 class _PlainSeedDisplayState extends State<PlainSeedDisplay> {
   static final String _obscuredSeed = '•' * 64;
 
-  bool _seedCopied;
-  bool _seedObscured;
-  Timer _seedCopiedTimer;
+  bool _seedCopied = false;
+  bool _seedObscured = true;
+  Timer? _seedCopiedTimer;
 
   @override
   void initState() {
@@ -120,10 +120,8 @@ class _PlainSeedDisplayState extends State<PlainSeedDisplay> {
                     setState(() {
                       _seedCopied = true;
                     });
-                    if (_seedCopiedTimer != null) {
-                      _seedCopiedTimer.cancel();
-                    }
-                    _seedCopiedTimer =
+                    _seedCopiedTimer?.cancel();
+                                      _seedCopiedTimer =
                         new Timer(const Duration(milliseconds: 1500), () {
                       setState(() {
                         _seedCopied = false;

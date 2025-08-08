@@ -1,4 +1,4 @@
-// @dart=2.9
+
 
 // Dart imports:
 import 'dart:async';
@@ -22,7 +22,7 @@ class MnemonicDisplay extends StatefulWidget {
   final bool showButton;
 
   MnemonicDisplay(
-      {@required this.wordList,
+      {required this.wordList,
       this.obscureSeed = false,
       this.showButton = true});
 
@@ -31,9 +31,9 @@ class MnemonicDisplay extends StatefulWidget {
 
 class _MnemonicDisplayState extends State<MnemonicDisplay> {
   static final List<String> _obscuredSeed = List.filled(24, '•' * 6);
-  bool _seedCopied;
-  bool _seedObscured;
-  Timer _seedCopiedTimer;
+  bool _seedCopied = false;
+  bool _seedObscured = true;
+  Timer? _seedCopiedTimer;
 
   @override
   void initState() {
@@ -159,10 +159,8 @@ class _MnemonicDisplayState extends State<MnemonicDisplay> {
                   setState(() {
                     _seedCopied = true;
                   });
-                  if (_seedCopiedTimer != null) {
-                    _seedCopiedTimer.cancel();
-                  }
-                  _seedCopiedTimer =
+                  _seedCopiedTimer?.cancel();
+                                  _seedCopiedTimer =
                       new Timer(const Duration(milliseconds: 1500), () {
                     setState(() {
                       _seedCopied = false;

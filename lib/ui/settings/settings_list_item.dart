@@ -1,4 +1,4 @@
-// @dart=2.9
+
 
 // Flutter imports:
 import 'package:flutter/material.dart';
@@ -20,14 +20,12 @@ class AppSettings {
       String heading,
       SettingSelectionItem defaultMethod,
       IconData icon,
-      Function onPressed,
+      VoidCallback? onPressed,
       {bool disabled = false}) {
     return IgnorePointer(
       ignoring: disabled,
       child: TextButton(
-        onPressed: () {
-          onPressed();
-        },
+        onPressed: onPressed,
         child: Container(
           height: 60.0,
           margin: EdgeInsetsDirectional.only(start: 30.0),
@@ -84,15 +82,9 @@ class AppSettings {
 
   static Widget buildSettingsListItemSingleLineWithInfos(
       BuildContext context, String heading, String info, IconData settingIcon,
-      {Function onPressed}) {
+      {VoidCallback? onPressed}) {
     return TextButton(
-      onPressed: () {
-        if (onPressed != null) {
-          onPressed();
-        } else {
-          return;
-        }
-      },
+      onPressed: onPressed,
       child: Container(
         height: 100.0,
         margin: EdgeInsetsDirectional.only(start: 30.0),
@@ -145,15 +137,9 @@ class AppSettings {
   //Settings item without any dropdown option but rather a direct functionality
   static Widget buildSettingsListItemSingleLine(
       BuildContext context, String heading, IconData settingIcon,
-      {Function onPressed}) {
+      {VoidCallback? onPressed}) {
     return TextButton(
-      onPressed: () {
-        if (onPressed != null) {
-          onPressed();
-        } else {
-          return;
-        }
-      },
+      onPressed: onPressed,
       child: Container(
         height: 60.0,
         margin: EdgeInsetsDirectional.only(start: 30.0),

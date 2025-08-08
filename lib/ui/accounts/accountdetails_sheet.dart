@@ -1,4 +1,4 @@
-// @dart=2.9
+
 
 // Dart imports:
 import 'dart:async';
@@ -10,7 +10,7 @@ import 'package:flutter/services.dart';
 // Package imports:
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:event_taxi/event_taxi.dart';
-import 'package:keyboard_avoider/keyboard_avoider.dart';
+// import 'package:keyboard_avoider/keyboard_avoider.dart'; // Replaced
 
 // Project imports:
 import 'package:my_bismuth_wallet/app_icons.dart';
@@ -20,7 +20,7 @@ import 'package:my_bismuth_wallet/dimens.dart';
 import 'package:my_bismuth_wallet/localization.dart';
 import 'package:my_bismuth_wallet/model/db/appdb.dart';
 import 'package:my_bismuth_wallet/model/db/hiveDB.dart';
-import 'package:my_bismuth_wallet/service/dragginator_service.dart';
+// import 'package:my_bismuth_wallet/service/dragginator_service.dart'; // Deleted
 import 'package:my_bismuth_wallet/service_locator.dart';
 import 'package:my_bismuth_wallet/styles.dart';
 import 'package:my_bismuth_wallet/ui/util/ui_util.dart';
@@ -35,21 +35,21 @@ import 'package:my_bismuth_wallet/util/numberutil.dart';
 // Account Details Sheet
 class AccountDetailsSheet {
   Account account;
-  String originalName;
-  String originalDragginatorAvatarDna;
-  TextEditingController _nameController;
-  TextEditingController _dragginatorAvatarDnaController;
-  FocusNode _nameFocusNode;
-  FocusNode _dragginatorAvatarDnaFocusNode;
-  bool deleted;
+  late String originalName;
+  late String originalDragginatorAvatarDna;
+  late TextEditingController _nameController;
+  late TextEditingController _dragginatorAvatarDnaController;
+  late FocusNode _nameFocusNode;
+  late FocusNode _dragginatorAvatarDnaFocusNode;
+  late bool deleted;
   // Address copied or not
-  bool _addressCopied;
+  late bool _addressCopied;
   // Timer reference so we can cancel repeated events
-  Timer _addressCopiedTimer;
+  Timer? _addressCopiedTimer;
 
   AccountDetailsSheet(this.account) {
-    this.originalName = account.name;
-    this.originalDragginatorAvatarDna = account.dragginatorDna;
+    this.originalName = account.name ?? '';
+    this.originalDragginatorAvatarDna = account.dragginatorDna ?? '';
     this.deleted = false;
   }
 
@@ -65,26 +65,13 @@ class AccountDetailsSheet {
     // Update avatar dna if changed and valid
     if (originalName != _dragginatorAvatarDnaController.text && !deleted) {
       if (_dragginatorAvatarDnaController.text.trim() != "") {
-        await sl
-            .get<DragginatorService>()
-            .getInfosFromDna(_dragginatorAvatarDnaController.text)
-            .then((value) {
-          if (value != null && value.status != "") {
-            sl.get<DBHelper>().changeAccountDragginatorDna(
-                account, _dragginatorAvatarDnaController.text, value.status);
-            account.dragginatorDna = _dragginatorAvatarDnaController.text;
-            account.dragginatorStatus = value.status;
-            EventTaxiImpl.singleton()
-                .fire(AccountModifiedEvent(account: account));
-          } else {
-            UIUtil.showSnackbar(
-                "The dna '" +
-                    _dragginatorAvatarDnaController.text +
-                    "' doesn't exist.",
-                context);
-            return false;
-          }
-        });
+        // DragginatorService removed - skip dragginator validation
+        sl.get<DBHelper>().changeAccountDragginatorDna(
+            account, _dragginatorAvatarDnaController.text, "");
+        account.dragginatorDna = _dragginatorAvatarDnaController.text;
+        account.dragginatorStatus = "";
+        EventTaxiImpl.singleton()
+            .fire(AccountModifiedEvent(account: account));
       } else {
         sl.get<DBHelper>().changeAccountDragginatorDna(account, "", "");
         account.dragginatorDna = "";
@@ -108,8 +95,12 @@ class AccountDetailsSheet {
         builder: (BuildContext context) {
           return StatefulBuilder(
               builder: (BuildContext context, StateSetter setState) {
-            return WillPopScope(
-                onWillPop: () => _onWillPop(context),
+            return PopScope(
+                onPopInvokedWithResult: (didPop, result) {
+                  if (!didPop) {
+                    _onWillPop(context);
+                  }
+                },
                 child: TapOutsideUnfocus(
                     child: SafeArea(
                         minimum: EdgeInsets.only(
@@ -205,20 +196,20 @@ class AccountDetailsSheet {
                               margin: EdgeInsets.only(top: 10.0),
                               child: account.address != null
                                   ? UIUtil.threeLineAddressText(
-                                      context, account.address,
+                                      context, account.address!,
                                       type: ThreeLineAddressTextType.PRIMARY60)
-                                  : account.selected
+                                  : (account.selected == true)
                                       ? UIUtil.threeLineAddressText(
                                           context,
                                           StateContainer.of(context)
                                               .wallet
-                                              .address,
+                                              ?.address ?? '',
                                           type: ThreeLineAddressTextType
                                               .PRIMARY60)
                                       : SizedBox(),
                             ),
                             // Balance Text
-                            (account.balance != null || account.selected)
+                            (account.balance != null || (account.selected == true))
                                 ? Container(
                                     margin: EdgeInsets.only(top: 5.0),
                                     child: RichText(
@@ -244,9 +235,9 @@ class AccountDetailsSheet {
                                                         ? StateContainer.of(
                                                                 context)
                                                             .wallet
-                                                            .accountBalance
-                                                            .toString()
-                                                        : account.balance),
+                                                            ?.accountBalance
+                                                            .toString() ?? '0'
+                                                        : account.balance!),
                                             style: TextStyle(
                                               color: StateContainer.of(context)
                                                   .curTheme
@@ -275,10 +266,8 @@ class AccountDetailsSheet {
 
                             // The main container that holds Contact Name and Contact Address
                             Expanded(
-                              child: KeyboardAvoider(
-                                  duration: Duration(milliseconds: 0),
-                                  autoScroll: true,
-                                  focusPadding: 40,
+                              child: SingleChildScrollView(
+                                  padding: EdgeInsets.all(40),
                                   child: Column(
                                       crossAxisAlignment:
                                           CrossAxisAlignment.center,
@@ -371,15 +360,13 @@ class AccountDetailsSheet {
                                           Dimens.BUTTON_TOP_DIMENS,
                                           onPressed: () {
                                         Clipboard.setData(new ClipboardData(
-                                            text: account.address));
+                                            text: account.address ?? ''));
                                         setState(() {
                                           // Set copied style
                                           _addressCopied = true;
                                         });
-                                        if (_addressCopiedTimer != null) {
-                                          _addressCopiedTimer.cancel();
-                                        }
-                                        _addressCopiedTimer = new Timer(
+                                        _addressCopiedTimer?.cancel();
+                                                                              _addressCopiedTimer = new Timer(
                                             const Duration(milliseconds: 800),
                                             () {
                                           setState(() {

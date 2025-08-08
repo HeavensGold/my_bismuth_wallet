@@ -43,7 +43,7 @@
   "enterTokenApi": "Enter url token api",
   "enterExplorerUrlSwitch": "Use a custom explorer url",
   "enterExplorerUrl": "Enter a custom url explorer",
-  "enterExplorerUrlInfo": "(ex: https://bismuth.online/search?quicksearch=%1\n\"%1\" will be replaced by BIS address)",
+  "enterExplorerUrlInfo": "(ex: https://bismuth.im/search?quicksearch=%1\n\"%1\" will be replaced by BIS address)",
   "enterWalletServerInfo": "ip:port (ex: 11.22.33.44:2000)",
   "enterTokenApiInfo": "(ex: https://bismuth.today/api/balances/)",
   "removeContact": "Remove Contact",

@@ -1,4 +1,4 @@
-// @dart=2.9
+
 
 // Dart imports:
 import 'dart:convert';
@@ -30,7 +30,7 @@ var SING85 = 85;
 class Base85Decoder extends Converter<String, Uint8List> {
   String alphabet;
   AlgoType algo;
-  Uint8List _baseMap;
+  late Uint8List _baseMap;
 
   Base85Decoder(this.alphabet, this.algo) {
     _baseMap = Uint8List(256);
@@ -54,7 +54,7 @@ class Base85Decoder extends Converter<String, Uint8List> {
   /// The [input] to decode. May be a String.
   /// If ascii85, it is expected to be enclosed in <~ and ~>.
   Uint8List convert(String input) {
-    if (input?.isEmpty ?? true) {
+    if (input.isEmpty) {
       return Uint8List(0);
     }
     var bytes = Uint8List.fromList(input.codeUnits);
@@ -86,17 +86,17 @@ class Base85Decoder extends Converter<String, Uint8List> {
 
     var writeIndex = 0;
     for (var i = bufferStart; i < bufferEnd;) {
-      var num = 0;
+      int num = 0;
       var starti = i;
 
       i = nextValidByte(i);
-      num = (_baseMap[bytes[i]]) * QUAD85;
+      num = ((_baseMap[bytes[i]]).toInt() * QUAD85).toInt();
 
       i = nextValidByte(i + 1);
-      num += (i >= bufferEnd ? 84 : _baseMap[bytes[i]]) * TRIO85;
+      num += ((i >= bufferEnd ? 84 : _baseMap[bytes[i]]).toInt() * TRIO85).toInt();
 
       i = nextValidByte(i + 1);
-      num += (i >= bufferEnd ? 84 : _baseMap[bytes[i]]) * DUO85;
+      num += ((i >= bufferEnd ? 84 : _baseMap[bytes[i]]).toInt() * DUO85).toInt();
 
       i = nextValidByte(i + 1);
       num += (i >= bufferEnd ? 84 : _baseMap[bytes[i]]) * SING85;

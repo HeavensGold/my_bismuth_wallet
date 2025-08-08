@@ -1,4 +1,4 @@
-// @dart=2.9
+
 
 // Dart imports:
 import 'dart:convert';
@@ -15,7 +15,6 @@ import 'package:hex/hex.dart';
 
 // Project imports:
 import 'package:my_bismuth_wallet/appstate_container.dart';
-import 'package:my_bismuth_wallet/localization.dart';
 import 'package:my_bismuth_wallet/model/db/appdb.dart';
 import 'package:my_bismuth_wallet/model/db/hiveDB.dart';
 import 'package:my_bismuth_wallet/service_locator.dart';
@@ -88,19 +87,33 @@ class AppUtil {
             .fromSeed(bip39.mnemonicToSeed(bip39.entropyToMnemonic(seed)))
             .toBase58())
         .derivePath("m/44'/209'/0'/0/" + index.toString())
-        .privateKey);
+        .privateKey!);
   }
 
   Future<void> loginAccount(String seed, BuildContext context) async {
-    Account selectedAcct = await sl.get<DBHelper>().getSelectedAccount(seed);
+    Account? selectedAcct = await sl.get<DBHelper>().getSelectedAccount(seed);
+    
+    // If no account exists, create a default account
     if (selectedAcct == null) {
-      selectedAcct = Account(
-          index: 0,
-          lastAccess: 0,
-          name: AppLocalization.of(context).defaultAccountName,
-          selected: true);
-      await sl.get<DBHelper>().saveAccount(selectedAcct);
+      // Create default account (index 0, selected=true)
+      Account defaultAccount = Account(
+        index: 0,
+        name: "Main Account",
+        lastAccess: DateTime.now().millisecondsSinceEpoch,
+        selected: true,
+        address: null, // Will be generated in updateWallet
+        balance: "0",
+        dragginatorDna: null,
+        dragginatorStatus: null,
+      );
+      
+      // Save the default account
+      await sl.get<DBHelper>().saveAccount(defaultAccount);
+      selectedAcct = defaultAccount;
     }
-    StateContainer.of(context).updateWallet(account: selectedAcct);
+    
+    if (selectedAcct != null) {
+      StateContainer.of(context).updateWallet(account: selectedAcct, seedOverride: seed);
+    }
   }
 }

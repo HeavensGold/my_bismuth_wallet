@@ -1,7 +1,6 @@
-// @dart=2.9
+
 
 // Dart imports:
-import 'dart:ui';
 
 // Flutter imports:
 import 'package:flutter/material.dart';
@@ -311,9 +310,9 @@ class AvailableCurrency extends SettingSelectionItem {
   // Get best currency for a given locale
   // Default to USD
   static AvailableCurrency getBestForLocale(Locale locale) {
-    AvailableCurrencyEnum.values.forEach((value) {
+    for (AvailableCurrencyEnum value in AvailableCurrencyEnum.values) {
       AvailableCurrency currency = AvailableCurrency(value);
-      if (locale != null && locale.countryCode == null) {
+      if (locale.countryCode != null) {
         // Special cases
         if ([
           'AT',
@@ -337,12 +336,12 @@ class AvailableCurrency extends SettingSelectionItem {
           'ES'
         ].contains(locale.countryCode)) {
           return AvailableCurrency(AvailableCurrencyEnum.EUR);
-        } else if (currency.getLocale().countryCode.toUpperCase() ==
-            locale.countryCode.toUpperCase()) {
+        } else if (currency.getLocale().countryCode?.toUpperCase() ==
+            locale.countryCode?.toUpperCase()) {
           return currency;
         }
       }
-    });
+    }
     return AvailableCurrency(AvailableCurrencyEnum.USD);
   }
 }

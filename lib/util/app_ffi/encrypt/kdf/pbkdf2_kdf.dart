@@ -1,4 +1,4 @@
-// @dart=2.9
+
 
 // Dart imports:
 import 'dart:typed_data';
@@ -16,9 +16,9 @@ class PBKDF2 extends KDF {
   /// Derive a KeyIV with given password and optional salt
   /// Expects password to be a utf-8 string
   /// If salt is not provided, a random 8-byte one will be generated
-  KeyIV deriveKey(String password, {Uint8List salt}) {
+  KeyIV deriveKey(String password, {Uint8List? salt}) {
     Uint8List pwBytes = AppHelpers.stringToBytesUtf8(password);
-    Uint8List saltBytes = salt == null ? Uint8List(1) : salt;
+    Uint8List saltBytes = salt ?? Uint8List(1);
 
     // Use pbkdf2 from pointycastle
     KeyDerivator kdf = KeyDerivator("SHA-1/HMAC/PBKDF2");
