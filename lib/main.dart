@@ -86,10 +86,12 @@ class _AppState extends State<App> {
         theme: ThemeData(
           primaryColor: StateContainer.of(context).curTheme.primary,
           fontFamily: 'Roboto',
-          brightness: Brightness.dark,
-          colorScheme: ColorScheme.fromSwatch(brightness: Brightness.dark).copyWith(
+          useMaterial3: false,
+          colorScheme: ColorScheme.dark(
+            primary: StateContainer.of(context).curTheme.primary,
             secondary: StateContainer.of(context).curTheme.primary10,
             surface: StateContainer.of(context).curTheme.backgroundDark,
+            background: StateContainer.of(context).curTheme.backgroundDark,
           ),
           dialogTheme: DialogThemeData(backgroundColor: StateContainer.of(context).curTheme.backgroundDark),
         ),

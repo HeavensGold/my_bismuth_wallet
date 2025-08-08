@@ -1,8 +1,8 @@
-
-
 // Dart imports:
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 // Package imports:
 import 'package:diacritic/diacritic.dart';
@@ -17,9 +17,9 @@ import 'package:my_bismuth_wallet/network/model/response/addlistlim_response.dar
 import 'package:my_bismuth_wallet/network/model/response/address_txs_response.dart';
 import 'package:my_bismuth_wallet/network/model/response/alias_get_response.dart';
 import 'package:my_bismuth_wallet/network/model/response/balance_get_response.dart';
-// import 'package:my_bismuth_wallet/network/model/response/mpinsert_response.dart'; // Deleted file
 import 'package:my_bismuth_wallet/network/model/response/servers_wallet_legacy.dart';
 import 'package:my_bismuth_wallet/network/model/response/wstatusget_response.dart';
+import 'package:my_bismuth_wallet/service/bismuth_p2p_service.dart';
 import 'package:my_bismuth_wallet/service/http_service.dart';
 import 'package:my_bismuth_wallet/service_locator.dart';
 import 'package:web_socket_channel/io.dart';
@@ -34,23 +34,67 @@ class AppService {
     return message == null ? null : message.length.toString().padLeft(10, '0');
   }
 
+  // Helper method to process buffered data and extract complete messages
+  List<String> processBuffer(Uint8List data, StringBuffer buffer) {
+    List<String> completeMessages = [];
+    
+    // Add new data to buffer (without trim to preserve exact data)
+    buffer.write(String.fromCharCodes(data));
+    String bufferContent = buffer.toString();
+    
+    // Process all complete messages in the buffer
+    while (bufferContent.length >= 10) {
+      // Try to parse the length header
+      String lengthStr = bufferContent.substring(0, 10);
+      int? messageLength = int.tryParse(lengthStr);
+      
+      if (messageLength == null) {
+        // Invalid length header, try to recover by finding next valid header
+        log.e("Invalid length header: $lengthStr");
+        // Skip one character and try again
+        bufferContent = bufferContent.substring(1);
+        continue;
+      }
+      
+      // Check if we have the complete message
+      if (bufferContent.length >= 10 + messageLength) {
+        // Extract the complete message
+        String message = bufferContent.substring(10, 10 + messageLength);
+        completeMessages.add(message);
+        
+        // Remove processed message from buffer
+        bufferContent = bufferContent.substring(10 + messageLength);
+      } else {
+        // Message is incomplete, wait for more data
+        break;
+      }
+    }
+    
+    // Update buffer with remaining data
+    buffer.clear();
+    buffer.write(bufferContent);
+    
+    return completeMessages;
+  }
+
   Future<void> getWStatusGetResponse() async {
-    //print("getWStatusGetResponse");
+    log.d("getWStatusGetResponse");
 
     try {
       ServerWalletLegacyResponse serverWalletLegacyResponse =
           await sl.get<HttpService>().getBestServerWalletLegacyResponse();
+      
+      log.d("Connecting to ${serverWalletLegacyResponse.ip}:${serverWalletLegacyResponse.port}");
+      
       IOWebSocketChannel? _webSocket;
       Socket? _socket;
       if (kIsWeb) {
         _webSocket = IOWebSocketChannel.connect(
-            serverWalletLegacyResponse.ip +
-                ':' +
-                serverWalletLegacyResponse.port.toString());
+            'ws://${serverWalletLegacyResponse.ip}:${serverWalletLegacyResponse.port}');
       } else {
         _socket = await Socket.connect(
             serverWalletLegacyResponse.ip, serverWalletLegacyResponse.port,
-            timeout: Duration(seconds: 3));
+            timeout: Duration(seconds: 5));
       }
 
       EventTaxiImpl.singleton().fire(ConnStatusEvent(
@@ -60,75 +104,74 @@ class AppService {
               serverWalletLegacyResponse.port.toString()));
 
       //Establish the onData, and onDone callbacks
-      String message = "";
+      StringBuffer messageBuffer = StringBuffer();
+      
       if (kIsWeb) {
         _webSocket?.stream.listen((data) {
           if (data != null) {
-            message += new String.fromCharCodes(data).trim();
-            if (message.length >= 10 &&
-                int.tryParse(message.substring(0, 10)) != null &&
-                message.length ==
-                    10 + (int.tryParse(message.substring(0, 10)) ?? 0)) {
-              int? parsedLength = int.tryParse(message.substring(0, 10));
-              if (parsedLength != null) {
-                message = message.substring(10, 10 + parsedLength);
-                // Process the status response
-                wStatusGetResponseFromJson(message);
+            List<String> messages = processBuffer(data is Uint8List ? data : Uint8List.fromList(data.toString().codeUnits), messageBuffer);
+            for (String message in messages) {
+              try {
+                log.d("Received wstatusget response: $message");
+                WStatusGetResponse response = wStatusGetResponseFromJson(message);
+                EventTaxiImpl.singleton().fire(WStatusGetEvent(response: response));
+              } catch (e) {
+                log.e("Failed to parse wstatusget response: $e\nResponse: $message");
               }
             }
           }
         }, onError: ((error, StackTrace trace) {
-          //print("Error");
+          log.e("WebSocket error: $error");
         }), onDone: () {
-          //print("Done");
+          log.d("WebSocket connection closed");
           _socket?.destroy();
         }, cancelOnError: false);
       } else {
-        _socket!.listen((data) {
-          message += new String.fromCharCodes(data).trim();
-          if (message.length >= 10 &&
-              int.tryParse(message.substring(0, 10)) != null &&
-              message.length ==
-                  10 + (int.tryParse(message.substring(0, 10)) ?? 0)) {
-            int? parsedLength = int.tryParse(message.substring(0, 10));
-            if (parsedLength != null) {
-              message = message.substring(10, 10 + parsedLength);
-              // Process the status response
-              wStatusGetResponseFromJson(message);
+        _socket!.listen((Uint8List data) {
+          List<String> messages = processBuffer(data, messageBuffer);
+          for (String message in messages) {
+            try {
+              log.d("Received wstatusget response: $message");
+              WStatusGetResponse response = wStatusGetResponseFromJson(message);
+              EventTaxiImpl.singleton().fire(WStatusGetEvent(response: response));
+            } catch (e) {
+              log.e("Failed to parse wstatusget response: $e\nResponse: $message");
             }
           }
-                  }, onError: ((error, StackTrace trace) {
-          //print("Error");
+        }, onError: ((error, StackTrace trace) {
+          log.e("Socket error: $error");
         }), onDone: () {
-          //print("Done");
+          log.d("Socket connection closed");
           _socket?.destroy();
         }, cancelOnError: false);
       }
 
       //Send the request
       String method = '"wstatusget"';
+      String request = (getLengthBuffer(method) ?? '') + method;
+      log.d("Sending request: $request");
 
       if (kIsWeb) {
-        _webSocket?.sink.add((getLengthBuffer(method) ?? '') + method);
+        _webSocket?.sink.add(request);
       } else {
-        _socket?.write((getLengthBuffer(method) ?? '') + method);
+        _socket?.write(request);
       }
-        } catch (e) {
-      //print("pb socket" + e.toString());
+    } catch (e) {
+      log.e("Socket connection failed: ${e.toString()}");
       EventTaxiImpl.singleton().fire(
           ConnStatusEvent(status: ConnectionStatus.DISCONNECTED, server: ""));
-    } finally {}
+    }
   }
 
   Future<void> getAlias(String address) async {
-    //print("getAlias");
+    log.d("getAlias for address: $address");
 
     try {
       ServerWalletLegacyResponse serverWalletLegacyResponse =
           await sl.get<HttpService>().getBestServerWalletLegacyResponse();
       Socket _socket = await Socket.connect(
           serverWalletLegacyResponse.ip, serverWalletLegacyResponse.port,
-          timeout: Duration(seconds: 3));
+          timeout: Duration(seconds: 5));
 
       EventTaxiImpl.singleton().fire(ConnStatusEvent(
           status: ConnectionStatus.CONNECTED,
@@ -137,38 +180,37 @@ class AppService {
               serverWalletLegacyResponse.port.toString()));
 
       //Establish the onData, and onDone callbacks
-      String message = "";
-      _socket.listen((data) {
-        message += new String.fromCharCodes(data).trim();
-        if (message.length >= 10 &&
-            int.tryParse(message.substring(0, 10)) != null &&
-            message.length == 10 + (int.tryParse(message.substring(0, 10)) ?? 0)) {
-          int? parsedLength = int.tryParse(message.substring(0, 10));
-          if (parsedLength != null) {
-            message = message.substring(10, 10 + parsedLength);
+      StringBuffer messageBuffer = StringBuffer();
+      _socket.listen((Uint8List data) {
+        List<String> messages = processBuffer(data, messageBuffer);
+        for (String message in messages) {
+          try {
+            log.d("Received alias response: $message");
+            List alias = aliasGetResponseFromJson(message);
+            EventTaxiImpl.singleton().fire(AliasListEvent(response: alias));
+          } catch (e) {
+            log.e("Failed to parse alias response: $e\nResponse: $message");
           }
-          List alias = aliasGetResponseFromJson(message);
-          //print("fire AliasListEvent");
-          EventTaxiImpl.singleton().fire(AliasListEvent(response: alias));
         }
-              }, onError: ((error, StackTrace trace) {
-        //print("Error");
+      }, onError: ((error, StackTrace trace) {
+        log.e("Socket error: $error");
       }), onDone: () {
-        //print("Done");
+        log.d("Socket connection closed");
         _socket.destroy();
       }, cancelOnError: false);
 
       //Send the request
       String method = '"aliasget"';
       String param = '"' + address + '"';
-
-      _socket.write(
-          (getLengthBuffer(method) ?? '') + method + (getLengthBuffer(param) ?? '') + param);
-        } catch (e) {
-      //print("pb socket" + e.toString());
+      String request = (getLengthBuffer(method) ?? '') + method + (getLengthBuffer(param) ?? '') + param;
+      log.d("Sending request: $request");
+      
+      _socket.write(request);
+    } catch (e) {
+      log.e("Socket connection failed: ${e.toString()}");
       EventTaxiImpl.singleton().fire(
           ConnStatusEvent(status: ConnectionStatus.DISCONNECTED, server: ""));
-    } finally {}
+    }
   }
 
   double getFeesEstimation(String openfield, String operation) {
@@ -178,18 +220,20 @@ class AppService {
     if (openfield.startsWith("alias=")) {
       fees += 1;
     }
-      if (operation == "token:issue") {
+    if (operation == "token:issue") {
       fees += 10;
     }
     if (operation == "alias:register") {
       fees += 1;
     }
   
-    //print("getFeesEstimation: " + fees.toString());
+    log.d("getFeesEstimation: $fees");
     return fees;
   }
 
   Future<void> getAddressTxsResponse(String address, int limit) async {
+    log.d("getAddressTxsResponse for address: $address using P2P network, limit: $limit");
+    
     AddressTxsResponse addressTxsResponse = new AddressTxsResponse();
 
     addressTxsResponse.tokens =
@@ -198,322 +242,78 @@ class AppService {
     addressTxsResponse.result = <AddressTxsResponseResult>[];
 
     try {
-      ServerWalletLegacyResponse serverWalletLegacyResponse =
-          await sl.get<HttpService>().getBestServerWalletLegacyResponse();
-
-      IOWebSocketChannel? _webSocket;
-      Socket? _socket;
-      if (kIsWeb) {
-        _webSocket = IOWebSocketChannel.connect(
-            serverWalletLegacyResponse.ip +
-                ':' +
-                serverWalletLegacyResponse.port.toString());
-      } else {
-        _socket = await Socket.connect(
-            serverWalletLegacyResponse.ip, serverWalletLegacyResponse.port,
-            timeout: Duration(seconds: 3));
-      }
-
-      EventTaxiImpl.singleton().fire(ConnStatusEvent(
-          status: ConnectionStatus.CONNECTED,
-          server: serverWalletLegacyResponse.ip +
-              ":" +
-              serverWalletLegacyResponse.port.toString()));
-
-      //Establish the onData, and onDone callbacks
-      String message = "";
-      if (kIsWeb) {
-        _webSocket?.stream.listen((data) {
-          if (data != null) {
-            message += new String.fromCharCodes(data).trim();
-            //print("response : " + message);
-            //print("response length : " + message.length.toString());
-            if (message.length >= 10 &&
-                int.tryParse(message.substring(0, 10)) != null) {
-              // Parse mempool tx
-              int? mempoolTxListStringLength =
-                  int.tryParse(message.substring(0, 10));
-              if (mempoolTxListStringLength == null) return;
-              if (message.length >= 10 + mempoolTxListStringLength) {
-                String mempoolTxListString =
-                    message.substring(10, 10 + mempoolTxListStringLength);
-                int mempoolTxListStringEnd = 10 + mempoolTxListStringLength;
-                //print(
-                //    "getAddressTxsResponse (memPool) : " + mempoolTxListString);
-                List mempoolTxs =
-                    addlistlimResponseFromJson(mempoolTxListString);
-
-                // Parse blockchain tx
-                if (message.length >= 10 + mempoolTxListStringEnd) {
-                  int? blockchainTxListStringLength = int.tryParse(
-                      message.substring(mempoolTxListStringEnd,
-                          10 + mempoolTxListStringEnd));
-                  if (blockchainTxListStringLength == null) return;
-                  if (message.length >=
-                      10 +
-                          mempoolTxListStringEnd +
-                          blockchainTxListStringLength) {
-                    String blockchainTxListString = message.substring(
-                        10 + mempoolTxListStringEnd,
-                        10 +
-                            mempoolTxListStringEnd +
-                            blockchainTxListStringLength);
-                    //print("getAddressTxsResponse (blockchain) : " +
-                    //    blockchainTxListString);
-                    List blockChainTxs =
-                        addlistlimResponseFromJson(blockchainTxListString);
-
-                    List txs = [];
-                    txs.addAll(mempoolTxs);
-                    txs.addAll(blockChainTxs);
-
-                    EventTaxiImpl.singleton()
-                        .fire(TransactionsListEvent(response: txs));
-                    for (int i = txs.length - 1; i >= 0; i--) {
-                      AddressTxsResponseResult addressTxResponse =
-                          new AddressTxsResponseResult();
-                      addressTxResponse.populate(txs[i], address);
-                      addressTxResponse.getBisToken();
-                      addressTxsResponse.result?.add(addressTxResponse);
-                    }
-                  }
-                }
-              }
-            } else {
-              //print("response length ko : " + message.length.toString());
-            }
-          }
-        }, onError: ((error, StackTrace trace) {
-          //print("Error");
-        }), onDone: () {
-          //print("Done");
-          _socket?.destroy();
-        }, cancelOnError: false);
-      } else {
-        _socket?.listen((data) {
-          message += new String.fromCharCodes(data).trim();
-          //print("response : " + message);
-          //print("response length : " + message.length.toString());
-          if (message.length >= 10 &&
-              int.tryParse(message.substring(0, 10)) != null) {
-            // Parse mempool tx
-            int? mempoolTxListStringLength =
-                int.tryParse(message.substring(0, 10));
-            if (mempoolTxListStringLength == null) return;
-            if (message.length >= 10 + mempoolTxListStringLength) {
-              String mempoolTxListString =
-                  message.substring(10, 10 + mempoolTxListStringLength);
-              int mempoolTxListStringEnd = 10 + mempoolTxListStringLength;
-              //print(
-              //    "getAddressTxsResponse (memPool) : " + mempoolTxListString);
-              List mempoolTxs =
-                  addlistlimResponseFromJson(mempoolTxListString);
-
-              // Parse blockchain tx
-              if (message.length >= 10 + mempoolTxListStringEnd) {
-                int? blockchainTxListStringLength = int.tryParse(
-                    message.substring(mempoolTxListStringEnd,
-                        10 + mempoolTxListStringEnd));
-                if (blockchainTxListStringLength == null) return;
-                if (message.length >=
-                    10 +
-                        mempoolTxListStringEnd +
-                        blockchainTxListStringLength) {
-                  String blockchainTxListString = message.substring(
-                      10 + mempoolTxListStringEnd,
-                      10 +
-                          mempoolTxListStringEnd +
-                          blockchainTxListStringLength);
-                  //print("getAddressTxsResponse (blockchain) : " +
-                  //    blockchainTxListString);
-                  List blockChainTxs =
-                      addlistlimResponseFromJson(blockchainTxListString);
-
-                  List txs = [];
-                  txs.addAll(mempoolTxs);
-                  txs.addAll(blockChainTxs);
-
-                  EventTaxiImpl.singleton()
-                      .fire(TransactionsListEvent(response: txs));
-                  for (int i = txs.length - 1; i >= 0; i--) {
-                    AddressTxsResponseResult addressTxResponse =
-                        new AddressTxsResponseResult();
-                    addressTxResponse.populate(txs[i], address);
-                    addressTxResponse.getBisToken();
-                    addressTxsResponse.result?.add(addressTxResponse);
-                  }
-                }
-              }
-            }
-          } else {
-            //print("response length ko : " + message.length.toString());
-          }
-                  }, onError: ((error, StackTrace trace) {
-          //print("Error");
-        }), onDone: () {
-          //print("Done");
-          _socket?.destroy();
-        }, cancelOnError: false);
-      }
-
-      //Send the request
-      String method = '"addlistlim"';
-      String param1 = '"' + address + '"';
-      String param2 = '"' + limit.toString() + '"';
-      String method2 = '"mpgetfor"';
-      if (kIsWeb) {
-        _webSocket?.sink.add((getLengthBuffer(method2) ?? '') +
-          method2 +
-          (getLengthBuffer(param1) ?? '') +
-          param1 +
-          (getLengthBuffer(method) ?? '') +
-          method +
-          (getLengthBuffer(param1) ?? '') +
-          param1 +
-          (getLengthBuffer(param2) ?? '') +
-          param2);
-      } else {
-        _socket?.write((getLengthBuffer(method2) ?? '') +
-          method2 +
-          (getLengthBuffer(param1) ?? '') +
-          param1 +
-          (getLengthBuffer(method) ?? '') +
-          method +
-          (getLengthBuffer(param1) ?? '') +
-          param1 +
-          (getLengthBuffer(param2) ?? '') +
-          param2);
-      }
-        } catch (e) {
-      log.e("Transaction history fetch failed: ${e.toString()}");
+      // Use P2P service to get real-time transaction history from Bismuth network
+      BismuthP2PService p2pService = BismuthP2PService();
       
-      // Fire connection status event
-      EventTaxiImpl.singleton().fire(
-          ConnStatusEvent(status: ConnectionStatus.DISCONNECTED, server: ""));
+      // Get both mempool and blockchain transactions via P2P
+      List<List<dynamic>>? mempoolTxs = await p2pService.getMempoolTransactions(address);
+      List<List<dynamic>>? blockchainTxs = await p2pService.getTransactionHistory(address, limit);
       
-      // Fire network error event for user feedback
-      EventTaxiImpl.singleton().fire(NetworkErrorEvent(
-        errorType: NetworkErrorType.TRANSACTION_HISTORY_FAILED,
-        message: "Failed to load transaction history. Please check your internet connection.",
-        operation: "Load Transactions",
-        canRetry: true,
-      ));
-    } finally {}
+      if (mempoolTxs != null || blockchainTxs != null) {
+        // Combined transaction list
+        List<List<dynamic>> allTxs = [];
+        if (mempoolTxs != null) allTxs.addAll(mempoolTxs);
+        if (blockchainTxs != null) allTxs.addAll(blockchainTxs);
+        
+        // Fire transactions list event for UI
+        EventTaxiImpl.singleton().fire(TransactionsListEvent(response: allTxs));
+        
+        // Convert to AddressTxsResponseResult format
+        for (int i = allTxs.length - 1; i >= 0; i--) {
+          AddressTxsResponseResult addressTxResponse = new AddressTxsResponseResult();
+          addressTxResponse.populate(allTxs[i], address);
+          addressTxResponse.getBisToken();
+          addressTxsResponse.result?.add(addressTxResponse);
+        }
+        
+        log.i("Transaction history retrieved via P2P: ${allTxs.length} total transactions for $address");
+        return;
+      }
+    } catch (e) {
+      log.e("P2P transaction history fetch failed: ${e.toString()}");
+    }
+    
+    // If P2P fails, fire error event
+    EventTaxiImpl.singleton().fire(
+        ConnStatusEvent(status: ConnectionStatus.DISCONNECTED, server: ""));
+    
+    EventTaxiImpl.singleton().fire(NetworkErrorEvent(
+      errorType: NetworkErrorType.TRANSACTION_HISTORY_FAILED,
+      message: "Failed to load transaction history from Bismuth P2P network. Please check your internet connection.",
+      operation: "Load Transactions",
+      canRetry: true,
+    ));
   }
 
   Future<void> getBalanceGetResponse(String address, bool activeBus) async {
-    BalanceGetResponse balanceGetResponse = BalanceGetResponse(
-      address: '',
-      balance: '0',
-      balanceNoMempool: '0',
-      totalCredits: '0',
-      totalDebits: '0',
-      totalFees: '0',
-      totalRewards: '0',
-    );
-
+    log.d("getBalanceGetResponse for address: $address using P2P network");
+    
     try {
-      ServerWalletLegacyResponse serverWalletLegacyResponse =
-          await sl.get<HttpService>().getBestServerWalletLegacyResponse();
-      IOWebSocketChannel? _webSocket;
-      Socket? _socket;
-      if (kIsWeb) {
-        _webSocket = IOWebSocketChannel.connect(
-            serverWalletLegacyResponse.ip +
-                ':' +
-                serverWalletLegacyResponse.port.toString());
-      } else {
-        _socket = await Socket.connect(
-            serverWalletLegacyResponse.ip, serverWalletLegacyResponse.port,
-            timeout: Duration(seconds: 3));
-      }
-
-      EventTaxiImpl.singleton().fire(ConnStatusEvent(
-          status: ConnectionStatus.CONNECTED,
-          server: serverWalletLegacyResponse.ip +
-              ":" +
-              serverWalletLegacyResponse.port.toString()));
-
-      //Establish the onData, and onDone callbacks
-      String message = "";
-      if (kIsWeb) {
-        _webSocket?.stream.listen((data) {
-          if (data != null) {
-            message += new String.fromCharCodes(data).trim();
-            if (message.length >= 10 &&
-                int.tryParse(message.substring(0, 10)) != null &&
-                message.length ==
-                    10 + (int.tryParse(message.substring(0, 10)) ?? 0)) {
-              int? parsedLength = int.tryParse(message.substring(0, 10));
-              if (parsedLength != null) {
-                message = message.substring(10, 10 + parsedLength);
-              }
-              balanceGetResponse = balanceGetResponseFromJson(message);
-              balanceGetResponse.address = address;
-              //print(message);
-              if (activeBus) {
-                EventTaxiImpl.singleton()
-                    .fire(BalanceGetEvent(response: balanceGetResponse));
-              }
-            }
-          }
-        }, onError: ((error, StackTrace trace) {
-          //print("Error");
-        }), onDone: () {
-          //print("Done");
-          _socket?.destroy();
-        }, cancelOnError: false);
-      } else {
-        _socket?.listen((data) {
-          message += new String.fromCharCodes(data).trim();
-          if (message.length >= 10 &&
-              int.tryParse(message.substring(0, 10)) != null &&
-              message.length ==
-                  10 + (int.tryParse(message.substring(0, 10)) ?? 0)) {
-            int? parsedLength = int.tryParse(message.substring(0, 10));
-            if (parsedLength != null) {
-              message = message.substring(10, 10 + parsedLength);
-            }
-            balanceGetResponse = balanceGetResponseFromJson(message);
-            balanceGetResponse.address = address;
-            //print(message);
-            if (activeBus) {
-              EventTaxiImpl.singleton()
-                  .fire(BalanceGetEvent(response: balanceGetResponse));
-            }
-          }
-                  }, onError: ((error, StackTrace trace) {
-          //print("Error");
-        }), onDone: () {
-          //print("Done");
-          _socket?.destroy();
-        }, cancelOnError: false);
-      }
-
-      //Send the request
-      String method = '"balancegetjson"';
-      String param = '"' + address + '"';
-
-      if (kIsWeb) {
-        _webSocket?.sink.add((getLengthBuffer(method) ?? '') + method + (getLengthBuffer(param) ?? '') + param);
-      } else {
-        _socket?.write((getLengthBuffer(method) ?? '') + method + (getLengthBuffer(param) ?? '') + param);
-      }
-        } catch (e) {
-      log.e("Balance fetch failed: ${e.toString()}");
+      // Use P2P service to get real-time balance from Bismuth network
+      BismuthP2PService p2pService = BismuthP2PService();
+      BalanceGetResponse? balanceResponse = await p2pService.getBalance(address);
       
-      // Fire connection status event
-      EventTaxiImpl.singleton().fire(
-          ConnStatusEvent(status: ConnectionStatus.DISCONNECTED, server: ""));
-      
-      // Fire network error event for user feedback
-      EventTaxiImpl.singleton().fire(NetworkErrorEvent(
-        errorType: NetworkErrorType.BALANCE_FETCH_FAILED,
-        message: "Failed to fetch wallet balance. Please check your internet connection.",
-        operation: "Balance Update",
-        canRetry: true,
-      ));
-    } finally {}
+      if (balanceResponse != null) {
+        if (activeBus) {
+          EventTaxiImpl.singleton().fire(BalanceGetEvent(response: balanceResponse));
+        }
+        log.i("Balance retrieved via P2P: ${balanceResponse.balance} for $address");
+        return;
+      }
+    } catch (e) {
+      log.e("P2P balance fetch failed: ${e.toString()}");
+    }
+    
+    // If P2P fails, fire error event
+    EventTaxiImpl.singleton().fire(
+        ConnStatusEvent(status: ConnectionStatus.DISCONNECTED, server: ""));
+    
+    EventTaxiImpl.singleton().fire(NetworkErrorEvent(
+      errorType: NetworkErrorType.BALANCE_FETCH_FAILED,
+      message: "Failed to fetch wallet balance from Bismuth P2P network. Please check your internet connection.",
+      operation: "Balance Update",
+      canRetry: true,
+    ));
   }
 
   Future<void> sendTx(
@@ -524,6 +324,8 @@ class AppService {
       String operation,
       String publicKey,
       String privateKey) async {
+    log.d("sendTx from: $address to: $destination amount: $amount");
+    
     SendTxRequest sendTxRequest = SendTxRequest(
       id: 0,
       tx: Tx(
@@ -547,60 +349,11 @@ class AppService {
       openfield: '',
       timestamp: '',
     );
-    //print("address : " + address);
-    //print("amount : " + amount);
-    //print("destination : " + destination);
-    //print("publicKey : " + publicKey);
-    //print("privateKey : " + privateKey);
 
     try {
-      ServerWalletLegacyResponse serverWalletLegacyResponse =
-          await sl.get<HttpService>().getBestServerWalletLegacyResponse();
-
-      Socket _socket = await Socket.connect(
-          serverWalletLegacyResponse.ip, serverWalletLegacyResponse.port,
-          timeout: Duration(seconds: 3));
-
-      EventTaxiImpl.singleton().fire(ConnStatusEvent(
-          status: ConnectionStatus.CONNECTED,
-          server: serverWalletLegacyResponse.ip +
-              ":" +
-              serverWalletLegacyResponse.port.toString()));
-
-      //print('Connected to: '
-      //    '${_socket.remoteAddress.address}:${_socket.remotePort}');
-      //Establish the onData, and onDone callbacks
-      _socket.listen((data) {
-        String message = new String.fromCharCodes(data).trim();
-        if (message.length >= 10 &&
-            int.tryParse(message.substring(0, 10)) != null &&
-            message.length == 10 + (int.tryParse(message.substring(0, 10)) ?? 0)) {
-          int? parsedLength = int.tryParse(message.substring(0, 10));
-          if (parsedLength != null) {
-            message = message.substring(10, 10 + parsedLength);
-          }
-          //print("Response sendTx : " + message);
-          List<String> sendTxResponse = message.split(',');
-          if (sendTxResponse.length < 4 ||
-              sendTxResponse[3].contains("Success") == false) {
-            EventTaxiImpl.singleton()
-                .fire(TransactionSendEvent(response: sendTxResponse[1]));
-          } else {
-            EventTaxiImpl.singleton()
-                .fire(TransactionSendEvent(response: "Success"));
-          }
-        }
-              }, onError: ((error, StackTrace trace) {
-        //print("Error");
-      }), onDone: () {
-        //print("Done");
-        _socket.destroy();
-      }, cancelOnError: false);
-
-      //Send the request
-      // Substract 3 sec to limit the issue with future tx
-      DateTime timeBefore4sec =
-          DateTime.now().subtract(new Duration(seconds: 4));
+      // Build transaction data
+      // Substract 4 sec to limit the issue with future tx
+      DateTime timeBefore4sec = DateTime.now().subtract(new Duration(seconds: 4));
       tx.timestamp = timeBefore4sec
               .toUtc()
               .microsecondsSinceEpoch
@@ -621,19 +374,39 @@ class AppService {
       sendTxRequest.id = 0;
       sendTxRequest.tx = tx;
       sendTxRequest.buffer = tx.buildBufferValue();
-
       sendTxRequest.publicKey = publicKey;
       sendTxRequest.buildSignature(privateKey);
       sendTxRequest.websocketCommand = "";
 
-      String method = '"mpinsert"';
-      String param = sendTxRequest.buildCommand();
-      String message =
-          (getLengthBuffer(method) ?? '') + method + (getLengthBuffer(param) ?? '') + param;
-      //print("message: " + message);
-      _socket.write(message);
-        } catch (e) {
-      log.e("Send transaction failed: ${e.toString()}");
+      // Use P2P service to send transaction
+      BismuthP2PService p2pService = BismuthP2PService();
+      
+      // Convert to map format for P2P transmission
+      Map<String, dynamic> transactionData = {
+        'timestamp': tx.timestamp,
+        'address': tx.address,
+        'recipient': tx.recipient,
+        'amount': tx.amount,
+        'signature': sendTxRequest.signature,
+        'public_key': sendTxRequest.publicKey,
+        'operation': tx.operation,
+        'openfield': tx.openfield,
+      };
+      
+      String? result = await p2pService.sendTransaction(transactionData);
+      
+      if (result != null) {
+        if (result.toLowerCase().contains("success") || result.contains("ok")) {
+          EventTaxiImpl.singleton().fire(TransactionSendEvent(response: "Success"));
+          log.i("Transaction sent successfully via P2P: $result");
+        } else {
+          EventTaxiImpl.singleton().fire(TransactionSendEvent(response: result));
+          log.w("Transaction response via P2P: $result");
+        }
+        return;
+      }
+    } catch (e) {
+      log.e("P2P send transaction failed: ${e.toString()}");
       
       // Fire connection status event
       EventTaxiImpl.singleton().fire(
@@ -642,13 +415,13 @@ class AppService {
       // Fire network error event for user feedback  
       EventTaxiImpl.singleton().fire(NetworkErrorEvent(
         errorType: NetworkErrorType.SEND_TRANSACTION_FAILED,
-        message: "Failed to send transaction. Please check your internet connection and try again.",
+        message: "Failed to send transaction via P2P network. Please check your internet connection and try again.",
         operation: "Send Transaction",
         canRetry: true,
       ));
       
       // Also fire transaction send event with error
-      EventTaxiImpl.singleton().fire(TransactionSendEvent(response: "Network Error"));
-    } finally {}
+      EventTaxiImpl.singleton().fire(TransactionSendEvent(response: "P2P Network Error"));
+    }
   }
 }
