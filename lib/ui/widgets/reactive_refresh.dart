@@ -165,8 +165,8 @@ class ReactiveRefreshIndicatorState extends State<ReactiveRefreshIndicator>
 
   _RefreshIndicatorMode? _mode;
   Future<void>? _pendingRefreshFuture;
-  bool? _isIndicatorAtTop = false;
-  double? _dragOffset = 0.0;
+  bool? _isIndicatorAtTop;
+  double? _dragOffset;
 
   static final Animatable<double> _threeQuarterTween =
       Tween<double>(begin: 0.0, end: 0.75);

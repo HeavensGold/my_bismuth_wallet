@@ -175,9 +175,13 @@ class _AppPopupButtonState extends State<AppPopupButton> {
           child: AnimatedContainer(
             duration: Duration(milliseconds: 100),
             decoration: BoxDecoration(
-              color: StateContainer.of(context).curTheme.primary,
+              color: ((StateContainer.of(context).wallet?.accountBalance ?? 0) > 0) 
+                  ? StateContainer.of(context).curTheme.primary
+                  : StateContainer.of(context).curTheme.text30,
               borderRadius: BorderRadius.circular(100),
-              boxShadow: [StateContainer.of(context).curTheme.boxShadowButton],
+              boxShadow: ((StateContainer.of(context).wallet?.accountBalance ?? 0) > 0)
+                  ? [StateContainer.of(context).curTheme.boxShadowButton]
+                  : [],
             ),
             height: 55,
             width: (MediaQuery.of(context).size.width - 18) / 3,
@@ -187,7 +191,14 @@ class _AppPopupButtonState extends State<AppPopupButton> {
               child: AutoSizeText(
                 AppLocalization.of(context).send,
                 textAlign: TextAlign.center,
-                style: AppStyles.textStyleButtonPrimary(context),
+                style: ((StateContainer.of(context).wallet?.accountBalance ?? 0) > 0)
+                    ? AppStyles.textStyleButtonPrimary(context)
+                    : TextStyle(
+                        color: StateContainer.of(context).curTheme.text60,
+                        fontSize: 16.0,
+                        fontWeight: FontWeight.w600,
+                        fontFamily: 'NunitoSans',
+                      ),
                 maxLines: 1,
                 stepGranularity: 0.5,
               ),

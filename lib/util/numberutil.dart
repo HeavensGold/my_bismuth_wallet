@@ -16,8 +16,24 @@ class NumberUtil {
   /// @return Decimal value 1.000000000000000000000000000000
   ///
   static Decimal getRawAsUsableDecimal(String raw) {
-    Decimal amount = Decimal.parse(raw.toString());
-    return amount;
+    // Handle null, empty, or invalid raw values
+    if (raw.isEmpty) {
+      return Decimal.zero;
+    }
+    
+    // Remove any whitespace
+    String cleanRaw = raw.trim();
+    if (cleanRaw.isEmpty) {
+      return Decimal.zero;
+    }
+    
+    try {
+      Decimal amount = Decimal.parse(cleanRaw);
+      return amount;
+    } catch (e) {
+      // Return zero if parsing fails
+      return Decimal.zero;
+    }
   }
 
   /// Truncate a Decimal to a specific amount of digits

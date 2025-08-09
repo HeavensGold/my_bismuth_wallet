@@ -17,6 +17,7 @@ import 'package:my_bismuth_wallet/bus/events.dart';
 import 'package:my_bismuth_wallet/localization.dart';
 import 'package:my_bismuth_wallet/styles.dart';
 import 'package:my_bismuth_wallet/ui/util/exceptions.dart';
+import 'package:my_bismuth_wallet/ui/util/webview_screen.dart';
 
 enum ThreeLineAddressTextType { PRIMARY60, PRIMARY, SUCCESS, SUCCESS_FULL }
 enum OneLineAddressTextType { PRIMARY60, PRIMARY, SUCCESS }
@@ -392,31 +393,51 @@ class UIUtil {
         future: AppLocalization.of(context).getAccountExplorerUrl(account),
         builder: (BuildContext context, AsyncSnapshot snapshot) {
           if (snapshot.hasData && snapshot.data != null) {
-            return WebViewWidget(
-              controller: WebViewController()
-                ..loadRequest(Uri.parse(snapshot.data))
-                ..setJavaScriptMode(JavaScriptMode.unrestricted),
+            return WebViewScreen(
+              url: snapshot.data,
+              title: 'Block Explorer',
             );
           } else {
-            return Center(child: CircularProgressIndicator());
+            return Scaffold(
+              appBar: AppBar(
+                backgroundColor: StateContainer.of(context).curTheme.backgroundDark,
+                iconTheme: IconThemeData(
+                  color: StateContainer.of(context).curTheme.text,
+                ),
+                title: Text(
+                  'Block Explorer',
+                  style: TextStyle(
+                    color: StateContainer.of(context).curTheme.text,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              body: Center(
+                child: CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    StateContainer.of(context).curTheme.primary,
+                  ),
+                ),
+              ),
+            );
           }
         });
   }
 
   static Widget showWebview(BuildContext context, String url, String title) {
-    return WebViewWidget(
-      controller: WebViewController()
-        ..loadRequest(Uri.parse(url))
-        ..setJavaScriptMode(JavaScriptMode.unrestricted),
+    cancelLockEvent();
+    return WebViewScreen(
+      url: url,
+      title: title,
     );
   }
 
   static Widget showDragginatorHelp(BuildContext context) {
     cancelLockEvent();
-    return WebViewWidget(
-      controller: WebViewController()
-        ..loadRequest(Uri.parse(AppLocalization.of(context).getDragginatorHelp()))
-        ..setJavaScriptMode(JavaScriptMode.unrestricted),
+    return WebViewScreen(
+      url: AppLocalization.of(context).getDragginatorHelp(),
+      title: 'Dragginator Help',
     );
   }
 

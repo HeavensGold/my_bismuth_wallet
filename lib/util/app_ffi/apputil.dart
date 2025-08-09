@@ -17,7 +17,9 @@ import 'package:hex/hex.dart';
 import 'package:my_bismuth_wallet/appstate_container.dart';
 import 'package:my_bismuth_wallet/model/db/appdb.dart';
 import 'package:my_bismuth_wallet/model/db/hiveDB.dart';
+import 'package:my_bismuth_wallet/model/vault.dart';
 import 'package:my_bismuth_wallet/service_locator.dart';
+import 'package:my_bismuth_wallet/util/app_ffi/encrypt/crypter.dart';
 
 class AppUtil {
   String seedToAddress(String seed, int index) {
@@ -110,6 +112,14 @@ class AppUtil {
       // Save the default account
       await sl.get<DBHelper>().saveAccount(defaultAccount);
       selectedAcct = defaultAccount;
+    }
+    
+    // Set up encrypted secret if not password protected
+    if (StateContainer.of(context).encryptedSecret == null) {
+      String sessionKey = await sl.get<Vault>().getSessionKey();
+      StateContainer.of(context).setEncryptedSecret(
+          HEX.encode(AppCrypt.encrypt(seed, sessionKey))
+      );
     }
     
     if (selectedAcct != null) {

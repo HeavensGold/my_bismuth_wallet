@@ -20,6 +20,7 @@ import 'package:my_bismuth_wallet/model/db/appdb.dart';
 import 'package:my_bismuth_wallet/model/db/hiveDB.dart';
 import 'package:my_bismuth_wallet/model/vault.dart';
 import 'package:my_bismuth_wallet/model/wallet.dart';
+import 'package:my_bismuth_wallet/network/model/block_types.dart';
 import 'package:my_bismuth_wallet/network/model/response/address_txs_response.dart';
 import 'package:my_bismuth_wallet/network/model/response/balance_get_response.dart';
 import 'package:my_bismuth_wallet/service/app_service.dart';
@@ -133,10 +134,10 @@ class StateContainerState extends State<StateContainer> {
     _transactionsListEventSub = EventTaxiImpl.singleton()
         .registerTo<TransactionsListEvent>()
         .listen((event) {
-      //print("listen TransactionsListEvent");
+      print("listen TransactionsListEvent - received " + (event.response?.length ?? 0).toString() + " transactions");
       AddressTxsResponse addressTxsResponse = new AddressTxsResponse();
       addressTxsResponse.result = <AddressTxsResponseResult>[];
-      for (int i = (event.response?.length ?? 0) - 1; i >= 0; i--) {
+      for (int i = 0; i < (event.response?.length ?? 0); i++) {
         AddressTxsResponseResult addressTxResponseResult =
             AddressTxsResponseResult();
         addressTxResponseResult.populate(
@@ -145,14 +146,65 @@ class StateContainerState extends State<StateContainer> {
         addressTxsResponse.result?.add(addressTxResponseResult);
       }
 
+      // Keep track of unconfirmed transactions before clearing
+      List<AddressTxsResponseResult> unconfirmedTransactions = wallet?.history
+          .where((tx) => tx.type == BlockTypes.UNCONFIRMED)
+          .toList() ?? [];
+      
       wallet?.history.clear();
+      print("Processed transactions: " + (addressTxsResponse.result?.length ?? 0).toString());
 
-      // Iterate list in reverse (oldest to newest block)
+      // Add all transactions to a temporary list and sort them by timestamp (newest first)
+      List<AddressTxsResponseResult> allTransactions = [];
       for (AddressTxsResponseResult item in addressTxsResponse.result ?? []) {
-        setState(() {
-          wallet?.history.insert(0, item);
-        });
+        print("Adding transaction: block=" + (item.blockHeight?.toString() ?? "null") + " from=" + (item.from ?? "null") + " to=" + (item.recipient ?? "null") + " amount=" + (item.amount ?? "null") + " type=" + (item.type?.toString() ?? "null"));
+        allTransactions.add(item);
       }
+      
+      // Filter out unconfirmed transactions that are now confirmed
+      List<AddressTxsResponseResult> stillUnconfirmed = [];
+      for (AddressTxsResponseResult unconfirmedTx in unconfirmedTransactions) {
+        bool isConfirmed = allTransactions.any((confirmedTx) =>
+            confirmedTx.from == unconfirmedTx.from &&
+            confirmedTx.recipient == unconfirmedTx.recipient &&
+            confirmedTx.amount == unconfirmedTx.amount);
+            
+        if (!isConfirmed) {
+          stillUnconfirmed.add(unconfirmedTx);
+          print("Keeping unconfirmed transaction: from=" + (unconfirmedTx.from ?? "null") + " to=" + (unconfirmedTx.recipient ?? "null") + " amount=" + (unconfirmedTx.amount ?? "null"));
+        } else {
+          print("Unconfirmed transaction now confirmed: from=" + (unconfirmedTx.from ?? "null") + " to=" + (unconfirmedTx.recipient ?? "null") + " amount=" + (unconfirmedTx.amount ?? "null"));
+        }
+      }
+
+      // Sort confirmed transactions by timestamp (oldest first for the data structure)
+      allTransactions.sort((a, b) {
+        if (a.timestamp == null && b.timestamp == null) return 0;
+        if (a.timestamp == null) return 1;
+        if (b.timestamp == null) return -1;
+        return a.timestamp!.compareTo(b.timestamp!);
+      });
+      
+      // Sort unconfirmed transactions by timestamp (newest first so they appear at top)
+      stillUnconfirmed.sort((a, b) {
+        if (a.timestamp == null && b.timestamp == null) return 0;
+        if (a.timestamp == null) return 1;
+        if (b.timestamp == null) return -1;
+        return b.timestamp!.compareTo(a.timestamp!);
+      });
+
+      // Add transactions to wallet history: confirmed first, then unconfirmed
+      // (Since UI reverses the order, unconfirmed at end will display at top)
+      setState(() {
+        for (AddressTxsResponseResult item in allTransactions) {
+          wallet?.history.add(item);
+        }
+        for (AddressTxsResponseResult unconfirmedTx in stillUnconfirmed) {
+          wallet?.history.add(unconfirmedTx);
+        }
+      });
+      
+      print("Final wallet history count: " + (wallet?.history.length ?? 0).toString());
     
       setState(() {
         wallet?.historyLoading = false;
@@ -342,12 +394,26 @@ class StateContainerState extends State<StateContainer> {
     setState(() {
       double? balance = double.tryParse(response.balance);
       if (wallet != null && balance != null) {
-        wallet!.accountBalance = balance;
+        // Check if we have unconfirmed transactions
+        bool hasUnconfirmed = wallet?.history.any((tx) => tx.type == BlockTypes.UNCONFIRMED) ?? false;
+        int unconfirmedCount = wallet?.history.where((tx) => tx.type == BlockTypes.UNCONFIRMED).length ?? 0;
+        
+        print("Balance update check - HasUnconfirmed: " + hasUnconfirmed.toString() + ", Count: " + unconfirmedCount.toString());
+        print("Server balance: " + balance.toString() + ", Current balance: " + wallet!.accountBalance.toString());
+        
+        if (!hasUnconfirmed) {
+          // No unconfirmed transactions, safe to update balance from server
+          wallet!.accountBalance = balance;
+          print("Updated balance from server: " + balance.toString());
+        } else {
+          // We have unconfirmed transactions, keep the manually calculated balance
+          print("Keeping manual balance due to unconfirmed transactions. Server: " + balance.toString() + ", Current: " + wallet!.accountBalance.toString());
+        }
       }
       // Only update account balance if we have a valid selected account
       if (selectedAccount.address != null && selectedAccount.address!.isNotEmpty) {
         sl.get<DBHelper>().updateAccountBalance(
-            selectedAccount, balance?.toString() ?? '0');
+            selectedAccount, wallet?.accountBalance.toString() ?? '0');
       }
             });
   }
@@ -356,7 +422,8 @@ class StateContainerState extends State<StateContainer> {
     // Debug: Check if we have a valid address to work with
     if (selectedAccount.address != null && selectedAccount.address!.isNotEmpty) {
       // Request account history
-      int count = 30;
+      int count = 100;
+      print("Requesting transaction history for address: " + selectedAccount.address! + " with limit: " + count.toString());
       try {
         // Making balance and transaction requests
         sl
@@ -393,6 +460,49 @@ class StateContainerState extends State<StateContainer> {
     }
   }
 
+  void addUnconfirmedTransaction({
+    required String fromAddress,
+    required String toAddress,
+    required String amount,
+    required String operation,
+    required String openfield,
+  }) {
+    // Create unconfirmed transaction
+    AddressTxsResponseResult unconfirmedTx = AddressTxsResponseResult();
+    unconfirmedTx.timestamp = DateTime.now();
+    unconfirmedTx.from = fromAddress;
+    unconfirmedTx.recipient = toAddress;
+    unconfirmedTx.amount = amount;
+    unconfirmedTx.operation = operation;
+    unconfirmedTx.openfield = openfield;
+    unconfirmedTx.blockHeight = null; // No block height for unconfirmed
+    unconfirmedTx.type = BlockTypes.UNCONFIRMED;
+    unconfirmedTx.signature = "pending..."; // Placeholder
+    unconfirmedTx.hash = "pending..."; // Placeholder
+    unconfirmedTx.fee = 0.01; // Standard fee
+    
+    setState(() {
+      // Add to the end of history (will display at top due to UI reverse indexing)
+      wallet?.history.add(unconfirmedTx);
+    });
+    
+    print("=== UNCONFIRMED TRANSACTION CREATED ===");
+    print("From: " + fromAddress);
+    print("To: " + toAddress);  
+    print("Amount: " + amount);
+    print("Type: " + unconfirmedTx.type.toString());
+    print("Timestamp: " + unconfirmedTx.timestamp.toString());
+    print("Total history count: " + (wallet?.history.length ?? 0).toString());
+    
+    // Count unconfirmed transactions
+    int unconfirmedCount = wallet?.history.where((tx) => tx.type == BlockTypes.UNCONFIRMED).length ?? 0;
+    print("Unconfirmed transactions in history: " + unconfirmedCount.toString());
+    print("=== END UNCONFIRMED CREATION DEBUG ===");
+    
+    // Fire event to update UI
+    EventTaxiImpl.singleton().fire(HistoryHomeEvent(items: wallet?.history ?? []));
+  }
+
   void logOut() {
     setState(() {
       wallet = AppWallet();
@@ -402,10 +512,22 @@ class StateContainerState extends State<StateContainer> {
   }
 
   Future<String> getSeed() async {
-    String seed;
-    seed = HEX.encode(AppCrypt.decrypt(
-        encryptedSecret, await sl.get<Vault>().getSessionKey()));
+    // Check if encryptedSecret is available
+    if (encryptedSecret == null || encryptedSecret!.isEmpty) {
+      throw Exception('Encrypted secret is not available');
+    }
+    
+    String sessionKey = await sl.get<Vault>().getSessionKey();
+    if (sessionKey.isEmpty) {
+      throw Exception('Session key is not available');
+    }
+    
+    try {
+      String seed = HEX.encode(AppCrypt.decrypt(encryptedSecret!, sessionKey));
       return seed;
+    } catch (e) {
+      throw Exception('Failed to decrypt seed: ${e.toString()}');
+    }
   }
 
   // Simple build method that just passes this state through

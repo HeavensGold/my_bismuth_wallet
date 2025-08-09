@@ -6,4 +6,5 @@ class BlockTypes {
   static const String OPEN = "open";
   static const String CHANGE = "change";
   static const String STATE = "state";
+  static const String UNCONFIRMED = "unconfirmed";
 }

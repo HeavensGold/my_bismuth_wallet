@@ -247,7 +247,7 @@ class _AppHomePageState extends State<AppHomePage>
   late StreamSubscription<AccountChangedEvent> _switchAccountSub;
   late StreamSubscription<NetworkErrorEvent> _networkErrorSub;
   late StreamSubscription<BalanceGetEvent> _balanceGetSub;
-  late StreamSubscription<TransactionsListEvent> _transactionsListSub;
+  // _transactionsListSub removed - using sophisticated handler in appstate_container.dart instead
 
   void _registerBus() {
     _historySub = EventTaxiImpl.singleton()
@@ -255,7 +255,11 @@ class _AppHomePageState extends State<AppHomePage>
         .listen((event) {
       setState(() {
         _isRefreshing = false;
+        // Force UI rebuild to show updated transaction history
+        // The transaction history data is already updated in StateContainer
+        // This setState ensures the UI reflects the changes
       });
+      print("HistoryHomeEvent received - UI refreshed with " + (event.items?.length ?? 0).toString() + " transactions");
       // TODO: Fix deep link handling
       // if (StateContainer.of(context).initialDeepLink != null) {
       //   handleDeepLink(StateContainer.of(context).initialDeepLink);
@@ -324,30 +328,8 @@ class _AppHomePageState extends State<AppHomePage>
       }
     });
     
-    // Transaction updates  
-    _transactionsListSub = EventTaxiImpl.singleton()
-        .registerTo<TransactionsListEvent>()
-        .listen((event) {
-      if (mounted && event.response != null) {
-        setState(() {
-          if (StateContainer.of(context).wallet != null) {
-            StateContainer.of(context).wallet!.history.clear();
-            
-            // Convert raw transaction data to AddressTxsResponseResult objects
-            for (var txData in event.response!) {
-              AddressTxsResponseResult tx = AddressTxsResponseResult();
-              tx.populate(txData, StateContainer.of(context).selectedAccount.address!);
-              tx.getBisToken();
-              StateContainer.of(context).wallet!.history.insert(0, tx);
-            }
-            
-            StateContainer.of(context).wallet!.historyLoading = false;
-            StateContainer.of(context).wallet!.loading = false;
-          }
-          _isRefreshing = false;
-        });
-      }
-    });
+    // Transaction updates - Legacy handler removed to prevent conflicts with sophisticated handler in appstate_container.dart
+    // The sophisticated handler preserves unconfirmed transactions properly
   }
 
   @override
@@ -367,7 +349,7 @@ class _AppHomePageState extends State<AppHomePage>
       _switchAccountSub.cancel();
       _networkErrorSub.cancel();
       _balanceGetSub.cancel();
-      _transactionsListSub.cancel();
+      // _transactionsListSub.cancel(); // removed - no longer using this subscription
     }
 
   @override
@@ -501,25 +483,29 @@ class _AppHomePageState extends State<AppHomePage>
   // Used to build list items that haven't been removed.
   Widget _buildItem(
       BuildContext context, int index, Animation<double> animation) {
+    // Reverse the index to show newest transactions first
+    int totalItems = StateContainer.of(context).wallet?.history.length ?? 0;
+    int reversedIndex = totalItems - 1 - index;
+    
     String displayName = smallScreen(context)
-        ? StateContainer.of(context).wallet?.history[index].getShorterString() ?? ""
-        : StateContainer.of(context).wallet?.history[index].getShortString() ?? "";
+        ? StateContainer.of(context).wallet?.history[reversedIndex].getShorterString() ?? ""
+        : StateContainer.of(context).wallet?.history[reversedIndex].getShortString() ?? "";
     _contacts.forEach((contact) {
-      if (StateContainer.of(context).wallet?.history[index].type ==
+      if (StateContainer.of(context).wallet?.history[reversedIndex].type ==
           BlockTypes.RECEIVE) {
         if (contact.address ==
-            StateContainer.of(context).wallet?.history[index].from) {
+            StateContainer.of(context).wallet?.history[reversedIndex].from) {
           displayName = contact.name ?? "";
         }
       } else {
         if (contact.address ==
-            StateContainer.of(context).wallet?.history[index].recipient) {
+            StateContainer.of(context).wallet?.history[reversedIndex].recipient) {
           displayName = contact.name ?? "";
         }
       }
     });
     return _buildTransactionCard(
-        StateContainer.of(context).wallet?.history[index] ?? AddressTxsResponseResult(),
+        StateContainer.of(context).wallet?.history[reversedIndex] ?? AddressTxsResponseResult(),
         animation,
         displayName,
         context);
@@ -589,7 +575,7 @@ class _AppHomePageState extends State<AppHomePage>
     return ReactiveRefreshIndicator(
       backgroundColor: StateContainer.of(context).curTheme.backgroundDark,
       child: AnimatedList(
-        key: _listKeyMap[StateContainer.of(context).wallet?.address],
+        key: ValueKey((StateContainer.of(context).wallet?.address ?? "unknown") + "_" + (StateContainer.of(context).wallet?.history.length ?? 0).toString()),
         padding: EdgeInsetsDirectional.fromSTEB(0, 5.0, 0, 15.0),
         initialItemCount: StateContainer.of(context).wallet?.history.length ?? 0,
         itemBuilder: _buildItem,
@@ -891,6 +877,8 @@ class _AppHomePageState extends State<AppHomePage>
     String text;
     if (item.type == BlockTypes.SEND) {
       text = AppLocalization.of(context).sent;
+    } else if (item.type == BlockTypes.UNCONFIRMED) {
+      text = "Unconfirmed";
     } else {
       text = AppLocalization.of(context).received;
     }
@@ -972,7 +960,7 @@ class _AppHomePageState extends State<AppHomePage>
                   context: context,
                   widget: TransactionDetailsSheet(
                       item: item,
-                      address: item.type == BlockTypes.SEND
+                      address: (item.type == BlockTypes.SEND || item.type == BlockTypes.UNCONFIRMED)
                           ? item.recipient
                           : item.from,
                       displayName: displayName),
@@ -1049,6 +1037,12 @@ class _AppHomePageState extends State<AppHomePage>
                                                         item
                                                             .getFormattedAmount() +
                                                         " BIS"
+                                                    : item.type ==
+                                                        BlockTypes.UNCONFIRMED
+                                                    ? "- " +
+                                                        item
+                                                            .getFormattedAmount() +
+                                                        " BIS (pending)"
                                                     : "+ " +
                                                         item.getFormattedAmount() +
                                                         " BIS",
@@ -1057,6 +1051,12 @@ class _AppHomePageState extends State<AppHomePage>
                                                     ? AppStyles
                                                         .textStyleTransactionTypeRed(
                                                             context)
+                                                    : item.type ==
+                                                        BlockTypes.UNCONFIRMED
+                                                    ? AppStyles
+                                                        .textStyleTransactionTypeRed(
+                                                            context).copyWith(
+                                                            color: Colors.orange)
                                                     : AppStyles
                                                         .textStyleTransactionTypeGreen(
                                                             context),
@@ -1085,6 +1085,17 @@ class _AppHomePageState extends State<AppHomePage>
                                                             (item
                                                                 .getBisToken()
                                                                 .tokenName ?? '')
+                                                        : item.type == BlockTypes.UNCONFIRMED
+                                                        ? "- " +
+                                                            item
+                                                                .getBisToken()
+                                                                .tokensQuantity
+                                                                .toString() +
+                                                            " " +
+                                                            (item
+                                                                .getBisToken()
+                                                                .tokenName ?? '') +
+                                                            " (pending)"
                                                         : "+ " +
                                                             item
                                                                 .getBisToken()
@@ -1099,6 +1110,12 @@ class _AppHomePageState extends State<AppHomePage>
                                                     ? AppStyles
                                                         .textStyleTransactionTypeRed(
                                                             context)
+                                                    : item.type ==
+                                                        BlockTypes.UNCONFIRMED
+                                                    ? AppStyles
+                                                        .textStyleTransactionTypeRed(
+                                                            context).copyWith(
+                                                            color: Colors.orange)
                                                     : AppStyles
                                                         .textStyleTransactionTypeGreen(
                                                             context),
@@ -1277,7 +1294,7 @@ class _AppHomePageState extends State<AppHomePage>
                                         .text05,
                                     backgroundImage: NetworkImage(
                                       UIUtil.getRobohashURL(
-                                          item.type == BlockTypes.SEND
+                                          (item.type == BlockTypes.SEND || item.type == BlockTypes.UNCONFIRMED)
                                               ? item.recipient
                                               : item.from),
                                     ),
@@ -2192,6 +2209,10 @@ class _TransactionDetailsSheetState extends State<TransactionDetailsSheet> {
                                           ? "- " +
                                               (widget.item?.getFormattedAmount() ?? '0.00') +
                                               " BIS"
+                                          : (widget.item?.type ?? BlockTypes.RECEIVE) == BlockTypes.UNCONFIRMED
+                                          ? "- " +
+                                              (widget.item?.getFormattedAmount() ?? '0.00') +
+                                              " BIS (pending)"
                                           : "+ " +
                                               (widget.item?.getFormattedAmount() ?? '0.00') +
                                               " BIS",

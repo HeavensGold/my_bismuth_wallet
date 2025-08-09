@@ -17,13 +17,32 @@ class AppCrypt {
   /// KDF is Sha256KDF if not specified
   static Uint8List decrypt(dynamic value, String password, {KDF? kdf}) {
     kdf = kdf ?? Sha256KDF();
+    
+    // Validate inputs
+    if (value == null) {
+      throw Exception('Value cannot be null');
+    }
+    if (password.isEmpty) {
+      throw Exception('Password cannot be empty');
+    }
+    
     Uint8List valBytes;
     if (value is String) {
-      valBytes = AppHelpers.hexToBytes(value);
+      if (value.isEmpty) {
+        throw Exception('Value string cannot be empty');
+      }
+      try {
+        valBytes = AppHelpers.hexToBytes(value);
+      } catch (e) {
+        throw Exception('Invalid hex string: ${e.toString()}');
+      }
     } else if (value is Uint8List) {
+      if (value.isEmpty) {
+        throw Exception('Byte array cannot be empty');
+      }
       valBytes = value;
     } else {
-      throw Exception('Value should be a string or a byte array');
+      throw Exception('Value should be a string or a byte array, got ${value.runtimeType}');
     }
 
     Uint8List salt = valBytes.sublist(8, 16);

@@ -20,6 +20,7 @@ import 'package:my_bismuth_wallet/model/db/appdb.dart';
 import 'package:my_bismuth_wallet/model/db/hiveDB.dart';
 import 'package:my_bismuth_wallet/model/vault.dart';
 import 'package:my_bismuth_wallet/network/model/response/address_txs_response.dart';
+import 'package:my_bismuth_wallet/network/model/response/balance_get_response.dart';
 import 'package:my_bismuth_wallet/service/app_service.dart';
 import 'package:my_bismuth_wallet/service_locator.dart';
 import 'package:my_bismuth_wallet/styles.dart';
@@ -84,41 +85,95 @@ class _SendConfirmSheetState extends State<SendConfirmSheet> {
         .registerTo<TransactionSendEvent>()
         .listen((event) async {
       //print("listen TransactionSendEvent");
-      //print("result : " + event.response);
+      //print("result : " + (event.response ?? "null"));
       if (event.response != "Success") {
         // Send failed
         if (animationOpen) {
           Navigator.of(context).pop();
         }
+        
+        String cleanErrorMessage = (event.response ?? "Unknown error").replaceAll('"', '').replaceAll(']', '');
         UIUtil.showSnackbar(
-            AppLocalization.of(context).sendError + " (" + (event.response ?? "") + ")",
+            AppLocalization.of(context).sendError + " (" + cleanErrorMessage + ")",
             context);
         Navigator.of(context).pop();
       } else {
-        if (StateContainer.of(context).wallet != null) {
-          StateContainer.of(context).wallet!.accountBalance -=
-              double.parse(widget.amountRaw);
-        }
-
-        // Show complete
-        Contact? contact = await sl
-            .get<DBHelper>()
-            .getContactWithAddress(widget.destination);
-        String? contactName = contact?.name;
-        Navigator.of(context).popUntil(RouteUtils.withNameLike('/home'));
-        StateContainer.of(context).requestUpdate();
-        Sheets.showAppHeightNineSheet(
-            context: context,
-            closeOnTap: true,
-            removeUntilHome: true,
-            widget: SendCompleteSheet(
-                title: widget.title,
-                amountRaw: widget.amountRaw,
-                destination: destinationAltered,
-                contactName: contactName,
-                localAmount: widget.localCurrency));
+        // Success case is now handled immediately after broadcast
+        // This listener only confirms the transaction was accepted by the network
+        print("Transaction broadcast confirmed by network: " + event.response.toString());
       }
     });
+  }
+
+  Future<void> _handleTransactionSuccess(String destinationAltered, String openfield) async {
+    // Dismiss sending animation first
+    if (animationOpen) {
+      Navigator.of(context).pop();
+      animationOpen = false;
+    }
+    
+    if (StateContainer.of(context).wallet != null) {
+      // Calculate transaction fee
+      double transactionFee = sl.get<AppService>().getFeesEstimation(
+        widget.openfield, 
+        widget.operation
+      );
+      
+      // For sending: subtract (amount + fee)
+      double sentAmount = double.parse(widget.amountRaw);
+      double newBalance = StateContainer.of(context).wallet!.accountBalance - (sentAmount + transactionFee);
+      StateContainer.of(context).wallet!.accountBalance = newBalance;
+      
+      print("Balance calculation: " + StateContainer.of(context).wallet!.accountBalance.toString() + " - (" + sentAmount.toString() + " + " + transactionFee.toString() + ") = " + newBalance.toString());
+      
+      // Fire balance event to update UI immediately
+      BalanceGetResponse balanceResponse = BalanceGetResponse(
+        address: StateContainer.of(context).selectedAccount.address!,
+        balance: newBalance.toString(),
+        balanceNoMempool: newBalance.toString(),
+        totalCredits: '0',
+        totalDebits: '0', 
+        totalFees: '0',
+        totalRewards: '0',
+      );
+      EventTaxiImpl.singleton().fire(BalanceGetEvent(response: balanceResponse));
+      print("Balance updated immediately: new balance = " + newBalance.toString());
+    }
+    
+    // Add unconfirmed transaction to history immediately
+    StateContainer.of(context).addUnconfirmedTransaction(
+      fromAddress: StateContainer.of(context).wallet?.address ?? "",
+      toAddress: destinationAltered,
+      amount: widget.amountRaw,
+      operation: widget.operation,
+      openfield: widget.openfield,
+    );
+
+    // Give UI time to update before navigation
+    await Future.delayed(Duration(milliseconds: 100));
+
+    // Show complete
+    Contact? contact = await sl
+        .get<DBHelper>()
+        .getContactWithAddress(widget.destination);
+    String? contactName = contact?.name;
+    Navigator.of(context).popUntil(RouteUtils.withNameLike('/home'));
+    // Don't call requestUpdate() immediately - it would overwrite our unconfirmed transaction
+    // The unconfirmed transaction will be replaced by confirmed transaction during next periodic update
+    
+    // Give main screen time to fully load before showing success sheet
+    await Future.delayed(Duration(milliseconds: 200));
+    
+    Sheets.showAppHeightNineSheet(
+        context: context,
+        closeOnTap: true,
+        removeUntilHome: true,
+        widget: SendCompleteSheet(
+            title: widget.title,
+            amountRaw: widget.amountRaw,
+            destination: destinationAltered,
+            contactName: contactName,
+            localAmount: widget.localCurrency));
   }
 
   void _destroyBus() {
@@ -636,11 +691,24 @@ class _SendConfirmSheetState extends State<SendConfirmSheet> {
         openfield += ':{"Message":"' + widget.comment + '"}';
       }
       String seed = await StateContainer.of(context).getSeed();
+      
+      // Validate seed
+      if (seed.isEmpty) {
+        throw Exception('Wallet seed is not available');
+      }
+      
       int index = StateContainer.of(context).selectedAccount.index ?? 0;
       String publicKeyBase64 =
           await AppUtil().seedToPublicKeyBase64(seed, index);
       String privateKey = await AppUtil().seedToPrivateKey(seed, index);
+      
+      // Validate private key
+      if (privateKey.isEmpty) {
+        throw Exception('Failed to generate private key from seed');
+      }
+      
       //print("send tx");
+      // Broadcast transaction to network (fire and forget - don't wait for response)
       sl.get<AppService>().sendTx(
           StateContainer.of(context).wallet?.address ?? "",
           widget.amountRaw,
@@ -649,6 +717,9 @@ class _SendConfirmSheetState extends State<SendConfirmSheet> {
           widget.operation,
           publicKeyBase64,
           privateKey);
+          
+      // Immediately proceed with success flow - don't wait for server response
+      await _handleTransactionSuccess(destinationAltered, openfield);
     } catch (e) {
       // Send failed
       //print("send failed" + e.toString());

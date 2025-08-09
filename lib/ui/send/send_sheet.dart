@@ -140,12 +140,23 @@ class _SendSheetState extends State<SendSheet> {
     _selectedTokenName = widget.selectedTokenName;
     quickSendAmount = widget.quickSendAmount;
     this.animationOpen = false;
+    
+    // Initialize late variables
+    _rawAmount = null;
+    _rawTokenQuantity = null;
     // Setup initial state for contact pre-filled
-    _sendAddressController.text = widget.contact?.name ?? "";
-    _isContact = true;
-    _showContactButton = false;
-    _pasteButtonVisible = false;
-    _sendAddressStyle = AddressStyle.PRIMARY;
+    if (widget.contact != null) {
+      _sendAddressController.text = widget.contact!.name ?? "";
+      _isContact = true;
+      _showContactButton = false;
+      _pasteButtonVisible = false;
+      _sendAddressStyle = AddressStyle.PRIMARY;
+    } else {
+      _isContact = false;
+      _showContactButton = true;
+      _pasteButtonVisible = true;
+      _sendAddressStyle = AddressStyle.TEXT60;
+    }
   
     _sendOperationController.text = widget.operation ?? "";
     if (widget.operation == AddressTxsResponseResult.TOKEN_TRANSFER) {
@@ -269,8 +280,13 @@ class _SendSheetState extends State<SendSheet> {
         locale: widget.localCurrency.getLocale().toString(),
         symbol: widget.localCurrency.getCurrencySymbol());
     // Set quick send amount
-    _sendAmountController.text =
-        NumberUtil.getRawAsUsableString(quickSendAmount ?? "").replaceAll(",", "");
+    String quickAmount = widget.quickSendAmount ?? "";
+    if (quickAmount.isNotEmpty) {
+      _sendAmountController.text =
+          NumberUtil.getRawAsUsableString(quickAmount).replaceAll(",", "");
+    } else {
+      _sendAmountController.text = "";
+    }
     }
 
   @override
@@ -1035,7 +1051,7 @@ class _SendSheetState extends State<SendSheet> {
                             _pasteButtonVisible = false;
                             _showContactButton = false;
                           });
-                          _sendAddressController.text = contact.name ?? "";
+                          _sendAddressController.text = contact?.name ?? "";
                         }
                                               // If amount is present, fill it and go to SendConfirm
                         bool hasError = false;
@@ -1606,7 +1622,7 @@ class _SendSheetState extends State<SendSheet> {
                     _pasteButtonVisible = false;
                     _showContactButton = false;
                   });
-                  _sendAddressController.text = contact.name ?? "";
+                  _sendAddressController.text = contact?.name ?? "";
                                 });
               }
             });

@@ -385,7 +385,7 @@ abstract class SlidableDelegate {
   const SlidableDelegate({
     double? fastThreshold,
   })  : fastThreshold = fastThreshold ?? _kFastThreshold,
-        assert(fastThreshold != null && fastThreshold >= .0,
+        assert((fastThreshold ?? _kFastThreshold) >= .0,
             'fastThreshold must be positive');
 
   /// The threshold used to know if a movement was fast and request to open/close the actions.

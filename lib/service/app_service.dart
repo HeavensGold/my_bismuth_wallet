@@ -226,8 +226,8 @@ class AppService {
         _webSocket?.stream.listen((data) {
           if (data != null) {
             message += new String.fromCharCodes(data).trim();
-            //print("response : " + message);
-            //print("response length : " + message.length.toString());
+            //print("TX History response : " + message);
+            //print("TX History response length : " + message.length.toString());
             if (message.length >= 10 &&
                 int.tryParse(message.substring(0, 10)) != null) {
               // Parse mempool tx
@@ -238,8 +238,8 @@ class AppService {
                 String mempoolTxListString =
                     message.substring(10, 10 + mempoolTxListStringLength);
                 int mempoolTxListStringEnd = 10 + mempoolTxListStringLength;
-                //print(
-                //    "getAddressTxsResponse (memPool) : " + mempoolTxListString);
+                print(
+                    "getAddressTxsResponse (memPool) : " + mempoolTxListString);
                 List mempoolTxs =
                     addlistlimResponseFromJson(mempoolTxListString);
 
@@ -258,14 +258,16 @@ class AppService {
                         10 +
                             mempoolTxListStringEnd +
                             blockchainTxListStringLength);
-                    //print("getAddressTxsResponse (blockchain) : " +
-                    //    blockchainTxListString);
+                    print("getAddressTxsResponse (blockchain) : " +
+                        blockchainTxListString);
                     List blockChainTxs =
                         addlistlimResponseFromJson(blockchainTxListString);
 
                     List txs = [];
                     txs.addAll(mempoolTxs);
                     txs.addAll(blockChainTxs);
+
+                    print("Total transactions found: mempool=" + mempoolTxs.length.toString() + " blockchain=" + blockChainTxs.length.toString() + " combined=" + txs.length.toString());
 
                     EventTaxiImpl.singleton()
                         .fire(TransactionsListEvent(response: txs));
@@ -292,8 +294,8 @@ class AppService {
       } else {
         _socket?.listen((data) {
           message += new String.fromCharCodes(data).trim();
-          //print("response : " + message);
-          //print("response length : " + message.length.toString());
+          //print("TX History response : " + message);
+          //print("TX History response length : " + message.length.toString());
           if (message.length >= 10 &&
               int.tryParse(message.substring(0, 10)) != null) {
             // Parse mempool tx
@@ -304,8 +306,8 @@ class AppService {
               String mempoolTxListString =
                   message.substring(10, 10 + mempoolTxListStringLength);
               int mempoolTxListStringEnd = 10 + mempoolTxListStringLength;
-              //print(
-              //    "getAddressTxsResponse (memPool) : " + mempoolTxListString);
+              print(
+                  "getAddressTxsResponse (memPool) : " + mempoolTxListString);
               List mempoolTxs =
                   addlistlimResponseFromJson(mempoolTxListString);
 
@@ -324,14 +326,16 @@ class AppService {
                       10 +
                           mempoolTxListStringEnd +
                           blockchainTxListStringLength);
-                  //print("getAddressTxsResponse (blockchain) : " +
-                  //    blockchainTxListString);
+                  print("getAddressTxsResponse (blockchain) : " +
+                      blockchainTxListString);
                   List blockChainTxs =
                       addlistlimResponseFromJson(blockchainTxListString);
 
                   List txs = [];
                   txs.addAll(mempoolTxs);
                   txs.addAll(blockChainTxs);
+
+                  print("Total transactions found: mempool=" + mempoolTxs.length.toString() + " blockchain=" + blockChainTxs.length.toString() + " combined=" + txs.length.toString());
 
                   EventTaxiImpl.singleton()
                       .fire(TransactionsListEvent(response: txs));
@@ -581,10 +585,12 @@ class AppService {
           }
           //print("Response sendTx : " + message);
           List<String> sendTxResponse = message.split(',');
+          
           if (sendTxResponse.length < 4 ||
               sendTxResponse[3].contains("Success") == false) {
+            String errorResponse = sendTxResponse.length > 1 ? sendTxResponse[1] : "Unknown Error";
             EventTaxiImpl.singleton()
-                .fire(TransactionSendEvent(response: sendTxResponse[1]));
+                .fire(TransactionSendEvent(response: errorResponse));
           } else {
             EventTaxiImpl.singleton()
                 .fire(TransactionSendEvent(response: "Success"));

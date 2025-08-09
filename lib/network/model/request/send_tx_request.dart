@@ -43,8 +43,19 @@ class SendTxRequest {
   String signString(String privateKey, String msgToSign) {
     final ECDSASigner signer = Signer('SHA-256/ECDSA') as ECDSASigner;
 
+    // Validate privateKey before parsing
+    if (privateKey.isEmpty) {
+      throw Exception('Private key is empty');
+    }
+    
+    // Remove any whitespace and ensure it's valid hex
+    String cleanPrivateKey = privateKey.trim();
+    if (!RegExp(r'^[0-9a-fA-F]+$').hasMatch(cleanPrivateKey)) {
+      throw Exception('Private key contains invalid characters');
+    }
+
     final _privateKey = ECPrivateKey(
-      BigInt.parse(privateKey, radix: 16),
+      BigInt.parse(cleanPrivateKey, radix: 16),
       ECDomainParameters('secp256k1'),
     );
     var privParams = PrivateKeyParameter(_privateKey);
