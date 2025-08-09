@@ -147,8 +147,17 @@ class AddressTxsResponseResult {
   }
 
   void populate(List txs, String address) {
-    blockHeight = txs[0];
-    timestamp = DateTime.fromMillisecondsSinceEpoch((txs[1] * 1000).toInt());
+    final dynamic h = txs[0];
+    if (h is int) {
+      blockHeight = h;
+    } else if (h is double) {
+      blockHeight = h.toInt();
+    } else {
+      blockHeight = null;
+    }
+    final dynamic ts = txs[1];
+    double tsSeconds = ts is num ? ts.toDouble() : 0.0;
+    timestamp = DateTime.fromMillisecondsSinceEpoch((tsSeconds * 1000).toInt());
     from = txs[2];
     recipient = txs[3];
     amount = txs[4].toString();

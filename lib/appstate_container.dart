@@ -100,6 +100,28 @@ class StateContainerState extends State<StateContainer> {
 
     // Register RxBus
     _registerBus();
+    
+    // Initialize wallet on startup
+    Future.delayed(Duration(milliseconds: 100), () async {
+      if (mounted) {
+        // Try to get the saved selected account
+        try {
+          String seed = await getSeed();
+          Account? savedAccount = await sl.get<DBHelper>().getSelectedAccount(seed);
+          if (savedAccount != null) {
+            // Initialize wallet with saved account
+            updateWallet(account: savedAccount);
+          } else {
+            // No saved account, get the main account
+            Account mainAccount = await sl.get<DBHelper>().getMainAccount(seed);
+            updateWallet(account: mainAccount);
+          }
+        } catch (e) {
+          // Error getting seed or account, wallet will be initialized later
+          print("Could not initialize wallet on startup: $e");
+        }
+      }
+    });
     // Set currency locale here for the UI to access
     sl.get<SharedPrefsUtil>().getCurrency(deviceLocale).then((currency) {
       setState(() {
@@ -131,89 +153,8 @@ class StateContainerState extends State<StateContainer> {
       }
     });
 
-    _transactionsListEventSub = EventTaxiImpl.singleton()
-        .registerTo<TransactionsListEvent>()
-        .listen((event) {
-      print("listen TransactionsListEvent - received " + (event.response?.length ?? 0).toString() + " transactions");
-      AddressTxsResponse addressTxsResponse = new AddressTxsResponse();
-      addressTxsResponse.result = <AddressTxsResponseResult>[];
-      for (int i = 0; i < (event.response?.length ?? 0); i++) {
-        AddressTxsResponseResult addressTxResponseResult =
-            AddressTxsResponseResult();
-        addressTxResponseResult.populate(
-            event.response![i], selectedAccount.address!);
-        addressTxResponseResult.getBisToken();
-        addressTxsResponse.result?.add(addressTxResponseResult);
-      }
-
-      // Keep track of unconfirmed transactions before clearing
-      List<AddressTxsResponseResult> unconfirmedTransactions = wallet?.history
-          .where((tx) => tx.type == BlockTypes.UNCONFIRMED)
-          .toList() ?? [];
-      
-      wallet?.history.clear();
-      print("Processed transactions: " + (addressTxsResponse.result?.length ?? 0).toString());
-
-      // Add all transactions to a temporary list and sort them by timestamp (newest first)
-      List<AddressTxsResponseResult> allTransactions = [];
-      for (AddressTxsResponseResult item in addressTxsResponse.result ?? []) {
-        print("Adding transaction: block=" + (item.blockHeight?.toString() ?? "null") + " from=" + (item.from ?? "null") + " to=" + (item.recipient ?? "null") + " amount=" + (item.amount ?? "null") + " type=" + (item.type?.toString() ?? "null"));
-        allTransactions.add(item);
-      }
-      
-      // Filter out unconfirmed transactions that are now confirmed
-      List<AddressTxsResponseResult> stillUnconfirmed = [];
-      for (AddressTxsResponseResult unconfirmedTx in unconfirmedTransactions) {
-        bool isConfirmed = allTransactions.any((confirmedTx) =>
-            confirmedTx.from == unconfirmedTx.from &&
-            confirmedTx.recipient == unconfirmedTx.recipient &&
-            confirmedTx.amount == unconfirmedTx.amount);
-            
-        if (!isConfirmed) {
-          stillUnconfirmed.add(unconfirmedTx);
-          print("Keeping unconfirmed transaction: from=" + (unconfirmedTx.from ?? "null") + " to=" + (unconfirmedTx.recipient ?? "null") + " amount=" + (unconfirmedTx.amount ?? "null"));
-        } else {
-          print("Unconfirmed transaction now confirmed: from=" + (unconfirmedTx.from ?? "null") + " to=" + (unconfirmedTx.recipient ?? "null") + " amount=" + (unconfirmedTx.amount ?? "null"));
-        }
-      }
-
-      // Sort confirmed transactions by timestamp (oldest first for the data structure)
-      allTransactions.sort((a, b) {
-        if (a.timestamp == null && b.timestamp == null) return 0;
-        if (a.timestamp == null) return 1;
-        if (b.timestamp == null) return -1;
-        return a.timestamp!.compareTo(b.timestamp!);
-      });
-      
-      // Sort unconfirmed transactions by timestamp (newest first so they appear at top)
-      stillUnconfirmed.sort((a, b) {
-        if (a.timestamp == null && b.timestamp == null) return 0;
-        if (a.timestamp == null) return 1;
-        if (b.timestamp == null) return -1;
-        return b.timestamp!.compareTo(a.timestamp!);
-      });
-
-      // Add transactions to wallet history: confirmed first, then unconfirmed
-      // (Since UI reverses the order, unconfirmed at end will display at top)
-      setState(() {
-        for (AddressTxsResponseResult item in allTransactions) {
-          wallet?.history.add(item);
-        }
-        for (AddressTxsResponseResult unconfirmedTx in stillUnconfirmed) {
-          wallet?.history.add(unconfirmedTx);
-        }
-      });
-      
-      print("Final wallet history count: " + (wallet?.history.length ?? 0).toString());
+    // Transaction event subscription is now managed in requestUpdate() to avoid duplicates
     
-      setState(() {
-        wallet?.historyLoading = false;
-        wallet?.loading = false;
-      });
-
-      EventTaxiImpl.singleton().fire(HistoryHomeEvent(items: wallet?.history ?? []));
-    });
-
     _priceEventSub =
         EventTaxiImpl.singleton().registerTo<PriceEvent>().listen((event) {
       // PriceResponse's get pushed periodically, it wasn't a request we made so don't pop the queue
@@ -273,6 +214,86 @@ class StateContainerState extends State<StateContainer> {
         updateRecentlyUsedAccounts();
       }
     });
+  }
+
+  void _handleTransactionsListEvent(TransactionsListEvent event) {
+    print("listen TransactionsListEvent - received " + (event.response?.length ?? 0).toString() + " transactions");
+    
+    // Check if widget is still mounted before processing
+    if (!mounted) {
+      print("Widget not mounted, skipping transaction event processing");
+      return;
+    }
+    
+    // Skip processing empty responses in certain conditions to prevent flickering
+    if (event.response?.isEmpty == true) {
+      // If we already have transactions, skip empty responses
+      if (wallet?.history.isNotEmpty ?? false) {
+        print("Skipping empty response to prevent UI flicker");
+        return;
+      }
+      // If we're still loading (historyLoading is true), skip the first empty response
+      // This gives time for the full data to arrive
+      if (wallet?.historyLoading == true) {
+        print("Skipping empty response during initial load");
+        return;
+      }
+    }
+    
+    try {
+      AddressTxsResponse addressTxsResponse = new AddressTxsResponse();
+      addressTxsResponse.result = <AddressTxsResponseResult>[];
+      for (int i = 0; i < (event.response?.length ?? 0); i++) {
+        AddressTxsResponseResult addressTxResponseResult = AddressTxsResponseResult();
+        addressTxResponseResult.populate(event.response![i], selectedAccount.address!);
+        addressTxResponseResult.getBisToken();
+        addressTxsResponse.result?.add(addressTxResponseResult);
+      }
+
+      // Server-mempool-only flow: rebuild history from server data only
+      wallet?.history.clear();
+      print("Processed transactions: " + (addressTxsResponse.result?.length ?? 0).toString());
+
+      // Add all transactions to a temporary list and sort them by timestamp (oldest first)
+      List<AddressTxsResponseResult> allTransactions = [];
+      for (AddressTxsResponseResult item in addressTxsResponse.result ?? []) {
+        allTransactions.add(item);
+      }
+
+      allTransactions.sort((a, b) {
+        if (a.timestamp == null && b.timestamp == null) return 0;
+        if (a.timestamp == null) return 1;
+        if (b.timestamp == null) return -1;
+        return a.timestamp!.compareTo(b.timestamp!);
+      });
+
+      // Check mounted again before setState
+      if (!mounted) {
+        print("Widget unmounted during processing, skipping setState");
+        return;
+      }
+
+      setState(() {
+        for (AddressTxsResponseResult item in allTransactions) {
+          wallet?.history.add(item);
+        }
+        wallet?.historyLoading = false;
+        wallet?.loading = false;
+      });
+
+      EventTaxiImpl.singleton().fire(HistoryHomeEvent(items: wallet?.history ?? []));
+    } catch (e) {
+      sl.get<Logger>().e("Error in _handleTransactionsListEvent", e);
+      // Always clear loading state on error
+      if (mounted) {
+        setState(() {
+          wallet?.historyLoading = false;
+          wallet?.loading = false;
+        });
+        // Fire event with empty history to unstick UI
+        EventTaxiImpl.singleton().fire(HistoryHomeEvent(items: wallet?.history ?? []));
+      }
+    }
   }
 
   @override
@@ -392,30 +413,21 @@ class StateContainerState extends State<StateContainer> {
       });
     });
     setState(() {
-      double? balance = double.tryParse(response.balance);
-      if (wallet != null && balance != null) {
-        // Check if we have unconfirmed transactions
-        bool hasUnconfirmed = wallet?.history.any((tx) => tx.type == BlockTypes.UNCONFIRMED) ?? false;
-        int unconfirmedCount = wallet?.history.where((tx) => tx.type == BlockTypes.UNCONFIRMED).length ?? 0;
-        
-        print("Balance update check - HasUnconfirmed: " + hasUnconfirmed.toString() + ", Count: " + unconfirmedCount.toString());
-        print("Server balance: " + balance.toString() + ", Current balance: " + wallet!.accountBalance.toString());
-        
-        if (!hasUnconfirmed) {
-          // No unconfirmed transactions, safe to update balance from server
-          wallet!.accountBalance = balance;
-          print("Updated balance from server: " + balance.toString());
-        } else {
-          // We have unconfirmed transactions, keep the manually calculated balance
-          print("Keeping manual balance due to unconfirmed transactions. Server: " + balance.toString() + ", Current: " + wallet!.accountBalance.toString());
-        }
+      // Use confirmed-only balance from server when available
+      double? confirmedBalance = double.tryParse(
+          (response.balanceNoMempool.isNotEmpty
+              ? response.balanceNoMempool
+              : response.balance));
+      if (wallet != null && confirmedBalance != null) {
+        wallet!.accountBalance = confirmedBalance;
+        print("Updated confirmed balance from server: " + confirmedBalance.toString());
       }
-      // Only update account balance if we have a valid selected account
+      // Persist to DB if we have a valid selected account
       if (selectedAccount.address != null && selectedAccount.address!.isNotEmpty) {
         sl.get<DBHelper>().updateAccountBalance(
             selectedAccount, wallet?.accountBalance.toString() ?? '0');
       }
-            });
+    });
   }
 
   Future<void> requestUpdate() async {
@@ -425,14 +437,16 @@ class StateContainerState extends State<StateContainer> {
       int count = 100;
       print("Requesting transaction history for address: " + selectedAccount.address! + " with limit: " + count.toString());
       try {
-        // Making balance and transaction requests
-        sl
-            .get<AppService>()
-            .getBalanceGetResponse(selectedAccount.address!, true);
+        // Before firing new requests, ensure previous listeners won't duplicate UI
+        _transactionsListEventSub?.cancel();
+        _transactionsListEventSub = EventTaxiImpl.singleton()
+            .registerTo<TransactionsListEvent>()
+            .listen((event) => _handleTransactionsListEvent(event));
 
-        await sl
-            .get<HttpService>()
-            .getSimplePrice(curCurrency.getIso4217Code());
+        // Making balance and transaction requests
+        sl.get<AppService>().getBalanceGetResponse(selectedAccount.address!, true);
+
+        await sl.get<HttpService>().getSimplePrice(curCurrency.getIso4217Code());
 
         sl.get<AppService>().getAddressTxsResponse(selectedAccount.address!, count);
 
@@ -454,6 +468,14 @@ class StateContainerState extends State<StateContainer> {
         // TODO handle account history error
         sl.get<Logger>().e("account_history e", e);
         // Error in requestUpdate
+        if (mounted) {
+          setState(() {
+            wallet?.historyLoading = false;
+            wallet?.loading = false;
+          });
+          // Notify UI to refresh with whatever we have
+          EventTaxiImpl.singleton().fire(HistoryHomeEvent(items: wallet?.history ?? []));
+        }
       }
     } else {
       // requestUpdate skipped - selectedAccount.address is null or empty

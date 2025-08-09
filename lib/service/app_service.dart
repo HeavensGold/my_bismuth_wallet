@@ -243,42 +243,60 @@ class AppService {
                 List mempoolTxs =
                     addlistlimResponseFromJson(mempoolTxListString);
 
-                // Parse blockchain tx
-                if (message.length >= 10 + mempoolTxListStringEnd) {
-                  int? blockchainTxListStringLength = int.tryParse(
-                      message.substring(mempoolTxListStringEnd,
-                          10 + mempoolTxListStringEnd));
-                  if (blockchainTxListStringLength == null) return;
-                  if (message.length >=
-                      10 +
-                          mempoolTxListStringEnd +
-                          blockchainTxListStringLength) {
-                    String blockchainTxListString = message.substring(
-                        10 + mempoolTxListStringEnd,
-                        10 +
-                            mempoolTxListStringEnd +
-                            blockchainTxListStringLength);
-                    print("getAddressTxsResponse (blockchain) : " +
-                        blockchainTxListString);
-                    List blockChainTxs =
-                        addlistlimResponseFromJson(blockchainTxListString);
-
-                    List txs = [];
-                    txs.addAll(mempoolTxs);
-                    txs.addAll(blockChainTxs);
-
-                    print("Total transactions found: mempool=" + mempoolTxs.length.toString() + " blockchain=" + blockChainTxs.length.toString() + " combined=" + txs.length.toString());
-
-                    EventTaxiImpl.singleton()
-                        .fire(TransactionsListEvent(response: txs));
-                    for (int i = txs.length - 1; i >= 0; i--) {
-                      AddressTxsResponseResult addressTxResponse =
-                          new AddressTxsResponseResult();
-                      addressTxResponse.populate(txs[i], address);
-                      addressTxResponse.getBisToken();
-                      addressTxsResponse.result?.add(addressTxResponse);
+                List blockChainTxs = [];
+                // Parse blockchain tx if available
+                print("Message length: ${message.length}, mempoolTxListStringEnd: $mempoolTxListStringEnd");
+                if (message.length > mempoolTxListStringEnd) {
+                  // Check if we have at least 10 bytes for the blockchain length
+                  if (message.length >= mempoolTxListStringEnd + 10) {
+                    String lengthStr = message.substring(mempoolTxListStringEnd,
+                            mempoolTxListStringEnd + 10);
+                    print("Blockchain length string: '$lengthStr'");
+                    int? blockchainTxListStringLength = int.tryParse(lengthStr);
+                    print("Parsed blockchain length: $blockchainTxListStringLength");
+                    print("Required message length: ${mempoolTxListStringEnd + 10 + (blockchainTxListStringLength ?? 0)}");
+                    print("Actual message length: ${message.length}");
+                    
+                    // Try to read what we have even if it's truncated
+                    if (blockchainTxListStringLength != null && blockchainTxListStringLength > 0) {
+                      int availableLength = message.length - mempoolTxListStringEnd - 10;
+                      int readLength = availableLength < blockchainTxListStringLength ? availableLength : blockchainTxListStringLength;
+                      if (readLength > 0) {
+                        String blockchainTxListString = message.substring(
+                            mempoolTxListStringEnd + 10,
+                            mempoolTxListStringEnd + 10 + readLength);
+                        print("getAddressTxsResponse (blockchain) : " +
+                            blockchainTxListString);
+                        try {
+                          blockChainTxs =
+                              addlistlimResponseFromJson(blockchainTxListString);
+                        } catch (e) {
+                          print("Error parsing blockchain transactions (truncated data): $e");
+                          // Try to parse what we can from the truncated data
+                          // The data might be cut off but still contain valid transactions
+                        }
+                      }
                     }
                   }
+                }
+
+                // Combine transactions and always fire event
+                List txs = [];
+                txs.addAll(mempoolTxs);
+                txs.addAll(blockChainTxs);
+
+                print("Total transactions found: mempool=" + mempoolTxs.length.toString() + " blockchain=" + blockChainTxs.length.toString() + " combined=" + txs.length.toString());
+
+                // Always fire the event, even if empty
+                EventTaxiImpl.singleton()
+                    .fire(TransactionsListEvent(response: txs));
+                    
+                for (int i = txs.length - 1; i >= 0; i--) {
+                  AddressTxsResponseResult addressTxResponse =
+                      new AddressTxsResponseResult();
+                  addressTxResponse.populate(txs[i], address);
+                  addressTxResponse.getBisToken();
+                  addressTxsResponse.result?.add(addressTxResponse);
                 }
               }
             } else {
@@ -311,42 +329,60 @@ class AppService {
               List mempoolTxs =
                   addlistlimResponseFromJson(mempoolTxListString);
 
-              // Parse blockchain tx
-              if (message.length >= 10 + mempoolTxListStringEnd) {
-                int? blockchainTxListStringLength = int.tryParse(
-                    message.substring(mempoolTxListStringEnd,
-                        10 + mempoolTxListStringEnd));
-                if (blockchainTxListStringLength == null) return;
-                if (message.length >=
-                    10 +
-                        mempoolTxListStringEnd +
-                        blockchainTxListStringLength) {
-                  String blockchainTxListString = message.substring(
-                      10 + mempoolTxListStringEnd,
-                      10 +
-                          mempoolTxListStringEnd +
-                          blockchainTxListStringLength);
-                  print("getAddressTxsResponse (blockchain) : " +
-                      blockchainTxListString);
-                  List blockChainTxs =
-                      addlistlimResponseFromJson(blockchainTxListString);
-
-                  List txs = [];
-                  txs.addAll(mempoolTxs);
-                  txs.addAll(blockChainTxs);
-
-                  print("Total transactions found: mempool=" + mempoolTxs.length.toString() + " blockchain=" + blockChainTxs.length.toString() + " combined=" + txs.length.toString());
-
-                  EventTaxiImpl.singleton()
-                      .fire(TransactionsListEvent(response: txs));
-                  for (int i = txs.length - 1; i >= 0; i--) {
-                    AddressTxsResponseResult addressTxResponse =
-                        new AddressTxsResponseResult();
-                    addressTxResponse.populate(txs[i], address);
-                    addressTxResponse.getBisToken();
-                    addressTxsResponse.result?.add(addressTxResponse);
+              List blockChainTxs = [];
+              // Parse blockchain tx if available
+              print("Message length: ${message.length}, mempoolTxListStringEnd: $mempoolTxListStringEnd");
+              if (message.length > mempoolTxListStringEnd) {
+                // Check if we have at least 10 bytes for the blockchain length
+                if (message.length >= mempoolTxListStringEnd + 10) {
+                  String lengthStr = message.substring(mempoolTxListStringEnd,
+                          mempoolTxListStringEnd + 10);
+                  print("Blockchain length string: '$lengthStr'");
+                  int? blockchainTxListStringLength = int.tryParse(lengthStr);
+                  print("Parsed blockchain length: $blockchainTxListStringLength");
+                  print("Required message length: ${mempoolTxListStringEnd + 10 + (blockchainTxListStringLength ?? 0)}");
+                  print("Actual message length: ${message.length}");
+                  
+                  // Try to read what we have even if it's truncated
+                  if (blockchainTxListStringLength != null && blockchainTxListStringLength > 0) {
+                    int availableLength = message.length - mempoolTxListStringEnd - 10;
+                    int readLength = availableLength < blockchainTxListStringLength ? availableLength : blockchainTxListStringLength;
+                    if (readLength > 0) {
+                      String blockchainTxListString = message.substring(
+                          mempoolTxListStringEnd + 10,
+                          mempoolTxListStringEnd + 10 + readLength);
+                      print("getAddressTxsResponse (blockchain) : " +
+                          blockchainTxListString);
+                      try {
+                        blockChainTxs =
+                            addlistlimResponseFromJson(blockchainTxListString);
+                      } catch (e) {
+                        print("Error parsing blockchain transactions (truncated data): $e");
+                        // Try to parse what we can from the truncated data
+                        // The data might be cut off but still contain valid transactions
+                      }
+                    }
                   }
                 }
+              }
+
+              // Combine transactions and always fire event
+              List txs = [];
+              txs.addAll(mempoolTxs);
+              txs.addAll(blockChainTxs);
+
+              print("Total transactions found: mempool=" + mempoolTxs.length.toString() + " blockchain=" + blockChainTxs.length.toString() + " combined=" + txs.length.toString());
+
+              // Always fire the event, even if empty
+              EventTaxiImpl.singleton()
+                  .fire(TransactionsListEvent(response: txs));
+                  
+              for (int i = txs.length - 1; i >= 0; i--) {
+                AddressTxsResponseResult addressTxResponse =
+                    new AddressTxsResponseResult();
+                addressTxResponse.populate(txs[i], address);
+                addressTxResponse.getBisToken();
+                addressTxsResponse.result?.add(addressTxResponse);
               }
             }
           } else {

@@ -93,6 +93,7 @@ class _AppHomePageState extends State<AppHomePage>
   late PriceConversion _priceConversion;
 
   bool _isRefreshing = false;
+  int _historyVersion = 0; // bump to force list rebuild when content changes without length change
 
   bool _lockDisabled = false; // whether we should avoid locking the app
   
@@ -255,6 +256,7 @@ class _AppHomePageState extends State<AppHomePage>
         .listen((event) {
       setState(() {
         _isRefreshing = false;
+        _historyVersion++;
         // Force UI rebuild to show updated transaction history
         // The transaction history data is already updated in StateContainer
         // This setState ensures the UI reflects the changes
@@ -289,10 +291,9 @@ class _AppHomePageState extends State<AppHomePage>
         StateContainer.of(context).wallet?.historyLoading = true;
 
         _startAnimation();
-        StateContainer.of(context).updateWallet(account: event.account!);
+          StateContainer.of(context).updateWallet(account: event.account!);
 
-        StateContainer.of(context).wallet?.loading = false;
-        StateContainer.of(context).wallet?.historyLoading = false;
+          // Do not immediately flip loading flags here; let StateContainer manage them after data loads
       });
       paintQrCode(address: event.account?.address ?? '');
       if (event.delayPop) {
@@ -575,7 +576,7 @@ class _AppHomePageState extends State<AppHomePage>
     return ReactiveRefreshIndicator(
       backgroundColor: StateContainer.of(context).curTheme.backgroundDark,
       child: AnimatedList(
-        key: ValueKey((StateContainer.of(context).wallet?.address ?? "unknown") + "_" + (StateContainer.of(context).wallet?.history.length ?? 0).toString()),
+        key: ValueKey((StateContainer.of(context).wallet?.address ?? "unknown") + "_" + (StateContainer.of(context).wallet?.history.length ?? 0).toString() + "_" + _historyVersion.toString()),
         padding: EdgeInsetsDirectional.fromSTEB(0, 5.0, 0, 15.0),
         initialItemCount: StateContainer.of(context).wallet?.history.length ?? 0,
         itemBuilder: _buildItem,
@@ -1036,30 +1037,36 @@ class _AppHomePageState extends State<AppHomePage>
                                                     ? "- " +
                                                         item
                                                             .getFormattedAmount() +
-                                                        " BIS"
-                                                    : item.type ==
-                                                        BlockTypes.UNCONFIRMED
-                                                    ? "- " +
-                                                        item
-                                                            .getFormattedAmount() +
-                                                        " BIS (pending)"
-                                                    : "+ " +
-                                                        item.getFormattedAmount() +
-                                                        " BIS",
+                                                        ( (item.blockHeight == -1)
+                                                          ? " BIS (pending)"
+                                                          : " BIS")
+                                                    : (item.type ==
+                                                                BlockTypes.UNCONFIRMED ||
+                                                            item.blockHeight == -1)
+                                                        ? "- " +
+                                                            item
+                                                                .getFormattedAmount() +
+                                                            " BIS (pending)"
+                                                        : "+ " +
+                                                            item.getFormattedAmount() +
+                                                            " BIS",
                                                 style: item.type ==
                                                         BlockTypes.SEND
                                                     ? AppStyles
                                                         .textStyleTransactionTypeRed(
                                                             context)
-                                                    : item.type ==
-                                                        BlockTypes.UNCONFIRMED
-                                                    ? AppStyles
-                                                        .textStyleTransactionTypeRed(
-                                                            context).copyWith(
-                                                            color: Colors.orange)
-                                                    : AppStyles
-                                                        .textStyleTransactionTypeGreen(
-                                                            context),
+                                                    : (item.type ==
+                                                                BlockTypes.UNCONFIRMED ||
+                                                            item.blockHeight == -1)
+                                                        ? AppStyles
+                                                            .textStyleTransactionTypeRed(
+                                                                context)
+                                                            .copyWith(
+                                                                color: Colors
+                                                                    .orange)
+                                                        : AppStyles
+                                                            .textStyleTransactionTypeGreen(
+                                                                context),
                                               ),
                                             ],
                                           ),
@@ -1074,18 +1081,21 @@ class _AppHomePageState extends State<AppHomePage>
                                             text: '',
                                             children: [
                                               TextSpan(
-                                                text:
-                                                    item.type == BlockTypes.SEND
-                                                        ? "- " +
-                                                            item
-                                                                .getBisToken()
-                                                                .tokensQuantity
-                                                                .toString() +
-                                                            " " +
-                                                            (item
-                                                                .getBisToken()
-                                                                .tokenName ?? '')
-                                                        : item.type == BlockTypes.UNCONFIRMED
+                                                text: item.type ==
+                                                        BlockTypes.SEND
+                                                    ? "- " +
+                                                        item
+                                                            .getBisToken()
+                                                            .tokensQuantity
+                                                            .toString() +
+                                                        " " +
+                                                        (item
+                                                            .getBisToken()
+                                                            .tokenName ?? '') +
+                                                        ( (item.blockHeight == -1)
+                                                          ? " (pending)"
+                                                          : "")
+                                                    : (item.type == BlockTypes.UNCONFIRMED || item.blockHeight == -1)
                                                         ? "- " +
                                                             item
                                                                 .getBisToken()
@@ -1110,15 +1120,16 @@ class _AppHomePageState extends State<AppHomePage>
                                                     ? AppStyles
                                                         .textStyleTransactionTypeRed(
                                                             context)
-                                                    : item.type ==
-                                                        BlockTypes.UNCONFIRMED
-                                                    ? AppStyles
-                                                        .textStyleTransactionTypeRed(
-                                                            context).copyWith(
-                                                            color: Colors.orange)
-                                                    : AppStyles
-                                                        .textStyleTransactionTypeGreen(
-                                                            context),
+                                                    : (item.type == BlockTypes.UNCONFIRMED || item.blockHeight == -1)
+                                                        ? AppStyles
+                                                            .textStyleTransactionTypeRed(
+                                                                context)
+                                                            .copyWith(
+                                                                color: Colors
+                                                                    .orange)
+                                                        : AppStyles
+                                                            .textStyleTransactionTypeGreen(
+                                                                context),
                                               ),
                                               item.getBisToken().tokenName ==
                                                       "egg"
@@ -2020,6 +2031,27 @@ class _AppHomePageState extends State<AppHomePage>
                         ],
                       ),
                     ),
+                    // Pending delta from mempool (server)
+                    Builder(builder: (context) {
+                      final wallet = StateContainer.of(context).wallet;
+                      if (wallet == null) return SizedBox(height: 0);
+                      final double pendingDelta = wallet.getPendingDelta();
+                      if (pendingDelta == 0) return SizedBox(height: 0);
+                      final String pendingText = (pendingDelta > 0 ? "+ " : "- ") +
+                          wallet.getPendingDeltaDisplay() +
+                          " BIS (pending)";
+                      final Color color = pendingDelta > 0
+                          ? Colors.orange
+                          : Colors.orange; // Keep pending as orange
+                      return Padding(
+                        padding: const EdgeInsets.only(top: 4.0),
+                        child: Text(
+                          "Pending: " + pendingText,
+                          style: AppStyles.textStyleTransactionTypeRed(context)
+                              .copyWith(color: color),
+                        ),
+                      );
+                    }),
                     _priceConversion == PriceConversion.BTC
                         ? Row(
                             mainAxisAlignment: MainAxisAlignment.center,

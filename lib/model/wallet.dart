@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 // Project imports:
 import 'package:my_bismuth_wallet/model/available_currency.dart';
 import 'package:my_bismuth_wallet/network/model/response/address_txs_response.dart';
+  import 'package:my_bismuth_wallet/network/model/block_types.dart';
 import 'package:my_bismuth_wallet/util/numberutil.dart';
 
 /// Main wallet object that's passed around the app via state
@@ -134,6 +135,30 @@ class AppWallet {
 
   set tokens(List<BisToken> value) {
     _tokens = value;
+  }
+
+  // Compute pending delta from mempool entries (blockHeight == -1)
+  double getPendingDelta() {
+    double delta = 0;
+    for (final tx in _history) {
+      final bool isMempool = (tx.blockHeight == -1);
+      if (!isMempool) continue;
+      final double amount = double.tryParse(tx.amount ?? '0') ?? 0;
+      final double fee = tx.fee ?? 0;
+      if (tx.type == BlockTypes.RECEIVE) {
+        delta += amount;
+      } else {
+        // Treat non-RECEIVE as outgoing
+        delta -= (amount + fee);
+      }
+    }
+    return delta;
+  }
+
+  // Get formatted pending delta string for display
+  String getPendingDeltaDisplay() {
+    final double delta = getPendingDelta();
+    return NumberUtil.getRawAsUsableString(delta.toString());
   }
 
   bool get loading => _loading;

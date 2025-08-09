@@ -20,7 +20,6 @@ import 'package:my_bismuth_wallet/model/db/appdb.dart';
 import 'package:my_bismuth_wallet/model/db/hiveDB.dart';
 import 'package:my_bismuth_wallet/model/vault.dart';
 import 'package:my_bismuth_wallet/network/model/response/address_txs_response.dart';
-import 'package:my_bismuth_wallet/network/model/response/balance_get_response.dart';
 import 'package:my_bismuth_wallet/service/app_service.dart';
 import 'package:my_bismuth_wallet/service_locator.dart';
 import 'package:my_bismuth_wallet/styles.dart';
@@ -112,42 +111,9 @@ class _SendConfirmSheetState extends State<SendConfirmSheet> {
       animationOpen = false;
     }
     
-    if (StateContainer.of(context).wallet != null) {
-      // Calculate transaction fee
-      double transactionFee = sl.get<AppService>().getFeesEstimation(
-        widget.openfield, 
-        widget.operation
-      );
-      
-      // For sending: subtract (amount + fee)
-      double sentAmount = double.parse(widget.amountRaw);
-      double newBalance = StateContainer.of(context).wallet!.accountBalance - (sentAmount + transactionFee);
-      StateContainer.of(context).wallet!.accountBalance = newBalance;
-      
-      print("Balance calculation: " + StateContainer.of(context).wallet!.accountBalance.toString() + " - (" + sentAmount.toString() + " + " + transactionFee.toString() + ") = " + newBalance.toString());
-      
-      // Fire balance event to update UI immediately
-      BalanceGetResponse balanceResponse = BalanceGetResponse(
-        address: StateContainer.of(context).selectedAccount.address!,
-        balance: newBalance.toString(),
-        balanceNoMempool: newBalance.toString(),
-        totalCredits: '0',
-        totalDebits: '0', 
-        totalFees: '0',
-        totalRewards: '0',
-      );
-      EventTaxiImpl.singleton().fire(BalanceGetEvent(response: balanceResponse));
-      print("Balance updated immediately: new balance = " + newBalance.toString());
-    }
-    
-    // Add unconfirmed transaction to history immediately
-    StateContainer.of(context).addUnconfirmedTransaction(
-      fromAddress: StateContainer.of(context).wallet?.address ?? "",
-      toAddress: destinationAltered,
-      amount: widget.amountRaw,
-      operation: widget.operation,
-      openfield: widget.openfield,
-    );
+    // Server-mempool-only flow: do not mutate local balance or add local placeholders.
+    // Trigger a refresh to fetch mempool + confirmed from server so both sender & receiver see the same pending item.
+    StateContainer.of(context).requestUpdate();
 
     // Give UI time to update before navigation
     await Future.delayed(Duration(milliseconds: 100));
@@ -158,9 +124,9 @@ class _SendConfirmSheetState extends State<SendConfirmSheet> {
         .getContactWithAddress(widget.destination);
     String? contactName = contact?.name;
     Navigator.of(context).popUntil(RouteUtils.withNameLike('/home'));
-    // Don't call requestUpdate() immediately - it would overwrite our unconfirmed transaction
-    // The unconfirmed transaction will be replaced by confirmed transaction during next periodic update
-    
+    // Ensure the home screen has a fresh state
+    StateContainer.of(context).requestUpdate();
+
     // Give main screen time to fully load before showing success sheet
     await Future.delayed(Duration(milliseconds: 200));
     
