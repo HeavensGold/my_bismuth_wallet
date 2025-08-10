@@ -364,6 +364,25 @@ class _AppHomePageState extends State<AppHomePage>
         break;
       case AppLifecycleState.resumed:
         cancelLockEvent();
+        // Clear any stale error messages when app resumes
+        ScaffoldMessenger.of(context).clearSnackBars();
+        // Reset error flag
+        _isShowingNetworkError = false;
+        
+        // Don't refresh if already loading to prevent duplicate requests
+        if (!(StateContainer.of(context).wallet?.loading ?? false)) {
+          // Add a longer delay for Android to stabilize network connections
+          // Especially important for Android 15+ with aggressive power management
+          Future.delayed(Duration(milliseconds: 1500), () {
+            if (mounted && 
+                StateContainer.of(context).wallet != null &&
+                !(StateContainer.of(context).wallet?.loading ?? false)) {
+              // Trigger a refresh to update data
+              StateContainer.of(context).requestUpdate();
+            }
+          });
+        }
+        
         if (!(StateContainer.of(context).wallet?.loading ?? false) &&
             false) {
           // TODO: Fix deep link handling
@@ -408,9 +427,19 @@ class _AppHomePageState extends State<AppHomePage>
     lockStreamListener?.cancel();
     }
 
+  // Track if we're already showing a network error to prevent duplicates
+  bool _isShowingNetworkError = false;
+  
   // Show user-friendly network error messages with retry option
   void _showNetworkError(NetworkErrorEvent event) {
     if (!mounted) return;
+    
+    // Prevent duplicate error messages
+    if (_isShowingNetworkError) return;
+    _isShowingNetworkError = true;
+    
+    // Clear any existing snackbars first
+    ScaffoldMessenger.of(context).clearSnackBars();
     
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -439,11 +468,15 @@ class _AppHomePageState extends State<AppHomePage>
           label: "Retry",
           textColor: Colors.white,
           onPressed: () {
+            _isShowingNetworkError = false;
             _retryNetworkOperation(event.errorType);
           },
         ) : null,
       ),
-    );
+    ).closed.then((_) {
+      // Reset flag when snackbar is dismissed
+      _isShowingNetworkError = false;
+    });
   }
 
   // Retry network operations based on error type
@@ -610,7 +643,11 @@ class _AppHomePageState extends State<AppHomePage>
   Future<void> _refresh() async {
     setState(() {
       _isRefreshing = true;
+      // Clear error state on manual refresh
+      _isShowingNetworkError = false;
     });
+    // Clear any existing error messages
+    ScaffoldMessenger.of(context).clearSnackBars();
     HapticUtil.lightFeedback();
     StateContainer.of(context).requestUpdate();
 
@@ -1043,10 +1080,15 @@ class _AppHomePageState extends State<AppHomePage>
                                                     : (item.type ==
                                                                 BlockTypes.UNCONFIRMED ||
                                                             item.blockHeight == -1)
-                                                        ? "- " +
-                                                            item
-                                                                .getFormattedAmount() +
-                                                            " BIS (pending)"
+                                                        ? (item.recipient == StateContainer.of(context).selectedAccount.address
+                                                            ? "+ " +
+                                                                item
+                                                                    .getFormattedAmount() +
+                                                                " BIS (pending)"
+                                                            : "- " +
+                                                                item
+                                                                    .getFormattedAmount() +
+                                                                " BIS (pending)")
                                                         : "+ " +
                                                             item.getFormattedAmount() +
                                                             " BIS",
@@ -1058,12 +1100,19 @@ class _AppHomePageState extends State<AppHomePage>
                                                     : (item.type ==
                                                                 BlockTypes.UNCONFIRMED ||
                                                             item.blockHeight == -1)
-                                                        ? AppStyles
-                                                            .textStyleTransactionTypeRed(
-                                                                context)
-                                                            .copyWith(
-                                                                color: Colors
-                                                                    .orange)
+                                                        ? (item.recipient == StateContainer.of(context).selectedAccount.address
+                                                            ? AppStyles
+                                                                .textStyleTransactionTypeGreen(
+                                                                    context)
+                                                                .copyWith(
+                                                                    color: Colors
+                                                                        .orange)
+                                                            : AppStyles
+                                                                .textStyleTransactionTypeRed(
+                                                                    context)
+                                                                .copyWith(
+                                                                    color: Colors
+                                                                        .orange))
                                                         : AppStyles
                                                             .textStyleTransactionTypeGreen(
                                                                 context),
@@ -2040,15 +2089,15 @@ class _AppHomePageState extends State<AppHomePage>
                       final String pendingText = (pendingDelta > 0 ? "+ " : "- ") +
                           wallet.getPendingDeltaDisplay() +
                           " BIS (pending)";
-                      final Color color = pendingDelta > 0
-                          ? Colors.orange
-                          : Colors.orange; // Keep pending as orange
+                      final Color color = Colors.orange; // Keep pending as orange
+                      final TextStyle baseStyle = pendingDelta > 0
+                          ? AppStyles.textStyleTransactionTypeGreen(context)
+                          : AppStyles.textStyleTransactionTypeRed(context);
                       return Padding(
                         padding: const EdgeInsets.only(top: 4.0),
                         child: Text(
                           "Pending: " + pendingText,
-                          style: AppStyles.textStyleTransactionTypeRed(context)
-                              .copyWith(color: color),
+                          style: baseStyle.copyWith(color: color),
                         ),
                       );
                     }),
@@ -2242,9 +2291,13 @@ class _TransactionDetailsSheetState extends State<TransactionDetailsSheet> {
                                               (widget.item?.getFormattedAmount() ?? '0.00') +
                                               " BIS"
                                           : (widget.item?.type ?? BlockTypes.RECEIVE) == BlockTypes.UNCONFIRMED
-                                          ? "- " +
-                                              (widget.item?.getFormattedAmount() ?? '0.00') +
-                                              " BIS (pending)"
+                                          ? (widget.item?.recipient == StateContainer.of(context).selectedAccount.address
+                                              ? "+ " +
+                                                  (widget.item?.getFormattedAmount() ?? '0.00') +
+                                                  " BIS (pending)"
+                                              : "- " +
+                                                  (widget.item?.getFormattedAmount() ?? '0.00') +
+                                                  " BIS (pending)")
                                           : "+ " +
                                               (widget.item?.getFormattedAmount() ?? '0.00') +
                                               " BIS",

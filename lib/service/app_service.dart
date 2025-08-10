@@ -438,6 +438,10 @@ class AppService {
         operation: "Load Transactions",
         canRetry: true,
       ));
+      
+      // IMPORTANT: Fire empty TransactionsListEvent to clear loading states
+      // This prevents the UI from getting stuck in loading state
+      EventTaxiImpl.singleton().fire(TransactionsListEvent(response: []));
     } finally {}
   }
 

@@ -232,12 +232,8 @@ class StateContainerState extends State<StateContainer> {
         print("Skipping empty response to prevent UI flicker");
         return;
       }
-      // If we're still loading (historyLoading is true), skip the first empty response
-      // This gives time for the full data to arrive
-      if (wallet?.historyLoading == true) {
-        print("Skipping empty response during initial load");
-        return;
-      }
+      // For accounts with no transactions, we need to process the empty response
+      // to clear the loading state. Don't skip empty responses for initial loads.
     }
     
     try {

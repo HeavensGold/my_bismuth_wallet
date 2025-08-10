@@ -5,6 +5,7 @@ import 'dart:async';
 
 // Flutter imports:
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 // Package imports:
 import 'package:auto_size_text/auto_size_text.dart';
@@ -394,82 +395,75 @@ class _AppAccountsWidgetState extends State<AppAccountsWidget> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: <Widget>[
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.start,
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: <Widget>[
-                                Container(
-                                  width: 64.0,
-                                  height: 64.0,
-                                  child: CircleAvatar(
-                                    backgroundColor: StateContainer.of(context)
-                                        .curTheme
-                                        .text05,
-                                    backgroundImage: NetworkImage(
-                                      account.dragginatorDna == null ||
-                                              account.dragginatorDna == ""
-                                          ? UIUtil.getRobohashURL(
-                                              account.address ?? "")
-                                          : UIUtil.getDragginatorURL(
-                                              account.dragginatorDna ?? "",
-                                              account.dragginatorStatus ?? ""),
-                                    ),
-                                    radius: 50.0,
-                                  ),
-                                ),
-                                // Account name and address
-                                Container(
-                                  width: (MediaQuery.of(context).size.width -
-                                          116) *
-                                      0.5,
-                                  margin:
-                                      EdgeInsetsDirectional.only(start: 8.0),
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: <Widget>[
-                                      // Account name
-                                      AutoSizeText(
-                                        account.name ?? "",
-                                        style: TextStyle(
-                                          fontFamily: "NunitoSans",
-                                          fontWeight: FontWeight.w600,
-                                          fontSize: 16.0,
-                                          color: StateContainer.of(context)
-                                              .curTheme
-                                              .text,
-                                        ),
-                                        minFontSize: 8.0,
-                                        stepGranularity: 0.1,
-                                        maxLines: 1,
-                                        textAlign: TextAlign.start,
-                                      ),
-                                      // Account address
-                                      AutoSizeText(
-                                        (account.address ?? "").substring(0, 12) +
-                                            "...",
-                                        style: TextStyle(
-                                          fontFamily: "OverpassMono",
-                                          fontWeight: FontWeight.w100,
-                                          fontSize: 14.0,
-                                          color: StateContainer.of(context)
-                                              .curTheme
-                                              .text60,
-                                        ),
-                                        minFontSize: 8.0,
-                                        stepGranularity: 0.1,
-                                        maxLines: 1,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
+                            // Avatar
                             Container(
-                              width: (MediaQuery.of(context).size.width - 116) *
-                                  0.4,
-                              alignment: AlignmentDirectional(1, 0),
+                              width: 64.0,
+                              height: 64.0,
+                              child: CircleAvatar(
+                                backgroundColor: StateContainer.of(context)
+                                    .curTheme
+                                    .text05,
+                                backgroundImage: NetworkImage(
+                                  account.dragginatorDna == null ||
+                                          account.dragginatorDna == ""
+                                      ? UIUtil.getRobohashURL(
+                                          account.address ?? "")
+                                      : UIUtil.getDragginatorURL(
+                                          account.dragginatorDna ?? "",
+                                          account.dragginatorStatus ?? ""),
+                                ),
+                                radius: 50.0,
+                              ),
+                            ),
+                            // Account name and address
+                            Expanded(
+                              child: Container(
+                                margin:
+                                    EdgeInsetsDirectional.only(start: 8.0),
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.start,
+                                  children: <Widget>[
+                                    // Account name
+                                    AutoSizeText(
+                                      account.name ?? "",
+                                      style: TextStyle(
+                                        fontFamily: "NunitoSans",
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 16.0,
+                                        color: StateContainer.of(context)
+                                            .curTheme
+                                            .text,
+                                      ),
+                                      minFontSize: 8.0,
+                                      stepGranularity: 0.1,
+                                      maxLines: 1,
+                                      textAlign: TextAlign.start,
+                                    ),
+                                    // Account address
+                                    AutoSizeText(
+                                      (account.address ?? "").substring(0, 12) +
+                                          "...",
+                                      style: TextStyle(
+                                        fontFamily: "OverpassMono",
+                                        fontWeight: FontWeight.w100,
+                                        fontSize: 14.0,
+                                        color: StateContainer.of(context)
+                                            .curTheme
+                                            .text60,
+                                      ),
+                                      minFontSize: 8.0,
+                                      stepGranularity: 0.1,
+                                      maxLines: 1,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            // Balance
+                            Container(
+                              margin: EdgeInsetsDirectional.only(start: 8.0, end: 8.0),
                               child: AutoSizeText.rich(
                                 TextSpan(
                                   children: [
@@ -493,7 +487,7 @@ class _AppAccountsWidgetState extends State<AppAccountsWidget> {
                                 maxLines: 1,
                                 style: TextStyle(fontSize: 16.0),
                                 stepGranularity: 0.1,
-                                minFontSize: 1,
+                                minFontSize: 10,
                                 textAlign: TextAlign.end,
                               ),
                             ),
@@ -520,6 +514,19 @@ class _AppAccountsWidgetState extends State<AppAccountsWidget> {
   List<Widget> _getSlideActionsForAccount(
       BuildContext context, Account account, StateSetter setState) {
     List<Widget> _actions = <Widget>[];
+    
+    // Copy address action (always shown)
+    _actions.add(SlidableAction(
+        backgroundColor: StateContainer.of(context).curTheme.primary,
+        icon: Icons.copy,
+        foregroundColor: StateContainer.of(context).curTheme.backgroundDark,
+        onPressed: (context) {
+          Clipboard.setData(ClipboardData(text: account.address ?? ''));
+          UIUtil.showSnackbar(
+              AppLocalization.of(context).addressCopied, context);
+        }));
+    
+    // Edit action (always shown)
     _actions.add(SlidableAction(
         backgroundColor: StateContainer.of(context).curTheme.primary,
         icon: Icons.edit,
@@ -527,32 +534,46 @@ class _AppAccountsWidgetState extends State<AppAccountsWidget> {
         onPressed: (context) {
           AccountDetailsSheet(account).mainBottomSheet(context);
         }));
+    
+    // Delete action (only for non-primary accounts with zero balance)
     if ((account.index ?? 0) > 0) {
-      _actions.add(SlidableAction(
-          backgroundColor: StateContainer.of(context).curTheme.primary,
-          icon: Icons.delete,
-          foregroundColor: StateContainer.of(context).curTheme.backgroundDark,
-          onPressed: (context) {
-            AppDialogs.showConfirmDialog(
-                context,
-                AppLocalization.of(context).hideAccountHeader,
-                AppLocalization.of(context)
-                    .removeAccountText
-                    .replaceAll("%1", AppLocalization.of(context).addAccount),
-                CaseChange.toUpperCase(
-                    AppLocalization.of(context).yes, context), () {
-              // Remove account
-              sl.get<DBHelper>().deleteAccount(account).then((id) {
-                EventTaxiImpl.singleton().fire(
-                    AccountModifiedEvent(account: account, deleted: true));
-                setState(() {
-                  widget.accounts.removeWhere((a) => a.index == account.index);
+      // Check if account has zero balance
+      String balance = account.balance ?? "0";
+      double balanceValue = 0;
+      try {
+        balanceValue = double.parse(balance);
+      } catch (e) {
+        balanceValue = 0;
+      }
+      
+      // Only show delete if balance is zero
+      if (balanceValue == 0) {
+        _actions.add(SlidableAction(
+            backgroundColor: StateContainer.of(context).curTheme.primary,
+            icon: Icons.delete,
+            foregroundColor: StateContainer.of(context).curTheme.backgroundDark,
+            onPressed: (context) {
+              AppDialogs.showConfirmDialog(
+                  context,
+                  AppLocalization.of(context).hideAccountHeader,
+                  AppLocalization.of(context)
+                      .removeAccountText
+                      .replaceAll("%1", AppLocalization.of(context).addAccount),
+                  CaseChange.toUpperCase(
+                      AppLocalization.of(context).yes, context), () {
+                // Remove account
+                sl.get<DBHelper>().deleteAccount(account).then((id) {
+                  EventTaxiImpl.singleton().fire(
+                      AccountModifiedEvent(account: account, deleted: true));
+                  setState(() {
+                    widget.accounts.removeWhere((a) => a.index == account.index);
+                  });
                 });
-              });
-            },
-                cancelText: CaseChange.toUpperCase(
-                    AppLocalization.of(context).no, context));
-          }));
+              },
+                  cancelText: CaseChange.toUpperCase(
+                      AppLocalization.of(context).no, context));
+            }));
+      }
     }
     return _actions;
   }
