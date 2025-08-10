@@ -277,8 +277,11 @@ class SplashState extends State<Splash> with WidgetsBindingObserver {
   }
 
   Future checkLoggedIn() async {
-    // Update session key
-    await sl.get<Vault>().updateSessionKey();
+    // Initialize session key if not exists, don't regenerate existing one
+    String existingKey = await sl.get<Vault>().getSessionKey();
+    if (existingKey.isEmpty) {
+      await sl.get<Vault>().updateSessionKey();
+    }
 
     if (!kIsWeb &&
         !Platform.isMacOS &&
