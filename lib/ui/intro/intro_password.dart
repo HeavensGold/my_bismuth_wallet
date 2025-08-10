@@ -296,8 +296,14 @@ class _IntroPasswordState extends State<IntroPassword> {
       String encryptedSeed = HEX.encode(
         AppCrypt.encrypt(widget.seed, confirmPasswordController.text));
       await sl.get<Vault>().setSeed(encryptedSeed);
+      
+      // Ensure session key exists (same pattern as password_lock_screen.dart)
+      String sessionKey = await sl.get<Vault>().getSessionKey();
+      if (sessionKey.isEmpty) {
+        sessionKey = await sl.get<Vault>().updateSessionKey();
+      }
       StateContainer.of(context).setEncryptedSecret(HEX.encode(AppCrypt.encrypt(
-          widget.seed, await sl.get<Vault>().getSessionKey())));
+          widget.seed, sessionKey)));
       await sl.get<DBHelper>().dropAccounts();
       await AppUtil().loginAccount(widget.seed, context);
       StateContainer.of(context).requestUpdate();

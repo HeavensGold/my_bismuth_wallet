@@ -80,10 +80,21 @@ android {
             }
         }
     }
-
+     signingConfigs {
+        release {
+            storeFile file('debug.jks')
+            storePassword 'android'
+            keyAlias 'debug'
+            keyPassword 'android'
+        }
+     }
      buildTypes {
         release {
             signingConfig signingConfigs.release
+            //following line for regular use not needed now.
+            //minifyEnabled false
+            //proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+
         }
     }
     packagingOptions {
