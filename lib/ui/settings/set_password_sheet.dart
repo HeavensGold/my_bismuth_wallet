@@ -286,11 +286,18 @@ class _SetPasswordSheetState extends State<SetPasswordSheet> {
       UIUtil.showSnackbar(
           AppLocalization.of(context).encryptionFailedError, context);
     } else {
+      // Validate session key first
+      String sessionKey = await sl.get<Vault>().getSessionKey();
+      if (sessionKey.isEmpty) {
+        // Create session key if missing
+        sessionKey = await sl.get<Vault>().updateSessionKey();
+      }
+      
       String encryptedSeed =
           HEX.encode(AppCrypt.encrypt(seed, confirmPasswordController.text));
       await sl.get<Vault>().setSeed(encryptedSeed);
       StateContainer.of(context).setEncryptedSecret(HEX.encode(
-          AppCrypt.encrypt(seed, await sl.get<Vault>().getSessionKey())));
+          AppCrypt.encrypt(seed, sessionKey)));
       UIUtil.showSnackbar(
           AppLocalization.of(context).setPasswordSuccess, context);
       Navigator.pop(context);

@@ -10,6 +10,7 @@ import 'package:flutter/services.dart';
 // Package imports:
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:event_taxi/event_taxi.dart';
+import 'package:hex/hex.dart';
 // import 'package:flare_flutter/base/animation/actor_animation.dart'; // Removed - deprecated
 // import 'package:flare_flutter/flare.dart'; // Removed - deprecated  
 // import 'package:flare_flutter/flare_actor.dart'; // Removed - deprecated
@@ -30,6 +31,7 @@ import 'package:my_bismuth_wallet/localization.dart';
 // import 'package:my_bismuth_wallet/model/bis_url.dart'; // Commented out - file deleted
 import 'package:my_bismuth_wallet/model/db/appdb.dart';
 import 'package:my_bismuth_wallet/model/db/hiveDB.dart';
+import 'package:my_bismuth_wallet/model/vault.dart';
 import 'package:my_bismuth_wallet/network/model/block_types.dart';
 import 'package:my_bismuth_wallet/network/model/response/address_txs_response.dart';
 import 'package:my_bismuth_wallet/service/app_service.dart';
@@ -50,6 +52,8 @@ import 'package:my_bismuth_wallet/ui/widgets/list_slidable.dart';
 import 'package:my_bismuth_wallet/ui/widgets/reactive_refresh.dart';
 import 'package:my_bismuth_wallet/ui/widgets/sheet_util.dart';
 import 'package:my_bismuth_wallet/ui/widgets/sync_info_view.dart';
+import 'package:my_bismuth_wallet/util/app_ffi/apputil.dart';
+import 'package:my_bismuth_wallet/util/app_ffi/encrypt/crypter.dart';
 import 'package:my_bismuth_wallet/util/caseconverter.dart';
 import 'package:my_bismuth_wallet/util/hapticutil.dart';
 import 'package:my_bismuth_wallet/util/sharedprefsutil.dart';
@@ -368,6 +372,28 @@ class _AppHomePageState extends State<AppHomePage>
         ScaffoldMessenger.of(context).clearSnackBars();
         // Reset error flag
         _isShowingNetworkError = false;
+        
+        // Check if we need to re-authenticate in password mode
+        // Only check for re-authentication if encryptedSecret is null AND we're in password mode
+        if (StateContainer.of(context).encryptedSecret == null) {
+          // Check if seed is encrypted (password mode)
+          sl.get<Vault>().getSeed().then((vaultSeed) {
+            if (AppUtil.isSeedEncrypted(vaultSeed)) {
+              // Navigate to password lock screen only if we're truly in password mode
+              Navigator.of(context).pushNamedAndRemoveUntil(
+                  '/password_lock_screen', (Route<dynamic> route) => false);
+            } else {
+              // For non-password mode, setup encryptedSecret if missing
+              sl.get<Vault>().getSessionKey().then((sessionKey) {
+                if (sessionKey.isNotEmpty) {
+                  StateContainer.of(context).setEncryptedSecret(
+                      HEX.encode(AppCrypt.encrypt(vaultSeed, sessionKey))
+                  );
+                }
+              });
+            }
+          });
+        }
         
         // Don't refresh if already loading to prevent duplicate requests
         if (!(StateContainer.of(context).wallet?.loading ?? false)) {

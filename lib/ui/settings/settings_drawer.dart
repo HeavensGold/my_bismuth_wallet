@@ -31,6 +31,7 @@ import 'package:my_bismuth_wallet/model/vault.dart';
 // import 'package:my_bismuth_wallet/service/dragginator_service.dart'; // Deleted
 import 'package:my_bismuth_wallet/service_locator.dart';
 import 'package:my_bismuth_wallet/styles.dart';
+import 'package:my_bismuth_wallet/util/app_ffi/apputil.dart';
 import 'package:my_bismuth_wallet/ui/accounts/accountdetails_sheet.dart';
 import 'package:my_bismuth_wallet/ui/accounts/accounts_sheet.dart';
 // import 'package:my_bismuth_wallet/ui/dragginator/my_dragginator_breeding_list.dart'; // Deleted
@@ -77,7 +78,7 @@ class _SettingsSheetState extends State<SettingsSheet>
 
   late bool _securityOpen;
   late bool _loadingAccounts;
-
+  bool _isPasswordMode = false;
 
   late bool _customUrlOpen;
 
@@ -90,6 +91,14 @@ class _SettingsSheetState extends State<SettingsSheet>
     _securityOpen = false;
     _loadingAccounts = false;
     _customUrlOpen = false;
+    // Check if wallet is in password mode
+    _checkPasswordMode().then((isPasswordMode) {
+      if (mounted) {
+        setState(() {
+          _isPasswordMode = isPasswordMode;
+        });
+      }
+    });
     // Determine if they have face or fingerprint enrolled, if not hide the setting
     sl.get<BiometricUtil>().hasBiometrics().then((bool hasBiometrics) {
       setState(() {
@@ -398,6 +407,15 @@ class _SettingsSheetState extends State<SettingsSheet>
       ));
     });
     return ret;
+  }
+
+  Future<bool> _checkPasswordMode() async {
+    try {
+      String seed = await sl.get<Vault>().getSeed();
+      return AppUtil.isSeedEncrypted(seed);
+    } catch (e) {
+      return false;
+    }
   }
 
   Future<void> _lockTimeoutDialog() async {
@@ -738,11 +756,16 @@ class _SettingsSheetState extends State<SettingsSheet>
                                     _loadingAccounts = true;
                                   });
                                   try {
-                                    String seed;
-                                    try {
-                                      seed = await StateContainer.of(context).getSeed();
-                                    } catch (e) {
-                                      seed = await sl.get<Vault>().getSeed();
+                                    String? seed = await AppUtil.getSeedSafely(context);
+                                    if (seed == null) {
+                                      // Password mode but not unlocked
+                                      setState(() {
+                                        _loadingAccounts = false;
+                                      });
+                                      UIUtil.showSnackbar(
+                                          AppLocalization.of(context).unlock, 
+                                          context);
+                                      return;
                                     }
                                     
                                     List<Account> accounts = await sl.get<DBHelper>().getAccounts(seed);
@@ -754,7 +777,9 @@ class _SettingsSheetState extends State<SettingsSheet>
                                     setState(() {
                                       _loadingAccounts = false;
                                     });
-                                    // Handle error - could show a message to user
+                                    UIUtil.showSnackbar(
+                                        AppLocalization.of(context).sendError, 
+                                        context);
                                     print("Error loading accounts: $e");
                                   }
                                 }
@@ -1103,9 +1128,14 @@ class _SettingsSheetState extends State<SettingsSheet>
                           if (authenticated) {
                             HapticUtil.lightFeedback();
                             try {
-                              // For backup, get seed directly from vault after biometric authentication
-                              String seed = await sl.get<Vault>().getSeed();
-                              AppSeedBackupSheet(seed).mainBottomSheet(context);
+                              // For backup, use proper seed access method that handles both password and non-password modes
+                              String? seed = await AppUtil.getSeedSafely(context);
+                              if (seed != null) {
+                                AppSeedBackupSheet(seed).mainBottomSheet(context);
+                              } else {
+                                print("Error: Could not get seed for backup");
+                                await authenticateWithPin();
+                              }
                             } catch (e) {
                               print("Error getting seed for backup: $e");
                               await authenticateWithPin();
@@ -1132,7 +1162,7 @@ class _SettingsSheetState extends State<SettingsSheet>
                           _authMethodDialog),
                     ],
                     // Authenticate on Launch
-                    StateContainer.of(context).encryptedSecret == null
+                    !_isPasswordMode
                         ? Column(children: <Widget>[
                             Divider(
                                 height: 2,
@@ -1158,10 +1188,10 @@ class _SettingsSheetState extends State<SettingsSheet>
                       AppIcons.timer,
                       _lockTimeoutDialog,
                       disabled: _curUnlockSetting.setting == UnlockOption.NO &&
-                          StateContainer.of(context).encryptedSecret == null,
+                          !_isPasswordMode,
                     ),
-                    // Encrypt option
-                    StateContainer.of(context).encryptedSecret == null
+                    // Encrypt option - check if seed is actually encrypted, not if encryptedSecret exists
+                    !_isPasswordMode
                         ? Column(children: <Widget>[
                             Divider(
                                 height: 2,
@@ -1170,9 +1200,16 @@ class _SettingsSheetState extends State<SettingsSheet>
                             AppSettings.buildSettingsListItemSingleLine(
                                 context,
                                 AppLocalization.of(context).setWalletPassword,
-                                AppIcons.walletpassword, onPressed: () {
-                              Sheets.showAppHeightNineSheet(
+                                AppIcons.walletpassword, onPressed: () async {
+                              await Sheets.showAppHeightNineSheet(
                                   context: context, widget: SetPasswordSheet());
+                              // Refresh password mode state after setting password
+                              bool isPasswordMode = await _checkPasswordMode();
+                              if (mounted) {
+                                setState(() {
+                                  _isPasswordMode = isPasswordMode;
+                                });
+                              }
                             })
                           ])
                         : // Decrypt option
@@ -1185,10 +1222,17 @@ class _SettingsSheetState extends State<SettingsSheet>
                                 context,
                                 AppLocalization.of(context)
                                     .disableWalletPassword,
-                                AppIcons.walletpassworddisabled, onPressed: () {
-                              Sheets.showAppHeightNineSheet(
+                                AppIcons.walletpassworddisabled, onPressed: () async {
+                              await Sheets.showAppHeightNineSheet(
                                   context: context,
                                   widget: DisablePasswordSheet());
+                              // Refresh password mode state after disabling password
+                              bool isPasswordMode = await _checkPasswordMode();
+                              if (mounted) {
+                                setState(() {
+                                  _isPasswordMode = isPasswordMode;
+                                });
+                              }
                             }),
                           ]),
                     // Reset Account Seed option
@@ -1320,9 +1364,20 @@ class _SettingsSheetState extends State<SettingsSheet>
       await Future.delayed(Duration(milliseconds: 200));
       Navigator.of(context).pop();
       try {
-        // For backup, get seed directly from vault after PIN authentication
-        String seed = await sl.get<Vault>().getSeed();
-        AppSeedBackupSheet(seed).mainBottomSheet(context);
+        // For backup, use proper seed access method that handles both password and non-password modes
+        String? seed = await AppUtil.getSeedSafely(context);
+        if (seed != null) {
+          AppSeedBackupSheet(seed).mainBottomSheet(context);
+        } else {
+          print("Error: Could not get seed for backup");
+          // Show error dialog if seed retrieval fails
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text("Error accessing wallet seed. Please try again."),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
       } catch (e) {
         print("Error getting seed for backup: $e");
         // Show error dialog if seed retrieval fails

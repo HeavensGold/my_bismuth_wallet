@@ -19,6 +19,7 @@ import 'package:my_bismuth_wallet/ui/widgets/app_text_field.dart';
 import 'package:my_bismuth_wallet/ui/widgets/buttons.dart';
 import 'package:my_bismuth_wallet/ui/widgets/dialog.dart';
 import 'package:my_bismuth_wallet/ui/widgets/tap_outside_unfocus.dart';
+import 'package:my_bismuth_wallet/util/app_ffi/apputil.dart';
 import 'package:my_bismuth_wallet/util/app_ffi/encrypt/crypter.dart';
 import 'package:my_bismuth_wallet/util/caseconverter.dart';
 import 'package:my_bismuth_wallet/util/sharedprefsutil.dart';
@@ -212,10 +213,20 @@ class _AppPasswordLockScreenState extends State<AppPasswordLockScreen> {
 
   Future<void> validateAndDecrypt() async {
     try {
+      // Validate session key first
+      String sessionKey = await sl.get<Vault>().getSessionKey();
+      if (sessionKey.isEmpty) {
+        // Create session key if missing
+        sessionKey = await sl.get<Vault>().updateSessionKey();
+      }
+      
       String decryptedSeed = HEX.encode(AppCrypt.decrypt(
           await sl.get<Vault>().getSeed(), enterPasswordController.text));
       StateContainer.of(context).setEncryptedSecret(HEX.encode(AppCrypt.encrypt(
-          decryptedSeed, await sl.get<Vault>().getSessionKey())));
+          decryptedSeed, sessionKey)));
+      
+      // Initialize the selected account properly (this was missing!)
+      await AppUtil().loginAccount(decryptedSeed, context);
       _goHome();
     } catch (e) {
       if (mounted) {

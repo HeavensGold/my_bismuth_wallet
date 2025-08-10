@@ -22,6 +22,51 @@ import 'package:my_bismuth_wallet/service_locator.dart';
 import 'package:my_bismuth_wallet/util/app_ffi/encrypt/crypter.dart';
 
 class AppUtil {
+  // Helper method to check if a seed is encrypted (password mode)
+  static bool isSeedEncrypted(String seed) {
+    if (seed.isEmpty) return false;
+    try {
+      // Check if seed starts with "Salted__" (16 hex chars = 8 bytes)
+      if (seed.length >= 16) {
+        String prefix = utf8.decode(HEX.decode(seed.substring(0, 16)));
+        return prefix == "Salted__";
+      }
+    } catch (e) {
+      // If decoding fails, seed might be invalid but not encrypted
+    }
+    return false;
+  }
+  
+  // Centralized method for safe seed access with proper password mode handling
+  static Future<String?> getSeedSafely(BuildContext context) async {
+    try {
+      // First try to get from StateContainer (already decrypted)
+      return await StateContainer.of(context).getSeed();
+    } catch (e) {
+      // If that fails, check vault seed
+      String vaultSeed = await sl.get<Vault>().getSeed();
+      
+      // If seed is encrypted, we can't use it directly
+      if (isSeedEncrypted(vaultSeed)) {
+        // In password mode but encryptedSecret not available
+        // This means user needs to unlock first
+        return null;
+      }
+      
+      // Seed is not encrypted, we can use it
+      // But we should also setup encryptedSecret for future use
+      String sessionKey = await sl.get<Vault>().getSessionKey();
+      if (sessionKey.isEmpty) {
+        sessionKey = await sl.get<Vault>().updateSessionKey();
+      }
+      StateContainer.of(context).setEncryptedSecret(
+          HEX.encode(AppCrypt.encrypt(vaultSeed, sessionKey))
+      );
+      
+      return vaultSeed;
+    }
+  }
+  
   String seedToAddress(String seed, int index) {
     String mnemonic = bip39.entropyToMnemonic(seed);
     //print("Mnemonic : " + mnemonic);

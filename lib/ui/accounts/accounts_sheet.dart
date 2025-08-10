@@ -27,6 +27,7 @@ import 'package:my_bismuth_wallet/ui/util/ui_util.dart';
 import 'package:my_bismuth_wallet/ui/widgets/buttons.dart';
 import 'package:my_bismuth_wallet/ui/widgets/dialog.dart';
 import 'package:my_bismuth_wallet/ui/widgets/sheets.dart';
+import 'package:my_bismuth_wallet/util/app_ffi/apputil.dart';
 import 'package:my_bismuth_wallet/util/caseconverter.dart';
 import 'package:my_bismuth_wallet/util/numberutil.dart';
 
@@ -276,11 +277,16 @@ class _AppAccountsWidgetState extends State<AppAccountsWidget> {
                                 _addingAccount = true;
                               });
                               try {
-                                String seed;
-                                try {
-                                  seed = await StateContainer.of(context).getSeed();
-                                } catch (e) {
-                                  seed = await sl.get<Vault>().getSeed();
+                                String? seed = await AppUtil.getSeedSafely(context);
+                                if (seed == null) {
+                                  // Password mode but not unlocked
+                                  setState(() {
+                                    _addingAccount = false;
+                                  });
+                                  UIUtil.showSnackbar(
+                                      AppLocalization.of(context).unlock, 
+                                      context);
+                                  return;
                                 }
                                 
                                 Account newAccount = await sl
