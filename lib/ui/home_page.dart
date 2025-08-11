@@ -374,26 +374,42 @@ class _AppHomePageState extends State<AppHomePage>
         _isShowingNetworkError = false;
         
         // Check if we need to re-authenticate in password mode
-        // Only check for re-authentication if encryptedSecret is null AND we're in password mode
-        if (StateContainer.of(context).encryptedSecret == null) {
-          // Check if seed is encrypted (password mode)
-          sl.get<Vault>().getSeed().then((vaultSeed) {
-            if (AppUtil.isSeedEncrypted(vaultSeed)) {
-              // Navigate to password lock screen only if we're truly in password mode
+        // Check if encryptedSecret is null OR if it's invalid/corrupted
+        sl.get<Vault>().getSeed().then((vaultSeed) async {
+          bool needsReauth = false;
+          
+          if (AppUtil.isSeedEncrypted(vaultSeed)) {
+            // In password mode, validate that encryptedSecret works
+            if (StateContainer.of(context).encryptedSecret == null) {
+              needsReauth = true;
+            } else {
+              // Try to decrypt to validate it's still valid
+              try {
+                await StateContainer.of(context).getSeed();
+              } catch (e) {
+                // Decryption failed, encryptedSecret is corrupted
+                log.w("encryptedSecret validation failed after resume: ${e.toString()}");
+                needsReauth = true;
+              }
+            }
+            
+            if (needsReauth) {
+              // Navigate to password lock screen
               Navigator.of(context).pushNamedAndRemoveUntil(
                   '/password_lock_screen', (Route<dynamic> route) => false);
-            } else {
-              // For non-password mode, setup encryptedSecret if missing
-              sl.get<Vault>().getSessionKey().then((sessionKey) {
-                if (sessionKey.isNotEmpty) {
-                  StateContainer.of(context).setEncryptedSecret(
-                      HEX.encode(AppCrypt.encrypt(vaultSeed, sessionKey))
-                  );
-                }
-              });
             }
-          });
-        }
+          } else {
+            // For non-password mode, setup encryptedSecret if missing
+            if (StateContainer.of(context).encryptedSecret == null) {
+              String sessionKey = await sl.get<Vault>().getSessionKey();
+              if (sessionKey.isNotEmpty) {
+                StateContainer.of(context).setEncryptedSecret(
+                    HEX.encode(AppCrypt.encrypt(vaultSeed, sessionKey))
+                );
+              }
+            }
+          }
+        });
         
         // Don't refresh if already loading to prevent duplicate requests
         if (!(StateContainer.of(context).wallet?.loading ?? false)) {

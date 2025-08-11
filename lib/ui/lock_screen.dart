@@ -16,6 +16,7 @@ import 'package:my_bismuth_wallet/ui/util/routes.dart';
 import 'package:my_bismuth_wallet/ui/widgets/buttons.dart';
 import 'package:my_bismuth_wallet/ui/widgets/dialog.dart';
 import 'package:my_bismuth_wallet/ui/widgets/security.dart';
+import 'package:my_bismuth_wallet/util/app_ffi/apputil.dart';
 import 'package:my_bismuth_wallet/util/biometrics.dart';
 import 'package:my_bismuth_wallet/util/caseconverter.dart';
 import 'package:my_bismuth_wallet/util/sharedprefsutil.dart';
@@ -30,8 +31,17 @@ class _AppLockScreenState extends State<AppLockScreen> {
   bool _showLock = false;
   bool _lockedOut = true;
   String _countDownTxt = "";
+  bool _isInitializing = true;
 
   Future<void> _goHome() async {
+    // Initialize the wallet properly after authentication
+    try {
+      String seed = await sl.get<Vault>().getSeed();
+      await AppUtil().loginAccount(seed, context);
+    } catch (e) {
+      print("Error initializing wallet after lock screen: $e");
+    }
+    
     StateContainer.of(context).requestUpdate();
     PriceConversion conversion =
         await sl.get<SharedPrefsUtil>().getPriceConversion();
@@ -129,6 +139,8 @@ class _AppLockScreenState extends State<AppLockScreen> {
         .authenticateWithBiometrics(
             context, AppLocalization.of(context).unlockBiometrics);
     if (authenticated) {
+      // Reset failed lock attempts on successful authentication
+      await sl.get<SharedPrefsUtil>().resetLockAttempts();
       _goHome();
     } else {
       setState(() {
@@ -153,29 +165,51 @@ class _AppLockScreenState extends State<AppLockScreen> {
         }),
       );
     }
-    await Future.delayed(Duration(milliseconds: 200));
-    if (mounted) {
-      setState(() {
-        _showUnlockButton = true;
-        _showLock = true;
-      });
-    }
+    
     if (auth) {
+      // Successful authentication - keep _isInitializing true to prevent UI flash
+      // The navigation will remove this screen anyway
       _goHome();
+    } else {
+      // Failed authentication or user cancelled - show the lock UI
+      await Future.delayed(Duration(milliseconds: 200));
+      if (mounted) {
+        setState(() {
+          _isInitializing = false;
+          _showUnlockButton = true;
+          _showLock = true;
+        });
+      }
     }
   }
 
   Future<void> _authenticate({bool transitions = false}) async {
     // Test if user is locked out
-    // Get duration of lockout
-    DateTime lockUntil = await sl.get<SharedPrefsUtil>().getLockDate();
-    int countDown = lockUntil.difference(DateTime.now().toUtc()).inSeconds;
-    // They're not allowed to attempt
-    if (countDown > 0) {
-      _runCountdown(countDown);
-      return;
+    // First check if we should lock at all
+    bool shouldLock = await sl.get<SharedPrefsUtil>().shouldLock();
+    if (shouldLock) {
+      // Get duration of lockout
+      DateTime? lockUntil = await sl.get<SharedPrefsUtil>().getLockDate();
+      if (lockUntil == null) {
+        // If we don't have a lock date but shouldLock is true (attempts >= 5),
+        // we need to set a lock date
+        await sl.get<SharedPrefsUtil>().updateLockDate();
+        lockUntil = await sl.get<SharedPrefsUtil>().getLockDate();
+      }
+      
+      if (lockUntil != null) {
+        int countDown = lockUntil.difference(DateTime.now().toUtc()).inSeconds;
+        // They're not allowed to attempt
+        if (countDown > 0) {
+          setState(() {
+            _isInitializing = false;
+          });
+          _runCountdown(countDown);
+          return;
+        }
+      }
     }
-      setState(() {
+    setState(() {
       _lockedOut = false;
     });
     AuthenticationMethod authMethod =
@@ -183,6 +217,7 @@ class _AppLockScreenState extends State<AppLockScreen> {
     bool hasBiometrics = await sl.get<BiometricUtil>().hasBiometrics();
     if (authMethod.method == AuthMethod.BIOMETRICS && hasBiometrics) {
       setState(() {
+        _isInitializing = false;
         _showLock = true;
         _showUnlockButton = true;
       });
@@ -192,6 +227,8 @@ class _AppLockScreenState extends State<AppLockScreen> {
         await authenticateWithPin(transitions: transitions);
       }
     } else {
+      // For PIN-only auth, keep _isInitializing = true to prevent UI flash
+      // The PIN screen will handle setting it to false only if auth fails
       await authenticateWithPin(transitions: transitions);
     }
   }
@@ -210,11 +247,13 @@ class _AppLockScreenState extends State<AppLockScreen> {
         body: Container(
             color: StateContainer.of(context).curTheme.backgroundDark,
             width: double.infinity,
-            child: SafeArea(
-                minimum: EdgeInsets.only(
-                  bottom: MediaQuery.of(context).size.height * 0.035,
-                ),
-                child: Column(
+            child: _isInitializing 
+                ? Container() // Show nothing while initializing
+                : SafeArea(
+                    minimum: EdgeInsets.only(
+                      bottom: MediaQuery.of(context).size.height * 0.035,
+                    ),
+                    child: Column(
                   children: <Widget>[
                     // Logout button
                     Container(
@@ -329,7 +368,6 @@ class _AppLockScreenState extends State<AppLockScreen> {
                           )
                         : SizedBox(),
                   ],
-                )))),
-    );
+                )))));
   }
 }

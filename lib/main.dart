@@ -347,6 +347,8 @@ class SplashState extends State<Splash> with WidgetsBindingObserver {
               '/lock_screen', (Route<dynamic> route) => false);
         } else {
           await AppUtil().loginAccount(seed, context);
+          // Reset any lingering failed attempts from previous sessions
+          await sl.get<SharedPrefsUtil>().resetLockAttempts();
           PriceConversion conversion =
               await sl.get<SharedPrefsUtil>().getPriceConversion();
           Navigator.of(context).pushNamedAndRemoveUntil(

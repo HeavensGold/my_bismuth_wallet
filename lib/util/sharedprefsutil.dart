@@ -253,8 +253,11 @@ class SharedPrefsUtil {
     }
   }
 
-  Future<DateTime> getLockDate() async {
-    String lockDateStr = await get(pin_lock_until);
+  Future<DateTime?> getLockDate() async {
+    String? lockDateStr = await get(pin_lock_until);
+    if (lockDateStr == null) {
+      return null;
+    }
     return DateFormat.yMd().add_jms().parseUtc(lockDateStr);
   }
 

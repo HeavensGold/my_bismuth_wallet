@@ -227,6 +227,8 @@ class _AppPasswordLockScreenState extends State<AppPasswordLockScreen> {
       
       // Initialize the selected account properly (this was missing!)
       await AppUtil().loginAccount(decryptedSeed, context);
+      // Reset failed lock attempts on successful authentication
+      await sl.get<SharedPrefsUtil>().resetLockAttempts();
       _goHome();
     } catch (e) {
       if (mounted) {
