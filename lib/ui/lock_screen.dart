@@ -38,11 +38,20 @@ class _AppLockScreenState extends State<AppLockScreen> {
     try {
       String seed = await sl.get<Vault>().getSeed();
       await AppUtil().loginAccount(seed, context);
+      
+      // Wait for wallet state to be properly initialized before navigation
+      await Future.delayed(Duration(milliseconds: 100));
+      
+      // Ensure requestUpdate completes before navigating
+      StateContainer.of(context).requestUpdate();
+      
+      // Add small delay to prevent race condition with navigation
+      await Future.delayed(Duration(milliseconds: 50));
+      
     } catch (e) {
       print("Error initializing wallet after lock screen: $e");
     }
     
-    StateContainer.of(context).requestUpdate();
     PriceConversion conversion =
         await sl.get<SharedPrefsUtil>().getPriceConversion();
     Navigator.of(context).pushNamedAndRemoveUntil(

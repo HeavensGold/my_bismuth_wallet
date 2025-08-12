@@ -2218,9 +2218,9 @@ class _AppHomePageState extends State<AppHomePage>
                       if (wallet == null) return SizedBox(height: 0);
                       final double pendingDelta = wallet.getPendingDelta();
                       if (pendingDelta == 0) return SizedBox(height: 0);
-                      final String pendingText = (pendingDelta > 0 ? "+ " : "- ") +
+                      final String pendingText = (pendingDelta > 0 ? "+" : "") +
                           wallet.getPendingDeltaDisplay() +
-                          " BIS (pending)";
+                          " BIS(pending)";
                       final Color color = Colors.orange; // Keep pending as orange
                       final TextStyle baseStyle = pendingDelta > 0
                           ? AppStyles.textStyleTransactionTypeGreen(context)
@@ -2228,7 +2228,7 @@ class _AppHomePageState extends State<AppHomePage>
                       return Padding(
                         padding: const EdgeInsets.only(top: 4.0),
                         child: Text(
-                          "Pending: " + pendingText,
+                          "" + pendingText,
                           style: baseStyle.copyWith(color: color),
                         ),
                       );

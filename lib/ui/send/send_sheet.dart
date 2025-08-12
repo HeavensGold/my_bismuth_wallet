@@ -18,7 +18,7 @@ import 'package:my_bismuth_wallet/app_icons.dart';
 import 'package:my_bismuth_wallet/appstate_container.dart';
 import 'package:my_bismuth_wallet/dimens.dart';
 import 'package:my_bismuth_wallet/localization.dart';
-import 'package:my_bismuth_wallet/model/address.dart';
+import 'package:my_bismuth_wallet/model/address.dart' as BismuthAddress;
 import 'package:my_bismuth_wallet/model/available_currency.dart';
 // import 'package:my_bismuth_wallet/model/bis_url.dart'; // Commented out - file deleted
 import 'package:my_bismuth_wallet/model/db/appdb.dart';
@@ -70,6 +70,7 @@ class SendSheet extends StatefulWidget {
 enum AddressStyle { TEXT60, TEXT90, PRIMARY }
 
 class _SendSheetState extends State<SendSheet> {
+  static String? _pendingQRResult;
   final Logger log = sl.get<Logger>();
 
   late FocusNode _sendAddressFocusNode;
@@ -207,7 +208,7 @@ class _SendSheetState extends State<SendSheet> {
         setState(() {
           _addressHint = "";
           _contacts = [];
-          if (Address(_sendAddressController.text).isValid()) {
+          if (BismuthAddress.Address(_sendAddressController.text).isValid()) {
             //_addressValidAndUnfocused = true;
           }
         });
@@ -286,6 +287,17 @@ class _SendSheetState extends State<SendSheet> {
           NumberUtil.getRawAsUsableString(quickAmount).replaceAll(",", "");
     } else {
       _sendAmountController.text = "";
+    }
+    
+    // Check for pending QR result from previous widget instance
+    if (_SendSheetState._pendingQRResult != null) {
+      final pendingResult = _SendSheetState._pendingQRResult!;
+      _SendSheetState._pendingQRResult = null; // Clear it
+      
+      // Process the pending result
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _processScanResultOnMountedWidget(pendingResult);
+      });
     }
     }
 
@@ -1000,142 +1012,25 @@ class _SendSheetState extends State<SendSheet> {
                           AppLocalization.of(context).scanQrCode,
                           Dimens.BUTTON_BOTTOM_DIMENS, onPressed: () async {
                         UIUtil.cancelLockEvent();
+                        
+                        // Store current controller reference before navigation
+                        final controller = _sendAddressController;
+                        
                         String? scanResult = await UserDataUtil.getQRData(
                             DataType.ADDRESS, context);
+                        
                         if (scanResult == null || QRScanErrs.ERROR_LIST.contains(scanResult)) {
-                        return;
-                      } else {
-                        if (scanResult.contains("bis://")) {
-                          // TODO: Implement BisUrl parsing
-                          // BisUrl bisUrl = await new BisUrl().getInfo(scanResult);
-                          UIUtil.showSnackbar(
-                              "BIS URL QR code parsing temporarily disabled", 
-                              context);
-                          return;
-                          /*
-                          setState(() {
-                            _addressValidationText = "";
-                            _amountValidationText = "";
-                            _tokenValidationText = "";
-                            _tokenQuantityValidationText = "";
-                            _openfieldValidationText = "";
-                            _operationValidationText = "";
-                            _sendAddressController.text = bisUrl.address;
-                            _sendAmountController.text = bisUrl.amount;
-                            _sendCommentController.text = bisUrl.comment;
-                            _sendOpenfieldController.text = bisUrl.openfield;
-                            _sendOperationController.text = bisUrl.operation;
-                            isTokenToSendSwitched = bisUrl.isTokenToSend;
-                            _sendTokenQuantityController.text =
-                                bisUrl.tokenToSendQty.toString();
-                            _selectedTokenName = bisUrl.tokenName;
-
-                            validRequest = _validateRequest();
-                          });
-                          */
                           return;
                         }
-
-                        // Is a URI
-                        Address address = Address(scanResult);
-                        // See if this address belongs to a contact
-                        Contact? contact = await sl
-                            .get<DBHelper>()
-                            .getContactWithAddress(address.address);
-                        // Handle contact vs regular address
+                        
+                        // Store result for the recreated widget to process
+                        _SendSheetState._pendingQRResult = scanResult;
+                        
+                        // Also try to process immediately if widget is still mounted
                         if (mounted) {
-                          if (contact != null) {
-                            // Is a contact
-                            setState(() {
-                              _isContact = true;
-                              _addressValidationText = "";
-                              _sendAddressStyle = AddressStyle.PRIMARY;
-                              _pasteButtonVisible = false;
-                              _showContactButton = false;
-                            });
-                            _sendAddressController.text = contact.name ?? "";
-                          } else {
-                            // Is a regular address, not a contact
-                            setState(() {
-                              _isContact = false;
-                              _addressValidationText = "";
-                              _sendAddressStyle = AddressStyle.TEXT90;
-                              _pasteButtonVisible = false;
-                              _showContactButton = false;
-                            });
-                            _sendAddressController.text = address.address;
-                          }
+                          _processScanResultOnMountedWidget(scanResult);
                         }
-                                              // If amount is present and valid, fill it and go to SendConfirm
-                        bool hasError = false;
-                        bool hasValidAmount = false;
-                        BigInt amountBigInt =
-                            BigInt.tryParse(address.amount ?? "0") ?? BigInt.zero;
-                        
-                        // Check if QR code has a valid amount (>= minimum send)
-                        if (amountBigInt >= BigInt.from(10).pow(24)) {
-                          hasValidAmount = true;
-                        }
-                        
-                        // Only proceed to confirm if there's a valid amount
-                        if (hasValidAmount && _localCurrencyMode && mounted) {
-                          toggleLocalCurrency();
-                          _sendAmountController.text =
-                              NumberUtil.getRawAsUsableString(
-                                  address.amount);
-                        } else if (hasValidAmount && mounted) {
-                          setState(() {
-                            _rawAmount = address.amount;
-                            // If raw amount has more precision than we support show a special indicator
-                            if (NumberUtil.getRawAsUsableString(_rawAmount ?? "")
-                                    .replaceAll(",", "") ==
-                                NumberUtil.getRawAsUsableDecimal(_rawAmount ?? "")
-                                    .toString()) {
-                              _sendAmountController.text =
-                                  NumberUtil.getRawAsUsableString(
-                                          _rawAmount ?? "0")
-                                      .replaceAll(",", "");
-                            } else {
-                              _sendAmountController
-                                  .text = NumberUtil.truncateDecimal(
-                                          NumberUtil.getRawAsUsableDecimal(
-                                              address.amount),
-                                          digits: 6)
-                                      .toStringAsFixed(6) +
-                                  "~";
-                            }
-                          });
-                          _sendAddressFocusNode.unfocus();
-                        }
-
-                        if (!hasError && hasValidAmount) {
-                          // Go to confirm sheet
-                          Sheets.showAppHeightNineSheet(
-                              context: context,
-                              widget: SendConfirmSheet(
-                                  title: widget.title ?? "",
-                                  amountRaw: _localCurrencyMode
-                                      ? NumberUtil.getAmountAsRaw(
-                                          _convertLocalCurrencyToCrypto())
-                                      : _rawAmount == null
-                                          ? NumberUtil.getAmountAsRaw(
-                                              _sendAmountController.text)
-                                          : (_rawAmount ?? ""),
-                                  destination: contact != null
-                                      ? (contact.address ?? "")
-                                      : address.address,
-                                  contactName:
-                                      contact?.name,
-                                  operation: "",
-                                  openfield: "",
-                                  comment: "",
-                                  maxSend: _isMaxSend(),
-                                  localCurrency: _localCurrencyMode
-                                      ? _sendAmountController.text
-                                      : ""));
-                        }
-                                            }
-                      })
+                      }),
                     ],
                   ),
                 ],
@@ -1381,7 +1276,7 @@ class _SendSheetState extends State<SendSheet> {
         _addressValidationText = AppLocalization.of(context).addressMising;
         _pasteButtonVisible = true;
       });
-    } else if (!isContact && !Address(_sendAddressController.text).isValid()) {
+    } else if (!isContact && !BismuthAddress.Address(_sendAddressController.text).isValid()) {
       isValid = false;
       setState(() {
         _addressValidationText = AppLocalization.of(context).invalidAddress;
@@ -1560,12 +1455,44 @@ class _SendSheetState extends State<SendSheet> {
       textAlign: TextAlign.center,
       onSubmitted: (text) {
         FocusScope.of(context).unfocus();
-        if (!Address(_sendAddressController.text).isValid()) {
+        if (!BismuthAddress.Address(_sendAddressController.text).isValid()) {
           FocusScope.of(context).requestFocus(_sendAddressFocusNode);
         }
       },
     );
   } //************ Enter Amount Container Method End ************//
+  
+  //************ Process QR Scan Result on Mounted Widget ************//
+  void _processScanResultOnMountedWidget(String scanResult) async {
+    // Validate address
+    BismuthAddress.Address address = BismuthAddress.Address(scanResult);
+    if (!address.isValid()) {
+      UIUtil.showSnackbar("Invalid address format", context);
+      return;
+    }
+    
+    // Check for contacts
+    Contact? contact = await sl.get<DBHelper>().getContactWithAddress(address.address);
+    
+    // Update UI and controller (this method should only be called on mounted widgets)
+    setState(() {
+      if (contact != null) {
+        _isContact = true;
+        _addressValidationText = "";
+        _sendAddressStyle = AddressStyle.PRIMARY;
+        _pasteButtonVisible = false;
+        _showContactButton = false;
+        _sendAddressController.text = contact.name ?? "";
+      } else {
+        _isContact = false;
+        _addressValidationText = "";
+        _sendAddressStyle = AddressStyle.TEXT90;
+        _pasteButtonVisible = false;
+        _showContactButton = false;
+        _sendAddressController.text = address.address;
+      }
+    });
+  }
   //*************************************************************//
 
   //************ Enter Address Container Method ************//
@@ -1622,7 +1549,7 @@ class _SendSheetState extends State<SendSheet> {
               if (data?.text == null) {
                 return;
               }
-              Address address = Address(data?.text ?? "");
+              BismuthAddress.Address address = BismuthAddress.Address(data?.text ?? "");
               if (address.isValid()) {
                 sl
                     .get<DBHelper>()
@@ -1683,7 +1610,7 @@ class _SendSheetState extends State<SendSheet> {
           setState(() {
             _addressValidationText = "";
           });
-          if (!isContact && Address(text).isValid()) {
+          if (!isContact && BismuthAddress.Address(text).isValid()) {
             //_sendAddressFocusNode.unfocus();
             setState(() {
               _sendAddressStyle = AddressStyle.TEXT90;
@@ -1835,7 +1762,7 @@ class _SendSheetState extends State<SendSheet> {
       textAlign: TextAlign.center,
       onSubmitted: (text) {
         FocusScope.of(context).unfocus();
-        if (!Address(_sendAddressController.text).isValid()) {
+        if (!BismuthAddress.Address(_sendAddressController.text).isValid()) {
           FocusScope.of(context).requestFocus(_sendAddressFocusNode);
         }
       },

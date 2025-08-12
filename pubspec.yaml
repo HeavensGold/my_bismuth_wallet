@@ -61,8 +61,8 @@ dependencies:
   # QR Codes
   qr_flutter: ^4.0.0
 
-  # QR code scanning
-  barcode_scan2: ^4.1.4
+  # QR code scanning (upgraded for better device compatibility)
+  mobile_scanner: ^7.0.1
 
   # HTTP client
   http: ^0.13.4

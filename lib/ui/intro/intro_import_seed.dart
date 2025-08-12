@@ -6,7 +6,7 @@ import 'package:flutter/services.dart';
 
 // Package imports:
 import 'package:auto_size_text/auto_size_text.dart';
-import 'package:barcode_scan2/barcode_scan2.dart';
+// QR scanning functionality moved to UserDataUtil
 // import 'package:keyboard_avoider/keyboard_avoider.dart'; // Replaced
 
 // Project imports:
@@ -18,6 +18,7 @@ import 'package:my_bismuth_wallet/ui/util/formatters.dart';
 import 'package:my_bismuth_wallet/ui/util/ui_util.dart';
 import 'package:my_bismuth_wallet/ui/widgets/app_text_field.dart';
 import 'package:my_bismuth_wallet/ui/widgets/tap_outside_unfocus.dart';
+import 'package:my_bismuth_wallet/util/user_data_util.dart';
 import 'package:my_bismuth_wallet/util/app_ffi/keys/mnemonics.dart';
 import 'package:my_bismuth_wallet/util/app_ffi/keys/seeds.dart';
 
@@ -169,38 +170,34 @@ class _IntroImportSeedState extends State<IntroImportSeedPage> {
                                                   return;
                                                 }
                                                 // Scan QR for seed
-                                                UIUtil.cancelLockEvent();
-                                                BarcodeScanner.scan()
+                                                UserDataUtil.getQRData(DataType.RAW, context)
                                                     .then((result) {
-                                                  if (AppSeeds.isValidSeed(
-                                                          result.rawContent)) {
-                                                    _seedInputController.text =
-                                                        result.rawContent;
-                                                    setState(() {
-                                                      _seedIsValid = true;
-                                                    });
-                                                  } else if (AppMnemomics
-                                                          .validateMnemonic(
-                                                              result.rawContent
-                                                                  .split(
-                                                                      ' '))) {
-                                                    _mnemonicController.text =
-                                                        result.rawContent;
-                                                    _mnemonicFocusNode
-                                                        .unfocus();
-                                                    _seedInputFocusNode
-                                                        .unfocus();
-                                                    setState(() {
-                                                      _seedMode = false;
-                                                      _mnemonicError = null;
-                                                      _mnemonicIsValid = true;
-                                                    });
-                                                  } else {
-                                                    UIUtil.showSnackbar(
-                                                        AppLocalization.of(
-                                                                context)
-                                                            .qrInvalidSeed,
-                                                        context);
+                                                  if (result != null && !QRScanErrs.ERROR_LIST.contains(result)) {
+                                                    if (AppSeeds.isValidSeed(result)) {
+                                                      _seedInputController.text = result;
+                                                      setState(() {
+                                                        _seedIsValid = true;
+                                                      });
+                                                    } else if (AppMnemomics
+                                                            .validateMnemonic(
+                                                                result.split(' '))) {
+                                                      _mnemonicController.text = result;
+                                                      _mnemonicFocusNode
+                                                          .unfocus();
+                                                      _seedInputFocusNode
+                                                          .unfocus();
+                                                      setState(() {
+                                                        _seedMode = false;
+                                                        _mnemonicError = null;
+                                                        _mnemonicIsValid = true;
+                                                      });
+                                                    } else {
+                                                      UIUtil.showSnackbar(
+                                                          AppLocalization.of(
+                                                                  context)
+                                                              .qrInvalidSeed,
+                                                          context);
+                                                    }
                                                   }
                                                 });
                                               },
@@ -303,38 +300,34 @@ class _IntroImportSeedState extends State<IntroImportSeedPage> {
                                                   return;
                                                 }
                                                 // Scan QR for mnemonic
-                                                UIUtil.cancelLockEvent();
-                                                BarcodeScanner.scan()
+                                                UserDataUtil.getQRData(DataType.RAW, context)
                                                     .then((result) {
-                                                  if (AppMnemomics
-                                                          .validateMnemonic(
-                                                              result.rawContent
-                                                                  .split(
-                                                                      ' '))) {
-                                                    _mnemonicController.text =
-                                                        result.rawContent;
-                                                    setState(() {
-                                                      _mnemonicIsValid = true;
-                                                    });
-                                                  } else if (AppSeeds.isValidSeed(
-                                                          result.rawContent)) {
-                                                    _seedInputController.text =
-                                                        result.rawContent;
-                                                    _mnemonicFocusNode
-                                                        .unfocus();
-                                                    _seedInputFocusNode
-                                                        .unfocus();
-                                                    setState(() {
-                                                      _seedMode = true;
-                                                      _seedIsValid = true;
-                                                      _showSeedError = false;
-                                                    });
-                                                  } else {
-                                                    UIUtil.showSnackbar(
-                                                        AppLocalization.of(
-                                                                context)
-                                                            .qrMnemonicError,
-                                                        context);
+                                                  if (result != null && !QRScanErrs.ERROR_LIST.contains(result)) {
+                                                    if (AppMnemomics
+                                                            .validateMnemonic(
+                                                                result.split(' '))) {
+                                                      _mnemonicController.text = result;
+                                                      setState(() {
+                                                        _mnemonicIsValid = true;
+                                                      });
+                                                    } else if (AppSeeds.isValidSeed(result)) {
+                                                      _seedInputController.text = result;
+                                                      _mnemonicFocusNode
+                                                          .unfocus();
+                                                      _seedInputFocusNode
+                                                          .unfocus();
+                                                      setState(() {
+                                                        _seedMode = true;
+                                                        _seedIsValid = true;
+                                                        _showSeedError = false;
+                                                      });
+                                                    } else {
+                                                      UIUtil.showSnackbar(
+                                                          AppLocalization.of(
+                                                                  context)
+                                                              .qrMnemonicError,
+                                                          context);
+                                                    }
                                                   }
                                                 });
                                               },
