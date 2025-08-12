@@ -6,6 +6,7 @@ import 'dart:async';
 // Flutter imports:
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'dart:ui' as ui;
 
 // Package imports:
 import 'package:auto_size_text/auto_size_text.dart';
@@ -144,6 +145,14 @@ class _AppHomePageState extends State<AppHomePage>
     receive = ReceiveSheet();
     WidgetsBinding.instance.addObserver(this);
     _priceConversion = widget.priceConversion ?? PriceConversion.BTC;
+    
+    // Generate initial QR code after frame is rendered
+    // This fixes the issue where QR code is not generated on first app launch
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && StateContainer.of(context).wallet?.address != null) {
+        paintQrCode(address: StateContainer.of(context).wallet!.address!);
+      }
+    });
       // Main Card Size
     if (_priceConversion == PriceConversion.BTC) {
       mainCardHeight = 120;
@@ -726,22 +735,103 @@ class _AppHomePageState extends State<AppHomePage>
   }
 
   void paintQrCode({required String address}) {
-    QrPainter painter = QrPainter(
-      data:
-          address.isEmpty ? StateContainer.of(context).wallet?.address ?? "" : address,
-      version: 6,
-      gapless: false,
-      errorCorrectionLevel: QrErrorCorrectLevel.Q,
-    );
-    painter.toImageData(MediaQuery.of(context).size.width).then((byteData) {
-      setState(() {
-        receive = ReceiveSheet(
-          qrWidget: Container(
-              width: MediaQuery.of(context).size.width / 2.675,
-              child: Image.memory(byteData?.buffer.asUint8List() ?? Uint8List(0))),
-        );
+    final qrData = address.isEmpty 
+        ? StateContainer.of(context).wallet?.address ?? "" 
+        : address;
+    
+    // Validate QR data
+    if (qrData.isEmpty) {
+      print('Warning: Empty QR data');
+      return;
+    }
+    
+    try {
+      QrPainter painter = QrPainter(
+        data: qrData,
+        version: 6,
+        gapless: false,
+        errorCorrectionLevel: QrErrorCorrectLevel.Q,
+      );
+      
+      // Use a fixed size for consistency
+      final double imageSize = 800.0;
+      
+      painter.toImageData(imageSize, format: ui.ImageByteFormat.png).then((byteData) {
+        if (!mounted) return;
+        
+        if (byteData != null && byteData.buffer.asUint8List().length > 100) {
+          // Check if the image data looks valid (should be larger than 100 bytes for a QR code)
+          final imageBytes = byteData.buffer.asUint8List();
+          
+          setState(() {
+            receive = ReceiveSheet(
+              qrWidget: Container(
+                width: MediaQuery.of(context).size.width / 2.675,
+                child: Image.memory(
+                  imageBytes,
+                  fit: BoxFit.contain,
+                ),
+              ),
+            );
+          });
+        } else {
+          print('QR generation produced invalid data (size: ${byteData?.buffer.asUint8List().length ?? 0})');
+          // Fallback to QrImageView
+          setState(() {
+            receive = ReceiveSheet(
+              qrWidget: Container(
+                width: MediaQuery.of(context).size.width / 2.675,
+                child: QrImageView(
+                  data: qrData,
+                  version: 6,
+                  size: MediaQuery.of(context).size.width / 2.675,
+                  gapless: false,
+                  errorCorrectionLevel: QrErrorCorrectLevel.Q,
+                ),
+              ),
+            );
+          });
+        }
+      }).catchError((error) {
+        print('Error generating QR with QrPainter: $error');
+        // Fallback to QrImageView
+        if (mounted) {
+          setState(() {
+            receive = ReceiveSheet(
+              qrWidget: Container(
+                width: MediaQuery.of(context).size.width / 2.675,
+                child: QrImageView(
+                  data: qrData,
+                  version: 6,
+                  size: MediaQuery.of(context).size.width / 2.675,
+                  gapless: false,
+                  errorCorrectionLevel: QrErrorCorrectLevel.Q,
+                ),
+              ),
+            );
+          });
+        }
       });
-    });
+    } catch (e) {
+      print('Exception in QR generation: $e');
+      // Fallback to QrImageView  
+      if (mounted) {
+        setState(() {
+          receive = ReceiveSheet(
+            qrWidget: Container(
+              width: MediaQuery.of(context).size.width / 2.675,
+              child: QrImageView(
+                data: qrData,
+                version: 6,
+                size: MediaQuery.of(context).size.width / 2.675,
+                gapless: false,
+                errorCorrectionLevel: QrErrorCorrectLevel.Q,
+              ),
+            ),
+          );
+        });
+      }
+    }
   }
 
   void _handleBackButton() {

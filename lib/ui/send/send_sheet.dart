@@ -1042,34 +1042,48 @@ class _SendSheetState extends State<SendSheet> {
                         Contact? contact = await sl
                             .get<DBHelper>()
                             .getContactWithAddress(address.address);
-                        // Is a contact
+                        // Handle contact vs regular address
                         if (mounted) {
-                          setState(() {
-                            _isContact = true;
-                            _addressValidationText = "";
-                            _sendAddressStyle = AddressStyle.PRIMARY;
-                            _pasteButtonVisible = false;
-                            _showContactButton = false;
-                          });
-                          _sendAddressController.text = contact?.name ?? "";
+                          if (contact != null) {
+                            // Is a contact
+                            setState(() {
+                              _isContact = true;
+                              _addressValidationText = "";
+                              _sendAddressStyle = AddressStyle.PRIMARY;
+                              _pasteButtonVisible = false;
+                              _showContactButton = false;
+                            });
+                            _sendAddressController.text = contact.name ?? "";
+                          } else {
+                            // Is a regular address, not a contact
+                            setState(() {
+                              _isContact = false;
+                              _addressValidationText = "";
+                              _sendAddressStyle = AddressStyle.TEXT90;
+                              _pasteButtonVisible = false;
+                              _showContactButton = false;
+                            });
+                            _sendAddressController.text = address.address;
+                          }
                         }
-                                              // If amount is present, fill it and go to SendConfirm
+                                              // If amount is present and valid, fill it and go to SendConfirm
                         bool hasError = false;
+                        bool hasValidAmount = false;
                         BigInt amountBigInt =
                             BigInt.tryParse(address.amount ?? "0") ?? BigInt.zero;
-                        if (amountBigInt < BigInt.from(10).pow(24)) {
-                          hasError = true;
-                          UIUtil.showSnackbar(
-                              AppLocalization.of(context)
-                                  .minimumSend
-                                  .replaceAll("%1", "0.000001"),
-                              context);
-                        } else if (_localCurrencyMode && mounted) {
+                        
+                        // Check if QR code has a valid amount (>= minimum send)
+                        if (amountBigInt >= BigInt.from(10).pow(24)) {
+                          hasValidAmount = true;
+                        }
+                        
+                        // Only proceed to confirm if there's a valid amount
+                        if (hasValidAmount && _localCurrencyMode && mounted) {
                           toggleLocalCurrency();
                           _sendAmountController.text =
                               NumberUtil.getRawAsUsableString(
                                   address.amount);
-                        } else if (mounted) {
+                        } else if (hasValidAmount && mounted) {
                           setState(() {
                             _rawAmount = address.amount;
                             // If raw amount has more precision than we support show a special indicator
@@ -1094,7 +1108,7 @@ class _SendSheetState extends State<SendSheet> {
                           _sendAddressFocusNode.unfocus();
                         }
 
-                        if (!hasError) {
+                        if (!hasError && hasValidAmount) {
                           // Go to confirm sheet
                           Sheets.showAppHeightNineSheet(
                               context: context,
