@@ -786,50 +786,6 @@ class _SendSheetState extends State<SendSheet> {
                                         ),
                                       ),
                                     ),
-                                    widget.sendATokenActive
-                                        ? Container(
-                                            child: Row(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.center,
-                                            children: [
-                                              Text(
-                                                AppLocalization.of(context)
-                                                    .sendATokenQuestion,
-                                                style: TextStyle(
-                                                  fontSize: 16.0,
-                                                  fontWeight: FontWeight.w100,
-                                                  fontFamily: 'Roboto',
-                                                  color:
-                                                      StateContainer.of(context)
-                                                          .curTheme
-                                                          .text60,
-                                                ),
-                                              ),
-                                              Switch(
-                                                  value: isTokenToSendSwitched,
-                                                  onChanged: (value) {
-                                                    setState(() {
-                                                      isTokenToSendSwitched =
-                                                          value;
-                                                      _sendOpenfieldController =
-                                                          TextEditingController();
-                                                      _sendOperationController =
-                                                          TextEditingController();
-                                                      _sendTokenQuantityController =
-                                                          TextEditingController();
-                                                      _sendCommentController =
-                                                          TextEditingController();
-                                                      _selectedTokenName = "";
-                                                    });
-                                                  },
-                                                  activeTrackColor:
-                                                      StateContainer.of(context)
-                                                          .curTheme
-                                                          .backgroundDarkest,
-                                                  activeColor: Colors.green),
-                                            ],
-                                          ))
-                                        : SizedBox(),
                                     isTokenToSendSwitched == false
                                         ? Column(
                                             children: [
@@ -1555,16 +1511,29 @@ class _SendSheetState extends State<SendSheet> {
                     .get<DBHelper>()
                     .getContactWithAddress(address.address)
                     .then((contact) {
-                  // Is a contact
-                  setState(() {
-                    _isContact = true;
-                    _addressValidationText = "";
-                    _sendAddressStyle = AddressStyle.PRIMARY;
-                    _pasteButtonVisible = false;
-                    _showContactButton = false;
-                  });
-                  _sendAddressController.text = contact?.name ?? "";
-                                });
+                  if (contact != null) {
+                    // Is a contact
+                    setState(() {
+                      _isContact = true;
+                      _addressValidationText = "";
+                      _sendAddressStyle = AddressStyle.PRIMARY;
+                      _pasteButtonVisible = false;
+                      _showContactButton = false;
+                    });
+                    _sendAddressController.text = contact.name ?? "";
+                  } else {
+                    // Valid address but not a contact
+                    setState(() {
+                      _isContact = false;
+                      _sendAddressController.text = address.address;
+                      _sendAddressStyle = AddressStyle.TEXT90;
+                      _addressValidationText = "";
+                      _pasteButtonVisible = false;
+                      _addressValidAndUnfocused = true;
+                    });
+                    _sendAddressFocusNode.unfocus();
+                  }
+                });
               }
             });
           },

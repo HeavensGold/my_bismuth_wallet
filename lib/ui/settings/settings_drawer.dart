@@ -38,6 +38,7 @@ import 'package:my_bismuth_wallet/ui/accounts/accounts_sheet.dart';
 // import 'package:my_bismuth_wallet/ui/dragginator/my_dragginator_merging.dart'; // Deleted
 import 'package:my_bismuth_wallet/ui/send/send_confirm_sheet.dart';
 import 'package:my_bismuth_wallet/ui/settings/backupseed_sheet.dart';
+import 'package:my_bismuth_wallet/ui/settings/contacts_widget.dart';
 import 'package:my_bismuth_wallet/ui/settings/custom_url_widget.dart';
 import 'package:my_bismuth_wallet/ui/settings/disable_password_sheet.dart';
 import 'package:my_bismuth_wallet/ui/settings/set_password_sheet.dart';
@@ -65,6 +66,8 @@ class _SettingsSheetState extends State<SettingsSheet>
   late Animation<Offset> _securityOffsetFloat;
   late AnimationController _customUrlController;
   late Animation<Offset> _customUrlOffsetFloat;
+  late AnimationController _contactsController;
+  late Animation<Offset> _contactsOffsetFloat;
 
   String versionString = "";
 
@@ -81,6 +84,7 @@ class _SettingsSheetState extends State<SettingsSheet>
   bool _isPasswordMode = false;
 
   late bool _customUrlOpen;
+  late bool _contactsOpen;
 
   bool notNull(Object o) => o != null;
 
@@ -91,6 +95,7 @@ class _SettingsSheetState extends State<SettingsSheet>
     _securityOpen = false;
     _loadingAccounts = false;
     _customUrlOpen = false;
+    _contactsOpen = false;
     // Check if wallet is in password mode
     _checkPasswordMode().then((isPasswordMode) {
       if (mounted) {
@@ -134,6 +139,11 @@ class _SettingsSheetState extends State<SettingsSheet>
       vsync: this,
       duration: const Duration(milliseconds: 220),
     );
+    // For contacts menu
+    _contactsController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 220),
+    );
 
     _securityOffsetFloat =
         Tween<Offset>(begin: Offset(1.1, 0), end: Offset(0, 0))
@@ -141,6 +151,9 @@ class _SettingsSheetState extends State<SettingsSheet>
     _customUrlOffsetFloat =
         Tween<Offset>(begin: Offset(1.1, 0), end: Offset(0, 0))
             .animate(_customUrlController);
+    _contactsOffsetFloat =
+        Tween<Offset>(begin: Offset(1.1, 0), end: Offset(0, 0))
+            .animate(_contactsController);
     // Version string
     PackageInfo.fromPlatform().then((packageInfo) {
       setState(() {
@@ -153,6 +166,7 @@ class _SettingsSheetState extends State<SettingsSheet>
   void dispose() {
     _securityController.dispose();
     _customUrlController.dispose();
+    _contactsController.dispose();
     super.dispose();
   }
 
@@ -465,6 +479,12 @@ class _SettingsSheetState extends State<SettingsSheet>
       });
       _customUrlController.reverse();
       return false;
+    } else if (_contactsOpen) {
+      setState(() {
+        _contactsOpen = false;
+      });
+      _contactsController.reverse();
+      return false;
     }
     return true;
   }
@@ -497,6 +517,9 @@ class _SettingsSheetState extends State<SettingsSheet>
             SlideTransition(
                 position: _customUrlOffsetFloat,
                 child: CustomUrl(_customUrlController, _customUrlOpen)),
+            SlideTransition(
+                position: _contactsOffsetFloat,
+                child: ContactsList(_contactsController, _contactsOpen)),
           ],
         ),
       ),
@@ -891,6 +914,19 @@ class _SettingsSheetState extends State<SettingsSheet>
                         _customUrlOpen = true;
                       });
                       _customUrlController.forward();
+                    }),
+                    Divider(
+                      height: 2,
+                      color: StateContainer.of(context).curTheme.text15,
+                    ),
+                    AppSettings.buildSettingsListItemSingleLine(
+                        context,
+                        AppLocalization.of(context).contactsHeader,
+                        AppIcons.addcontact, onPressed: () {
+                      setState(() {
+                        _contactsOpen = true;
+                      });
+                      _contactsController.forward();
                     }),
                     Divider(
                       height: 2,

@@ -37,6 +37,8 @@ class AddContactSheet extends StatefulWidget {
 }
 
 class _AddContactSheetState extends State<AddContactSheet> {
+  static String? _pendingQRResult;
+  
   late FocusNode _nameFocusNode;
   late FocusNode _addressFocusNode;
   late TextEditingController _nameController;
@@ -44,7 +46,7 @@ class _AddContactSheetState extends State<AddContactSheet> {
 
   // State variables
   bool _addressValid = false;
-  bool _showPasteButton = false;
+  bool _showPasteButton = true;
   bool _showNameHint = false;
   bool _showAddressHint = false;
   bool _addressValidAndUnfocused = false;
@@ -98,12 +100,22 @@ class _AddContactSheetState extends State<AddContactSheet> {
         });
       }
     });
+    
+    // Check for pending QR result from previous widget instance
+    if (_AddContactSheetState._pendingQRResult != null) {
+      final pendingResult = _AddContactSheetState._pendingQRResult!;
+      _AddContactSheetState._pendingQRResult = null; // Clear it
+      
+      // Process the pending result
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _processQRResult(pendingResult);
+      });
+    }
   }
 
   /// Return true if textfield should be shown, false if colorized should be shown
   bool _shouldShowTextField() {
-    return false;
-      return true;
+    return !_addressValidAndUnfocused;
   }
 
   @override
@@ -227,17 +239,18 @@ class _AddContactSheetState extends State<AddContactSheet> {
                           UIUtil.cancelLockEvent();
                           String? scanResult = await UserDataUtil.getQRData(
                               DataType.ADDRESS, context);
-                          if (scanResult != null && !QRScanErrs.ERROR_LIST.contains(scanResult)) {
-                          if (mounted) {
-                            setState(() {
-                              _addressController.text = scanResult;
-                              _addressValidationText = "";
-                              _addressValid = true;
-                              _addressValidAndUnfocused = true;
-                            });
-                            _addressFocusNode.unfocus();
+                          
+                          if (scanResult == null || QRScanErrs.ERROR_LIST.contains(scanResult)) {
+                            return;
                           }
-                        }
+                          
+                          // Store result for the recreated widget to process
+                          _AddContactSheetState._pendingQRResult = scanResult;
+                          
+                          // Also try to process immediately if widget is still mounted
+                          if (mounted) {
+                            _processQRResult(scanResult);
+                          }
                         }),
                     fadePrefixOnCondition: true,
                     prefixShowFirstCondition: _showPasteButton,
@@ -261,31 +274,23 @@ class _AddContactSheetState extends State<AddContactSheet> {
                     fadeSuffixOnCondition: true,
                     suffixShowFirstCondition: _showPasteButton,
                     onChanged: (text) {
-                      /*Address address = Address(text);
+                      Address address = Address(text);
                       if (address.isValid()) {
-                            setState(() {
-                              _addressValid = true;
-                              _showPasteButton = true;
-                              _addressController.text =
-                                  address.address;
-                            });
-                            _addressFocusNode.unfocus();
-                          } else {
-                            setState(() {
-                              _showPasteButton = true;
-                              _addressValid = false;
-                            });
-                          }*/
-                      setState(() {
-                        _showPasteButton = true;
-                        _addressValid = false;
-                      });
+                        setState(() {
+                          _addressValid = true;
+                          _showPasteButton = false;
+                        });
+                      } else {
+                        setState(() {
+                          _showPasteButton = true;
+                          _addressValid = false;
+                        });
+                      }
                     },
                     overrideTextFieldWidget: !_shouldShowTextField()
                         ? GestureDetector(
                             onTap: () {
-                              return;
-                                                          setState(() {
+                              setState(() {
                                 _addressValidAndUnfocused = false;
                               });
                               Future.delayed(Duration(milliseconds: 50), () {
@@ -365,6 +370,18 @@ class _AddContactSheetState extends State<AddContactSheet> {
         ],
       ),
     ));
+  }
+
+  void _processQRResult(String scanResult) {
+    if (!mounted) return;
+    
+    setState(() {
+      _addressController.text = scanResult;
+      _addressValidationText = "";
+      _addressValid = true;
+      _addressValidAndUnfocused = true;
+    });
+    _addressFocusNode.unfocus();
   }
 
   Future<bool> validateForm() async {

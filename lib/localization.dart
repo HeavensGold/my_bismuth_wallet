@@ -293,7 +293,7 @@ class AppLocalization {
   /// -- CUSTOM URL
 
   String get customUrlHeader {
-    return Intl.message('Custom Urls', desc: '', name: 'customUrlHeader');
+    return Intl.message('Servers', desc: '', name: 'customUrlHeader');
   }
 
   String get enterWalletServer {
@@ -950,7 +950,7 @@ class AppLocalization {
   /// -- START MULTI-ACCOUNT
 
   String get defaultAccountName {
-    return Intl.message("Main Account",
+    return Intl.message("@Main Account",
         desc: "Default account name", name: 'defaultAccountName');
   }
 
@@ -1303,7 +1303,7 @@ class AppLocalization {
   }
 
   String get donationsName {
-    return '@Donations';
+    return '@Main Account';
   }
 
   String get explorerUrlByDefault {

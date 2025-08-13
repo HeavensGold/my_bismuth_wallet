@@ -223,13 +223,14 @@ class _AppHomePageState extends State<AppHomePage>
     }
   }
 
-  /// Add donations contact if it hasnt already been added
+  /// Add main account contact if it hasnt already been added
   Future<void> _addSampleContact() async {
     bool contactAdded = await sl.get<SharedPrefsUtil>().getFirstContactAdded();
-    if (!contactAdded) {
+    if (!contactAdded && StateContainer.of(context).wallet?.address != null) {
+      String mainAddress = StateContainer.of(context).wallet!.address!;
       bool addressExists = await sl
           .get<DBHelper>()
-          .contactExistsWithAddress(AppLocalization.of(context).donationsUrl);
+          .contactExistsWithAddress(mainAddress);
       if (addressExists) {
         return;
       }
@@ -242,7 +243,7 @@ class _AppHomePageState extends State<AppHomePage>
       await sl.get<SharedPrefsUtil>().setFirstContactAdded(true);
       Contact c = Contact(
           name: AppLocalization.of(context).donationsName,
-          address: AppLocalization.of(context).donationsUrl);
+          address: mainAddress);
       await sl.get<DBHelper>().saveContact(c);
     }
   }
@@ -2280,7 +2281,7 @@ class _TransactionDetailsSheetState extends State<TransactionDetailsSheet> {
   // Current state references
   bool _addressCopied = false;
   // Timer reference so we can cancel repeated events
-  late Timer _addressCopiedTimer;
+  Timer? _addressCopiedTimer;
 
   @override
   Widget build(BuildContext context) {
@@ -2510,8 +2511,8 @@ class _TransactionDetailsSheetState extends State<TransactionDetailsSheet> {
                                                     _addressCopied = true;
                                                   });
                                                 }
-                                                _addressCopiedTimer.cancel();
-                                                                                              _addressCopiedTimer = new Timer(
+                                                _addressCopiedTimer?.cancel();
+                                                _addressCopiedTimer = new Timer(
                                                     const Duration(
                                                         milliseconds: 800), () {
                                                   if (mounted) {

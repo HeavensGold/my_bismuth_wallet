@@ -71,9 +71,9 @@ class MessageLookup extends MessageLookupByLibrary {
         "copy": MessageLookupByLibrary.simpleMessage("Copy"),
         "copyAddress": MessageLookupByLibrary.simpleMessage("Copy Address"),
         "copySeed": MessageLookupByLibrary.simpleMessage("Copy Seed"),
-        "customUrlHeader": MessageLookupByLibrary.simpleMessage("Custom Urls"),
+        "customUrlHeader": MessageLookupByLibrary.simpleMessage("Servers"),
         "defaultAccountName":
-            MessageLookupByLibrary.simpleMessage("Main Account"),
+            MessageLookupByLibrary.simpleMessage("@Main Account"),
         "defaultNewAccountName":
             MessageLookupByLibrary.simpleMessage("Account %1"),
         "diacritic": MessageLookupByLibrary.simpleMessage(
