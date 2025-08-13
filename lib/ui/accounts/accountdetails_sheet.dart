@@ -1,5 +1,3 @@
-
-
 // Dart imports:
 import 'dart:async';
 
@@ -70,8 +68,7 @@ class AccountDetailsSheet {
             account, _dragginatorAvatarDnaController.text, "");
         account.dragginatorDna = _dragginatorAvatarDnaController.text;
         account.dragginatorStatus = "";
-        EventTaxiImpl.singleton()
-            .fire(AccountModifiedEvent(account: account));
+        EventTaxiImpl.singleton().fire(AccountModifiedEvent(account: account));
       } else {
         sl.get<DBHelper>().changeAccountDragginatorDna(account, "", "");
         account.dragginatorDna = "";
@@ -202,14 +199,16 @@ class AccountDetailsSheet {
                                       ? UIUtil.threeLineAddressText(
                                           context,
                                           StateContainer.of(context)
-                                              .wallet
-                                              ?.address ?? '',
+                                                  .wallet
+                                                  ?.address ??
+                                              '',
                                           type: ThreeLineAddressTextType
                                               .PRIMARY60)
                                       : SizedBox(),
                             ),
                             // Balance Text
-                            (account.balance != null || (account.selected == true))
+                            (account.balance != null ||
+                                    (account.selected == true))
                                 ? Container(
                                     margin: EdgeInsets.only(top: 5.0),
                                     child: RichText(
@@ -233,10 +232,11 @@ class AccountDetailsSheet {
                                                 NumberUtil.getRawAsUsableString(
                                                     account.balance == null
                                                         ? StateContainer.of(
-                                                                context)
-                                                            .wallet
-                                                            ?.accountBalance
-                                                            .toString() ?? '0'
+                                                                    context)
+                                                                .wallet
+                                                                ?.accountBalance
+                                                                .toString() ??
+                                                            '0'
                                                         : account.balance!),
                                             style: TextStyle(
                                               color: StateContainer.of(context)
@@ -366,7 +366,7 @@ class AccountDetailsSheet {
                                           _addressCopied = true;
                                         });
                                         _addressCopiedTimer?.cancel();
-                                                                              _addressCopiedTimer = new Timer(
+                                        _addressCopiedTimer = new Timer(
                                             const Duration(milliseconds: 800),
                                             () {
                                           setState(() {

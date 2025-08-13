@@ -2,7 +2,6 @@
 //
 //     final aliasGetResponse = aliasGetResponseFromJson(jsonString);
 
-
 // Dart imports:
 import 'dart:convert';
 

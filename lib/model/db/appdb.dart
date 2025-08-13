@@ -126,7 +126,8 @@ class DBHelper {
         .sort((Account a, Account b) => a.lastAccess!.compareTo(b.lastAccess!));
 
     for (int i = 0; i < accounts.length; i++) {
-      accounts[i].address = AppUtil().seedToAddress(seed, accounts[i].index ?? 0);
+      accounts[i].address =
+          AppUtil().seedToAddress(seed, accounts[i].index ?? 0);
       if (i + 1 == limit) {
         break;
       }
@@ -213,7 +214,7 @@ class DBHelper {
   Future<void> updateAccountBalance(Account account, String balance) async {
     Box<Account> box = await Hive.openBox<Account>(_accountsTable);
     account.balance = balance;
-    
+
     // Check if the account exists at the specified index
     if (account.index != null && account.index! < box.length) {
       box.putAt(account.index!, account);

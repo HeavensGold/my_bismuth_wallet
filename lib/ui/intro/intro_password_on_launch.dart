@@ -1,5 +1,3 @@
-
-
 // Flutter imports:
 import 'package:flutter/material.dart';
 
@@ -130,8 +128,7 @@ class _IntroPasswordOnLaunchState extends State<IntroPasswordOnLaunch> {
                         await AppUtil().loginAccount(widget.seed, context);
                         StateContainer.of(context).requestUpdate();
                         String pin = await Navigator.of(context).push(
-                            MaterialPageRoute(
-                                builder: (BuildContext context) {
+                            MaterialPageRoute(builder: (BuildContext context) {
                           return PinScreen(
                             PinOverlayType.NEW_PIN,
                           );
@@ -139,7 +136,7 @@ class _IntroPasswordOnLaunchState extends State<IntroPasswordOnLaunch> {
                         if (pin.length > 5) {
                           _pinEnteredCallback(pin);
                         }
-                                            }),
+                      }),
                     ],
                   ),
                   Row(

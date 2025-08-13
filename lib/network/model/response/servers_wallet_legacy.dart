@@ -2,7 +2,6 @@
 //
 //     final serverWalletLegacyResponse = serverWalletLegacyResponseFromJson(jsonString);
 
-
 // Dart imports:
 import 'dart:convert';
 

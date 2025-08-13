@@ -1,5 +1,3 @@
-
-
 // Dart imports:
 import 'dart:core';
 
@@ -48,21 +46,22 @@ class Address {
 
   bool isValid() {
     if (_address.isEmpty) return false;
-    
+
     // Check for Bis1 format (34-38 characters, base58)
     if (_address.startsWith('Bis1')) {
       if (_address.length < 34 || _address.length > 38) return false;
       // Base58 character check (no 0, O, I, l)
-      final base58Chars = RegExp(r'^[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+$');
+      final base58Chars = RegExp(
+          r'^[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+$');
       return base58Chars.hasMatch(_address);
     }
-    
+
     // Check for hex format (56 characters, hexadecimal)
     if (_address.length == 56) {
       final hexChars = RegExp(r'^[0-9a-fA-F]+$');
       return hexChars.hasMatch(_address);
     }
-    
+
     return false;
   }
 }

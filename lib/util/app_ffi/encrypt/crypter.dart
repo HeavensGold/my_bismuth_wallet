@@ -1,5 +1,3 @@
-
-
 // Dart imports:
 import 'dart:math';
 import 'dart:typed_data';
@@ -17,7 +15,7 @@ class AppCrypt {
   /// KDF is Sha256KDF if not specified
   static Uint8List decrypt(dynamic value, String password, {KDF? kdf}) {
     kdf = kdf ?? Sha256KDF();
-    
+
     // Validate inputs
     if (value == null) {
       throw Exception('Value cannot be null');
@@ -25,7 +23,7 @@ class AppCrypt {
     if (password.isEmpty) {
       throw Exception('Password cannot be empty');
     }
-    
+
     Uint8List valBytes;
     if (value is String) {
       if (value.isEmpty) {
@@ -42,7 +40,8 @@ class AppCrypt {
       }
       valBytes = value;
     } else {
-      throw Exception('Value should be a string or a byte array, got ${value.runtimeType}');
+      throw Exception(
+          'Value should be a string or a byte array, got ${value.runtimeType}');
     }
 
     Uint8List salt = valBytes.sublist(8, 16);

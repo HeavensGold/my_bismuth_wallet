@@ -1,5 +1,3 @@
-
-
 // Dart imports:
 import 'dart:async';
 
@@ -28,8 +26,8 @@ import 'package:my_bismuth_wallet/service/http_service.dart';
 import 'package:my_bismuth_wallet/service_locator.dart';
 import 'package:my_bismuth_wallet/themes.dart';
 import 'package:my_bismuth_wallet/util/app_ffi/apputil.dart';
-import 'package:my_bismuth_wallet/util/app_ffi/encrypt/crypter.dart';
 import 'package:my_bismuth_wallet/util/sharedprefsutil.dart';
+import 'package:my_bismuth_wallet/util/app_ffi/encrypt/crypter.dart';
 
 class _InheritedStateContainer extends InheritedWidget {
   // Data is your entire state. In our case just 'User'
@@ -60,8 +58,9 @@ class StateContainer extends StatefulWidget {
   // It basically says 'get the data from the widget of this type.
   static StateContainerState of(BuildContext context) {
     return context
-        .dependOnInheritedWidgetOfExactType<_InheritedStateContainer>()
-        ?.data ?? (throw Exception('StateContainer not found'));
+            .dependOnInheritedWidgetOfExactType<_InheritedStateContainer>()
+            ?.data ??
+        (throw Exception('StateContainer not found'));
   }
 
   @override
@@ -86,10 +85,11 @@ class StateContainerState extends State<StateContainer> {
   // Currently selected account
   Account selectedAccount =
       Account(name: "AB", index: 0, lastAccess: 0, selected: true);
+  // Currently selected default DEX
+  DefaultDex? selectedDefaultDex;
   // Two most recently used accounts
   Account? recentLast;
   Account? recentSecondLast;
-
 
   // When wallet is encrypted
   String? encryptedSecret;
@@ -100,14 +100,15 @@ class StateContainerState extends State<StateContainer> {
 
     // Register RxBus
     _registerBus();
-    
+
     // Initialize wallet on startup
     Future.delayed(Duration(milliseconds: 100), () async {
       if (mounted) {
         // Try to get the saved selected account
         try {
           String seed = await getSeed();
-          Account? savedAccount = await sl.get<DBHelper>().getSelectedAccount(seed);
+          Account? savedAccount =
+              await sl.get<DBHelper>().getSelectedAccount(seed);
           if (savedAccount != null) {
             // Initialize wallet with saved account
             updateWallet(account: savedAccount);
@@ -135,6 +136,12 @@ class StateContainerState extends State<StateContainer> {
         curLanguage = language;
       });
     });
+    // Get default DEX setting
+    sl.get<SharedPrefsUtil>().getDefaultDex().then((dex) {
+      setState(() {
+        selectedDefaultDex = dex;
+      });
+    });
   }
 
   // Subscriptions
@@ -154,7 +161,7 @@ class StateContainerState extends State<StateContainer> {
     });
 
     // Transaction event subscription is now managed in requestUpdate() to avoid duplicates
-    
+
     _priceEventSub =
         EventTaxiImpl.singleton().registerTo<PriceEvent>().listen((event) {
       // PriceResponse's get pushed periodically, it wasn't a request we made so don't pop the queue
@@ -217,14 +224,16 @@ class StateContainerState extends State<StateContainer> {
   }
 
   void _handleTransactionsListEvent(TransactionsListEvent event) {
-    print("listen TransactionsListEvent - received " + (event.response?.length ?? 0).toString() + " transactions");
-    
+    print("listen TransactionsListEvent - received " +
+        (event.response?.length ?? 0).toString() +
+        " transactions");
+
     // Check if widget is still mounted before processing
     if (!mounted) {
       print("Widget not mounted, skipping transaction event processing");
       return;
     }
-    
+
     // Skip processing empty responses in certain conditions to prevent flickering
     if (event.response?.isEmpty == true) {
       // If we already have transactions, skip empty responses
@@ -235,20 +244,23 @@ class StateContainerState extends State<StateContainer> {
       // For accounts with no transactions, we need to process the empty response
       // to clear the loading state. Don't skip empty responses for initial loads.
     }
-    
+
     try {
       AddressTxsResponse addressTxsResponse = new AddressTxsResponse();
       addressTxsResponse.result = <AddressTxsResponseResult>[];
       for (int i = 0; i < (event.response?.length ?? 0); i++) {
-        AddressTxsResponseResult addressTxResponseResult = AddressTxsResponseResult();
-        addressTxResponseResult.populate(event.response![i], selectedAccount.address!);
+        AddressTxsResponseResult addressTxResponseResult =
+            AddressTxsResponseResult();
+        addressTxResponseResult.populate(
+            event.response![i], selectedAccount.address!);
         addressTxResponseResult.getBisToken();
         addressTxsResponse.result?.add(addressTxResponseResult);
       }
 
       // Server-mempool-only flow: rebuild history from server data only
       wallet?.history.clear();
-      print("Processed transactions: " + (addressTxsResponse.result?.length ?? 0).toString());
+      print("Processed transactions: " +
+          (addressTxsResponse.result?.length ?? 0).toString());
 
       // Add all transactions to a temporary list and sort them by timestamp (oldest first)
       List<AddressTxsResponseResult> allTransactions = [];
@@ -277,7 +289,8 @@ class StateContainerState extends State<StateContainer> {
         wallet?.loading = false;
       });
 
-      EventTaxiImpl.singleton().fire(HistoryHomeEvent(items: wallet?.history ?? []));
+      EventTaxiImpl.singleton()
+          .fire(HistoryHomeEvent(items: wallet?.history ?? []));
     } catch (e) {
       sl.get<Logger>().e("Error in _handleTransactionsListEvent", e);
       // Always clear loading state on error
@@ -287,7 +300,8 @@ class StateContainerState extends State<StateContainer> {
           wallet?.loading = false;
         });
         // Fire event with empty history to unstick UI
-        EventTaxiImpl.singleton().fire(HistoryHomeEvent(items: wallet?.history ?? []));
+        EventTaxiImpl.singleton()
+            .fire(HistoryHomeEvent(items: wallet?.history ?? []));
       }
     }
   }
@@ -300,16 +314,17 @@ class StateContainerState extends State<StateContainer> {
 
   void _destroyBus() {
     _balanceGetEventSub?.cancel();
-      _priceEventSub?.cancel();
-      _accountModifiedSub?.cancel();
-      _transactionsListEventSub?.cancel();
-    }
+    _priceEventSub?.cancel();
+    _accountModifiedSub?.cancel();
+    _transactionsListEventSub?.cancel();
+  }
 
   // Update the global wallet instance with a new address
-  Future<void> updateWallet({required Account account, String? seedOverride}) async {
+  Future<void> updateWallet(
+      {required Account account, String? seedOverride}) async {
     String address;
     String seed;
-    
+
     if (seedOverride != null) {
       seed = seedOverride;
     } else {
@@ -319,7 +334,7 @@ class StateContainerState extends State<StateContainer> {
         seed = await sl.get<Vault>().getSeed();
       }
     }
-    
+
     address = AppUtil().seedToAddress(seed, account.index ?? 0);
     account.address = address;
     selectedAccount = account;
@@ -339,10 +354,10 @@ class StateContainerState extends State<StateContainer> {
       } catch (e) {
         seed = await sl.get<Vault>().getSeed();
       }
-      
+
       List<Account> otherAccounts =
           await sl.get<DBHelper>().getRecentlyUsedAccounts(seed);
-      
+
       if (otherAccounts.length > 0) {
         if (otherAccounts.length > 1) {
           setState(() {
@@ -379,9 +394,26 @@ class StateContainerState extends State<StateContainer> {
 
   // Change curency
   void updateCurrency(AvailableCurrency currency) async {
-    await sl.get<HttpService>().getSimplePrice(currency.getIso4217Code());
+    String currencyCode = currency.getIso4217Code();
+    
+    // Fetch both aggregated and DEX-specific prices for the new currency
+    await Future.wait([
+      sl.get<HttpService>().getSimplePrice(currencyCode),
+      sl.get<HttpService>().getIndividualDexPrices(currencyCode).then((dexResponse) {
+        // Update wallet with new DEX prices
+        wallet?.updateDexPrices(dexResponse.dexPrices);
+      }),
+    ]);
+    
     setState(() {
       curCurrency = currency;
+    });
+  }
+
+  // Change default DEX
+  void updateDefaultDex(DefaultDex dex) {
+    setState(() {
+      selectedDefaultDex = dex;
     });
   }
 
@@ -416,10 +448,12 @@ class StateContainerState extends State<StateContainer> {
               : response.balance));
       if (wallet != null && confirmedBalance != null) {
         wallet!.accountBalance = confirmedBalance;
-        print("Updated confirmed balance from server: " + confirmedBalance.toString());
+        print("Updated confirmed balance from server: " +
+            confirmedBalance.toString());
       }
       // Persist to DB if we have a valid selected account
-      if (selectedAccount.address != null && selectedAccount.address!.isNotEmpty) {
+      if (selectedAccount.address != null &&
+          selectedAccount.address!.isNotEmpty) {
         sl.get<DBHelper>().updateAccountBalance(
             selectedAccount, wallet?.accountBalance.toString() ?? '0');
       }
@@ -428,10 +462,14 @@ class StateContainerState extends State<StateContainer> {
 
   Future<void> requestUpdate() async {
     // Debug: Check if we have a valid address to work with
-    if (selectedAccount.address != null && selectedAccount.address!.isNotEmpty) {
+    if (selectedAccount.address != null &&
+        selectedAccount.address!.isNotEmpty) {
       // Request account history
       int count = 100;
-      print("Requesting transaction history for address: " + selectedAccount.address! + " with limit: " + count.toString());
+      print("Requesting transaction history for address: " +
+          selectedAccount.address! +
+          " with limit: " +
+          count.toString());
       try {
         // Before firing new requests, ensure previous listeners won't duplicate UI
         _transactionsListEventSub?.cancel();
@@ -440,11 +478,17 @@ class StateContainerState extends State<StateContainer> {
             .listen((event) => _handleTransactionsListEvent(event));
 
         // Making balance and transaction requests
-        sl.get<AppService>().getBalanceGetResponse(selectedAccount.address!, true);
+        sl
+            .get<AppService>()
+            .getBalanceGetResponse(selectedAccount.address!, true);
 
-        await sl.get<HttpService>().getSimplePrice(curCurrency.getIso4217Code());
+        await sl
+            .get<HttpService>()
+            .getSimplePrice(curCurrency.getIso4217Code());
 
-        sl.get<AppService>().getAddressTxsResponse(selectedAccount.address!, count);
+        sl
+            .get<AppService>()
+            .getAddressTxsResponse(selectedAccount.address!, count);
 
         //sl.get<AppService>().getAlias(wallet.address);
 
@@ -470,7 +514,8 @@ class StateContainerState extends State<StateContainer> {
             wallet?.loading = false;
           });
           // Notify UI to refresh with whatever we have
-          EventTaxiImpl.singleton().fire(HistoryHomeEvent(items: wallet?.history ?? []));
+          EventTaxiImpl.singleton()
+              .fire(HistoryHomeEvent(items: wallet?.history ?? []));
         }
       }
     } else {
@@ -498,27 +543,32 @@ class StateContainerState extends State<StateContainer> {
     unconfirmedTx.signature = "pending..."; // Placeholder
     unconfirmedTx.hash = "pending..."; // Placeholder
     unconfirmedTx.fee = 0.01; // Standard fee
-    
+
     setState(() {
       // Add to the end of history (will display at top due to UI reverse indexing)
       wallet?.history.add(unconfirmedTx);
     });
-    
+
     print("=== UNCONFIRMED TRANSACTION CREATED ===");
     print("From: " + fromAddress);
-    print("To: " + toAddress);  
+    print("To: " + toAddress);
     print("Amount: " + amount);
     print("Type: " + unconfirmedTx.type.toString());
     print("Timestamp: " + unconfirmedTx.timestamp.toString());
     print("Total history count: " + (wallet?.history.length ?? 0).toString());
-    
+
     // Count unconfirmed transactions
-    int unconfirmedCount = wallet?.history.where((tx) => tx.type == BlockTypes.UNCONFIRMED).length ?? 0;
-    print("Unconfirmed transactions in history: " + unconfirmedCount.toString());
+    int unconfirmedCount = wallet?.history
+            .where((tx) => tx.type == BlockTypes.UNCONFIRMED)
+            .length ??
+        0;
+    print(
+        "Unconfirmed transactions in history: " + unconfirmedCount.toString());
     print("=== END UNCONFIRMED CREATION DEBUG ===");
-    
+
     // Fire event to update UI
-    EventTaxiImpl.singleton().fire(HistoryHomeEvent(items: wallet?.history ?? []));
+    EventTaxiImpl.singleton()
+        .fire(HistoryHomeEvent(items: wallet?.history ?? []));
   }
 
   void logOut() {
@@ -534,12 +584,12 @@ class StateContainerState extends State<StateContainer> {
     if (encryptedSecret == null || encryptedSecret!.isEmpty) {
       throw Exception('Encrypted secret is not available');
     }
-    
+
     String sessionKey = await sl.get<Vault>().getSessionKey();
     if (sessionKey.isEmpty) {
       throw Exception('Session key is not available');
     }
-    
+
     try {
       String seed = HEX.encode(AppCrypt.decrypt(encryptedSecret!, sessionKey));
       return seed;

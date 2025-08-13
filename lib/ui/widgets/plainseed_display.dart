@@ -1,5 +1,3 @@
-
-
 // Dart imports:
 import 'dart:async';
 
@@ -121,7 +119,7 @@ class _PlainSeedDisplayState extends State<PlainSeedDisplay> {
                       _seedCopied = true;
                     });
                     _seedCopiedTimer?.cancel();
-                                      _seedCopiedTimer =
+                    _seedCopiedTimer =
                         new Timer(const Duration(milliseconds: 1500), () {
                       setState(() {
                         _seedCopied = false;

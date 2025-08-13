@@ -1,5 +1,3 @@
-
-
 // Dart imports:
 import 'dart:async';
 
@@ -36,9 +34,10 @@ class CustomUrl extends StatefulWidget {
   _CustomUrlState createState() => _CustomUrlState();
 }
 
-class _CustomUrlState extends State<CustomUrl> with SingleTickerProviderStateMixin {
+class _CustomUrlState extends State<CustomUrl>
+    with SingleTickerProviderStateMixin {
   final Logger log = sl.get<Logger>();
-  
+
   late TabController _tabController;
   List<ServerWalletLegacyResponse> _availableServers = [];
   bool _loadingServers = false;
@@ -100,9 +99,8 @@ class _CustomUrlState extends State<CustomUrl> with SingleTickerProviderStateMix
 
   void updateTokenApi() async {
     await sl.get<SharedPrefsUtil>().setTokensApi(_tokenApiController.text);
-    tokenApiOk = await sl
-        .get<HttpService>()
-        .isTokensBalance(StateContainer.of(context).selectedAccount?.address ?? '');
+    tokenApiOk = await sl.get<HttpService>().isTokensBalance(
+        StateContainer.of(context).selectedAccount?.address ?? '');
     setState(() {});
   }
 
@@ -110,25 +108,23 @@ class _CustomUrlState extends State<CustomUrl> with SingleTickerProviderStateMix
     await sl.get<SharedPrefsUtil>().setExplorerUrl(_explorerUrlController.text);
     setState(() {});
   }
-  
+
   Future<void> _fetchAvailableServers() async {
     setState(() {
       _loadingServers = true;
     });
-    
+
     try {
-      final response = await http.get(
-        Uri.parse("https://bismuth.world/api/legacy.json"),
-        headers: {
-          'content-type': 'application/json',
-          'access-Control-Allow-Origin': '*'
-        }
-      );
-      
+      final response = await http
+          .get(Uri.parse("https://bismuth.world/api/legacy.json"), headers: {
+        'content-type': 'application/json',
+        'access-Control-Allow-Origin': '*'
+      });
+
       if (response.statusCode == 200) {
-        List<ServerWalletLegacyResponse> servers = 
+        List<ServerWalletLegacyResponse> servers =
             serverWalletLegacyResponseFromJson(response.body);
-        
+
         // Sort servers: active first, then by number of clients
         servers.sort((a, b) {
           if (a.active != b.active) {
@@ -136,7 +132,7 @@ class _CustomUrlState extends State<CustomUrl> with SingleTickerProviderStateMix
           }
           return a.clients.compareTo(b.clients);
         });
-        
+
         setState(() {
           _availableServers = servers;
           _loadingServers = false;
@@ -149,7 +145,7 @@ class _CustomUrlState extends State<CustomUrl> with SingleTickerProviderStateMix
       });
     }
   }
-  
+
   void _selectServer(ServerWalletLegacyResponse server) {
     setState(() {
       _walletServerController.text = "${server.ip}:${server.port}";
@@ -162,7 +158,7 @@ class _CustomUrlState extends State<CustomUrl> with SingleTickerProviderStateMix
   void initState() {
     _registerBus();
     super.initState();
-    
+
     _tabController = TabController(length: 2, vsync: this);
 
     useCustomWalletServer = false;
@@ -179,10 +175,10 @@ class _CustomUrlState extends State<CustomUrl> with SingleTickerProviderStateMix
     _explorerUrlController = TextEditingController();
 
     initControllerText();
-    
+
     // Fetch available servers on init
     _fetchAvailableServers();
-    
+
     // Refresh server list every 30 seconds
     _serverRefreshTimer = Timer.periodic(Duration(seconds: 30), (timer) {
       _fetchAvailableServers();
@@ -233,7 +229,7 @@ class _CustomUrlState extends State<CustomUrl> with SingleTickerProviderStateMix
 
   void _destroyBus() {
     _connStatusEventSub.cancel();
-    }
+  }
 
   void _registerBus() {
     _connStatusEventSub =
@@ -314,7 +310,8 @@ class _CustomUrlState extends State<CustomUrl> with SingleTickerProviderStateMix
                   controller: _tabController,
                   indicatorColor: StateContainer.of(context).curTheme.primary,
                   labelColor: StateContainer.of(context).curTheme.primary,
-                  unselectedLabelColor: StateContainer.of(context).curTheme.text60,
+                  unselectedLabelColor:
+                      StateContainer.of(context).curTheme.text60,
                   tabs: [
                     Tab(
                       child: Text(
@@ -341,8 +338,9 @@ class _CustomUrlState extends State<CustomUrl> with SingleTickerProviderStateMix
                     // Tab 2: Custom URL (existing content)
                     SingleChildScrollView(
                       child: Padding(
-                        padding: EdgeInsets.only(top: 30, bottom: bottom + 30),
-                        child: Column(children: <Widget>[
+                          padding:
+                              EdgeInsets.only(top: 30, bottom: bottom + 30),
+                          child: Column(children: <Widget>[
                             Stack(children: <Widget>[
                               Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -554,26 +552,34 @@ class _CustomUrlState extends State<CustomUrl> with SingleTickerProviderStateMix
                   itemCount: _availableServers.length,
                   itemBuilder: (context, index) {
                     final server = _availableServers[index];
-                    final isCurrentServer = _walletServerController.text == 
+                    final isCurrentServer = _walletServerController.text ==
                         "${server.ip}:${server.port}";
-                    
+
                     return Card(
                       margin: EdgeInsets.symmetric(vertical: 4),
-                      color: isCurrentServer 
-                          ? StateContainer.of(context).curTheme.primary.withValues(alpha: 0.1)
-                          : StateContainer.of(context).curTheme.backgroundDarkest,
+                      color: isCurrentServer
+                          ? StateContainer.of(context)
+                              .curTheme
+                              .primary
+                              .withValues(alpha: 0.1)
+                          : StateContainer.of(context)
+                              .curTheme
+                              .backgroundDarkest,
                       child: ListTile(
                         leading: CircleAvatar(
-                          backgroundColor: server.active 
-                              ? Colors.green 
-                              : Colors.red,
+                          backgroundColor:
+                              server.active ? Colors.green : Colors.red,
                           radius: 8,
                         ),
                         title: Text(
-                          server.label.isNotEmpty ? server.label : "${server.ip}:${server.port}",
+                          server.label.isNotEmpty
+                              ? server.label
+                              : "${server.ip}:${server.port}",
                           style: TextStyle(
                             color: StateContainer.of(context).curTheme.text,
-                            fontWeight: isCurrentServer ? FontWeight.bold : FontWeight.normal,
+                            fontWeight: isCurrentServer
+                                ? FontWeight.bold
+                                : FontWeight.normal,
                           ),
                         ),
                         subtitle: Column(
@@ -582,14 +588,16 @@ class _CustomUrlState extends State<CustomUrl> with SingleTickerProviderStateMix
                             Text(
                               "${server.ip}:${server.port}",
                               style: TextStyle(
-                                color: StateContainer.of(context).curTheme.text60,
+                                color:
+                                    StateContainer.of(context).curTheme.text60,
                                 fontSize: 12,
                               ),
                             ),
                             Text(
                               "Country: ${server.country} | Clients: ${server.clients}/${server.totalSlots} | Height: ${server.height}",
                               style: TextStyle(
-                                color: StateContainer.of(context).curTheme.text45,
+                                color:
+                                    StateContainer.of(context).curTheme.text45,
                                 fontSize: 11,
                               ),
                             ),
@@ -606,12 +614,12 @@ class _CustomUrlState extends State<CustomUrl> with SingleTickerProviderStateMix
                         trailing: isCurrentServer
                             ? Icon(
                                 Icons.check_circle,
-                                color: StateContainer.of(context).curTheme.primary,
+                                color:
+                                    StateContainer.of(context).curTheme.primary,
                               )
                             : null,
-                        onTap: server.active
-                            ? () => _selectServer(server)
-                            : null,
+                        onTap:
+                            server.active ? () => _selectServer(server) : null,
                       ),
                     );
                   },

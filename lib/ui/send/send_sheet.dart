@@ -1,5 +1,3 @@
-
-
 // Dart imports:
 import 'dart:math';
 
@@ -141,7 +139,7 @@ class _SendSheetState extends State<SendSheet> {
     _selectedTokenName = widget.selectedTokenName;
     quickSendAmount = widget.quickSendAmount;
     this.animationOpen = false;
-    
+
     // Initialize late variables
     _rawAmount = null;
     _rawTokenQuantity = null;
@@ -158,25 +156,26 @@ class _SendSheetState extends State<SendSheet> {
       _pasteButtonVisible = true;
       _sendAddressStyle = AddressStyle.TEXT60;
     }
-  
+
     _sendOperationController.text = widget.operation ?? "";
     if (widget.operation == AddressTxsResponseResult.TOKEN_TRANSFER) {
       isTokenToSendSwitched = true;
     }
-      _sendOpenfieldController.text = widget.openfield ?? "";
-      // On amount focus change
+    _sendOpenfieldController.text = widget.openfield ?? "";
+    // On amount focus change
     _sendAmountFocusNode.addListener(() {
       if (_sendAmountFocusNode.hasFocus) {
         setState(() {
           _sendAmountController.text =
-              NumberUtil.getRawAsUsableString(_rawAmount ?? "").replaceAll(",", "");
+              NumberUtil.getRawAsUsableString(_rawAmount ?? "")
+                  .replaceAll(",", "");
           _rawAmount = null;
         });
-              _sendAmountController.text = "";
+        _sendAmountController.text = "";
         setState(() {
           quickSendAmount = null;
         });
-              setState(() {
+        setState(() {
           _amountHint = "";
         });
       } else {
@@ -267,7 +266,7 @@ class _SendSheetState extends State<SendSheet> {
                   .replaceAll(",", "");
           _rawTokenQuantity = null;
         });
-              setState(() {
+        setState(() {
           _tokenQuantityHint = "";
         });
       } else {
@@ -288,18 +287,18 @@ class _SendSheetState extends State<SendSheet> {
     } else {
       _sendAmountController.text = "";
     }
-    
+
     // Check for pending QR result from previous widget instance
     if (_SendSheetState._pendingQRResult != null) {
       final pendingResult = _SendSheetState._pendingQRResult!;
       _SendSheetState._pendingQRResult = null; // Clear it
-      
+
       // Process the pending result
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _processScanResultOnMountedWidget(pendingResult);
       });
     }
-    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -344,7 +343,8 @@ class _SendSheetState extends State<SendSheet> {
                           AutoSizeText(
                             CaseChange.toUpperCase(
                                 widget.title == null
-                                    ? (AppLocalization.of(context).sendFrom ?? "")
+                                    ? (AppLocalization.of(context).sendFrom ??
+                                        "")
                                     : (widget.title ?? ""),
                                 context),
                             style: AppStyles.textStyleHeader(context),
@@ -458,20 +458,20 @@ class _SendSheetState extends State<SendSheet> {
                                                   ),
                                                   TextSpan(
                                                     text: _localCurrencyMode
-                                                        ? StateContainer.of(
-                                                                context)
-                                                            .wallet
-                                                            ?.getLocalCurrencyPrice(
+                                                        ? StateContainer.of(context).wallet?.getLocalCurrencyPrice(
                                                                 StateContainer.of(
                                                                         context)
                                                                     .curCurrency,
                                                                 locale: StateContainer.of(
-                                                                        context)
-                                                                    .currencyLocale ?? "en_US") ?? ""
+                                                                            context)
+                                                                        .currencyLocale ??
+                                                                    "en_US") ??
+                                                            ""
                                                         : StateContainer.of(
-                                                                context)
-                                                            .wallet
-                                                            ?.getAccountBalanceDisplay() ?? "",
+                                                                    context)
+                                                                .wallet
+                                                                ?.getAccountBalanceDisplay() ??
+                                                            "",
                                                     style: TextStyle(
                                                       color: StateContainer.of(
                                                               context)
@@ -696,7 +696,8 @@ class _SendSheetState extends State<SendSheet> {
                                                       data) async {
                                                 if (data?.text == null ||
                                                     (data?.text?.contains(
-                                                            "bis://") ?? false) ==
+                                                                "bis://") ??
+                                                            false) ==
                                                         false) {
                                                   UIUtil.showSnackbar(
                                                       AppLocalization.of(
@@ -712,7 +713,7 @@ class _SendSheetState extends State<SendSheet> {
                                                     "BIS URL parsing temporarily disabled",
                                                     context);
                                                 return;
-                                                
+
                                                 // setState(() {
                                                 //   _addressValidationText = "";
                                                 //   _amountValidationText = "";
@@ -933,7 +934,7 @@ class _SendSheetState extends State<SendSheet> {
                                     localCurrency: _localCurrencyMode
                                         ? _sendAmountController.text
                                         : ""));
-                                                    });
+                          });
                         } else if (validRequest) {
                           Sheets.showAppHeightNineSheet(
                               context: context,
@@ -968,20 +969,21 @@ class _SendSheetState extends State<SendSheet> {
                           AppLocalization.of(context).scanQrCode,
                           Dimens.BUTTON_BOTTOM_DIMENS, onPressed: () async {
                         UIUtil.cancelLockEvent();
-                        
+
                         // Store current controller reference before navigation
                         final controller = _sendAddressController;
-                        
+
                         String? scanResult = await UserDataUtil.getQRData(
                             DataType.ADDRESS, context);
-                        
-                        if (scanResult == null || QRScanErrs.ERROR_LIST.contains(scanResult)) {
+
+                        if (scanResult == null ||
+                            QRScanErrs.ERROR_LIST.contains(scanResult)) {
                           return;
                         }
-                        
+
                         // Store result for the recreated widget to process
                         _SendSheetState._pendingQRResult = scanResult;
-                        
+
                         // Also try to process immediately if widget is still mounted
                         if (mounted) {
                           _processScanResultOnMountedWidget(scanResult);
@@ -1062,13 +1064,14 @@ class _SendSheetState extends State<SendSheet> {
       String balance;
       if (_localCurrencyMode) {
         balance = StateContainer.of(context).wallet?.getLocalCurrencyPrice(
-            StateContainer.of(context).curCurrency,
-            locale: StateContainer.of(context).currencyLocale ?? "en_US") ?? "";
+                StateContainer.of(context).curCurrency,
+                locale: StateContainer.of(context).currencyLocale ?? "en_US") ??
+            "";
       } else {
-        balance = (StateContainer.of(context)
-            .wallet
-            ?.getAccountBalanceDisplay() ?? "")
-            .replaceAll(r",", "");
+        balance =
+            (StateContainer.of(context).wallet?.getAccountBalanceDisplay() ??
+                    "")
+                .replaceAll(r",", "");
       }
       // Convert to Integer representations
       int textFieldInt;
@@ -1214,15 +1217,16 @@ class _SendSheetState extends State<SendSheet> {
           : _rawAmount == null
               ? _sendAmountController.text
               : NumberUtil.getRawAsUsableString(_rawAmount ?? "");
-      double balanceRaw = StateContainer.of(context).wallet?.accountBalance ?? 0.0;
+      double balanceRaw =
+          StateContainer.of(context).wallet?.accountBalance ?? 0.0;
       double sendAmount = double.tryParse(amount) ?? 0.0;
       if (sendAmount + estimationFees > balanceRaw) {
-      isValid = false;
-      setState(() {
-        _amountValidationText =
-            AppLocalization.of(context).insufficientBalance;
-      });
-    }
+        isValid = false;
+        setState(() {
+          _amountValidationText =
+              AppLocalization.of(context).insufficientBalance;
+        });
+      }
     }
     // Validate address
     bool isContact = _sendAddressController.text.startsWith("@");
@@ -1232,7 +1236,8 @@ class _SendSheetState extends State<SendSheet> {
         _addressValidationText = AppLocalization.of(context).addressMising;
         _pasteButtonVisible = true;
       });
-    } else if (!isContact && !BismuthAddress.Address(_sendAddressController.text).isValid()) {
+    } else if (!isContact &&
+        !BismuthAddress.Address(_sendAddressController.text).isValid()) {
       isValid = false;
       setState(() {
         _addressValidationText = AppLocalization.of(context).invalidAddress;
@@ -1287,13 +1292,15 @@ class _SendSheetState extends State<SendSheet> {
           for (int i = 0;
               i < (StateContainer.of(context).wallet?.tokens.length ?? 0);
               i++) {
-            if ((StateContainer.of(context).wallet?.tokens[i].tokenName ?? "") ==
+            if ((StateContainer.of(context).wallet?.tokens[i].tokenName ??
+                    "") ==
                 _selectedTokenName) {
-              if ((int.tryParse(_sendTokenQuantityController.text) ?? 0).compareTo(
-                      StateContainer.of(context)
-                          .wallet
-                          ?.tokens[i]
-                          .tokensQuantity ?? 0) >
+              if ((int.tryParse(_sendTokenQuantityController.text) ?? 0)
+                      .compareTo(StateContainer.of(context)
+                              .wallet
+                              ?.tokens[i]
+                              .tokensQuantity ??
+                          0) >
                   0) {
                 isValid = false;
 
@@ -1371,8 +1378,9 @@ class _SendSheetState extends State<SendSheet> {
                 _sendOpenfieldController.text + _sendCommentController.text,
                 _sendOperationController.text);
             _sendAmountController.text = (StateContainer.of(context)
-                .wallet
-                ?.getAccountBalanceMoinsFeesDisplay(estimationFees) ?? "0")
+                        .wallet
+                        ?.getAccountBalanceMoinsFeesDisplay(estimationFees) ??
+                    "0")
                 .replaceAll(r",", "");
             _sendAddressController.selection = TextSelection.fromPosition(
                 TextPosition(offset: _sendAddressController.text.length));
@@ -1386,11 +1394,13 @@ class _SendSheetState extends State<SendSheet> {
                 .replaceAll(".", _localCurrencyFormat.symbols.DECIMAL_SEP);
 
             String localAmount = StateContainer.of(context)
-                .wallet
-                ?.getLocalCurrencyPriceMoinsFees(
-                    StateContainer.of(context).curCurrency,
-                    double.tryParse(feeString) ?? 0.0,
-                    locale: StateContainer.of(context).currencyLocale ?? "en_US") ?? "";
+                    .wallet
+                    ?.getLocalCurrencyPriceMoinsFees(
+                        StateContainer.of(context).curCurrency,
+                        double.tryParse(feeString) ?? 0.0,
+                        locale: StateContainer.of(context).currencyLocale ??
+                            "en_US") ??
+                "";
             localAmount = localAmount.replaceAll(
                 _localCurrencyFormat.symbols.GROUP_SEP, "");
             localAmount = localAmount.replaceAll(
@@ -1417,7 +1427,7 @@ class _SendSheetState extends State<SendSheet> {
       },
     );
   } //************ Enter Amount Container Method End ************//
-  
+
   //************ Process QR Scan Result on Mounted Widget ************//
   void _processScanResultOnMountedWidget(String scanResult) async {
     // Validate address
@@ -1426,10 +1436,11 @@ class _SendSheetState extends State<SendSheet> {
       UIUtil.showSnackbar("Invalid address format", context);
       return;
     }
-    
+
     // Check for contacts
-    Contact? contact = await sl.get<DBHelper>().getContactWithAddress(address.address);
-    
+    Contact? contact =
+        await sl.get<DBHelper>().getContactWithAddress(address.address);
+
     // Update UI and controller (this method should only be called on mounted widgets)
     setState(() {
       if (contact != null) {
@@ -1505,7 +1516,8 @@ class _SendSheetState extends State<SendSheet> {
               if (data?.text == null) {
                 return;
               }
-              BismuthAddress.Address address = BismuthAddress.Address(data?.text ?? "");
+              BismuthAddress.Address address =
+                  BismuthAddress.Address(data?.text ?? "");
               if (address.isValid()) {
                 sl
                     .get<DBHelper>()
@@ -1598,7 +1610,7 @@ class _SendSheetState extends State<SendSheet> {
                 _addressValidationText = "";
                 _sendAddressStyle = AddressStyle.PRIMARY;
               });
-                        });
+            });
           }
         },
         overrideTextFieldWidget: _addressValidAndUnfocused
@@ -1715,8 +1727,9 @@ class _SendSheetState extends State<SendSheet> {
           _sendOperationController = TextEditingController(
               text: AddressTxsResponseResult.TOKEN_TRANSFER);
           _sendOpenfieldController = TextEditingController(
-              text:
-                  (_selectedTokenName ?? "") + ":" + _sendTokenQuantityController.text);
+              text: (_selectedTokenName ?? "") +
+                  ":" +
+                  _sendTokenQuantityController.text);
         });
       },
       textInputAction: TextInputAction.next,
@@ -1800,8 +1813,8 @@ class _SendSheetState extends State<SendSheet> {
             fontFamily: 'Roboto',
             color: StateContainer.of(context).curTheme.text60,
           ),
-          items:
-              (StateContainer.of(context).wallet?.tokens ?? []).map((BisToken bisToken) {
+          items: (StateContainer.of(context).wallet?.tokens ?? [])
+              .map((BisToken bisToken) {
             return DropdownMenuItem<String>(
                 value: bisToken.tokenName,
                 child: Container(
@@ -1839,5 +1852,4 @@ class _SendSheetState extends State<SendSheet> {
     );
   } //************ Enter Token Container Method End ************//
   //*************************************************************//
-
 }

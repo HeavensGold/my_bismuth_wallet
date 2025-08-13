@@ -1,5 +1,3 @@
-
-
 // Flutter imports:
 import 'package:flutter/material.dart';
 
@@ -46,7 +44,7 @@ class _IntroBackupSeedState extends State<IntroBackupSeedPage> {
         _mnemonic = AppMnemomics.seedToMnemonic(_seed);
       });
     });
-      _showMnemonic = true;
+    _showMnemonic = true;
   }
 
   @override

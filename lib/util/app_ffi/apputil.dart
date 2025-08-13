@@ -1,5 +1,3 @@
-
-
 // Dart imports:
 import 'dart:convert';
 import 'dart:typed_data';
@@ -36,7 +34,7 @@ class AppUtil {
     }
     return false;
   }
-  
+
   // Centralized method for safe seed access with proper password mode handling
   static Future<String?> getSeedSafely(BuildContext context) async {
     try {
@@ -45,14 +43,14 @@ class AppUtil {
     } catch (e) {
       // If that fails, check vault seed
       String vaultSeed = await sl.get<Vault>().getSeed();
-      
+
       // If seed is encrypted, we can't use it directly
       if (isSeedEncrypted(vaultSeed)) {
         // In password mode but encryptedSecret not available
         // This means user needs to unlock first
         return null;
       }
-      
+
       // Seed is not encrypted, we can use it
       // But we should also setup encryptedSecret for future use
       String sessionKey = await sl.get<Vault>().getSessionKey();
@@ -60,13 +58,12 @@ class AppUtil {
         sessionKey = await sl.get<Vault>().updateSessionKey();
       }
       StateContainer.of(context).setEncryptedSecret(
-          HEX.encode(AppCrypt.encrypt(vaultSeed, sessionKey))
-      );
-      
+          HEX.encode(AppCrypt.encrypt(vaultSeed, sessionKey)));
+
       return vaultSeed;
     }
   }
-  
+
   String seedToAddress(String seed, int index) {
     String mnemonic = bip39.entropyToMnemonic(seed);
     //print("Mnemonic : " + mnemonic);
@@ -139,7 +136,7 @@ class AppUtil {
 
   Future<void> loginAccount(String seed, BuildContext context) async {
     Account? selectedAcct = await sl.get<DBHelper>().getSelectedAccount(seed);
-    
+
     // If no account exists, create a default account
     if (selectedAcct == null) {
       // Create default account (index 0, selected=true)
@@ -153,22 +150,22 @@ class AppUtil {
         dragginatorDna: null,
         dragginatorStatus: null,
       );
-      
+
       // Save the default account
       await sl.get<DBHelper>().saveAccount(defaultAccount);
       selectedAcct = defaultAccount;
     }
-    
+
     // Set up encrypted secret if not password protected
     if (StateContainer.of(context).encryptedSecret == null) {
       String sessionKey = await sl.get<Vault>().getSessionKey();
-      StateContainer.of(context).setEncryptedSecret(
-          HEX.encode(AppCrypt.encrypt(seed, sessionKey))
-      );
+      StateContainer.of(context)
+          .setEncryptedSecret(HEX.encode(AppCrypt.encrypt(seed, sessionKey)));
     }
-    
+
     if (selectedAcct != null) {
-      StateContainer.of(context).updateWallet(account: selectedAcct, seedOverride: seed);
+      StateContainer.of(context)
+          .updateWallet(account: selectedAcct, seedOverride: seed);
     }
   }
 }

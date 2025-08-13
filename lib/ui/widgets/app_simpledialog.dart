@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-
 // Dart imports:
 import 'dart:async';
 
@@ -65,7 +64,8 @@ class Dialog extends StatelessWidget {
   final ShapeBorder? shape;
 
   Color _getColor(BuildContext context) {
-    return Theme.of(context).dialogTheme.backgroundColor ?? Theme.of(context).colorScheme.surface;
+    return Theme.of(context).dialogTheme.backgroundColor ??
+        Theme.of(context).colorScheme.surface;
   }
 
   double _getHeight(BuildContext context) {
@@ -193,7 +193,7 @@ class AppAlertDialog extends StatelessWidget {
     this.actions,
     this.semanticLabel,
     this.shape,
-  })  : super(key: key);
+  }) : super(key: key);
 
   /// The (optional) title of the dialog is displayed in a large font at the top
   /// of the dialog.
@@ -275,7 +275,7 @@ class AppAlertDialog extends StatelessWidget {
         ),
       ));
     }
-  
+
     if (content != null) {
       children.add(Flexible(
         child: Padding(
@@ -287,14 +287,14 @@ class AppAlertDialog extends StatelessWidget {
         ),
       ));
     }
-  
+
     if (actions != null && actions!.isNotEmpty) {
       children.add(OverflowBar(
         alignment: MainAxisAlignment.center,
         children: actions!,
       ));
     }
-  
+
     Widget dialogChild = IntrinsicWidth(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -457,7 +457,7 @@ class AppSimpleDialog extends StatelessWidget {
         const EdgeInsetsDirectional.fromSTEB(0.0, 12.0, 0.0, 16.0),
     this.semanticLabel,
     this.shape,
-  })  : super(key: key);
+  }) : super(key: key);
 
   /// The (optional) title of the dialog is displayed in a large font at the top
   /// of the dialog.
@@ -526,7 +526,7 @@ class AppSimpleDialog extends StatelessWidget {
             child: Semantics(namesRoute: true, child: title),
           )));
     }
-  
+
     if (children != null) {
       body.add(Flexible(
           child: SingleChildScrollView(
@@ -534,7 +534,7 @@ class AppSimpleDialog extends StatelessWidget {
         child: ListBody(children: children!),
       )));
     }
-  
+
     Widget dialogChild = IntrinsicWidth(
       stepWidth: 56.0,
       child: ConstrainedBox(
@@ -605,14 +605,13 @@ Widget _buildMaterialDialogTransitions(
 ///  * [showGeneralDialog], which allows for customization of the dialog popup.
 ///  * <https://material.google.com/components/dialogs.html>
 Future<T?> showAppDialog<T>({
-  required
-      BuildContext context,
+  required BuildContext context,
   bool barrierDismissible = true,
   @Deprecated(
       'Instead of using the "child" argument, return the child from a closure '
       'provided to the "builder" argument. This will ensure that the BuildContext '
       'is appropriate for widgets built in the dialog.')
-      Widget? child,
+  Widget? child,
   WidgetBuilder? builder,
 }) {
   assert(child != null || builder != null);

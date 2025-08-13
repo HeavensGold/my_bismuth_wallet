@@ -1,5 +1,3 @@
-
-
 // Flutter imports:
 import 'package:flutter/material.dart';
 
@@ -144,7 +142,8 @@ class _SendCompleteSheetState extends State<SendCompleteSheet> {
                         // "SENT TO" text
                         Text(
                           CaseChange.toUpperCase(
-                              widget.title ?? AppLocalization.of(context).sentTo,
+                              widget.title ??
+                                  AppLocalization.of(context).sentTo,
                               context),
                           style: TextStyle(
                             fontSize: 28.0,

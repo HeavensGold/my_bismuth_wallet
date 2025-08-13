@@ -1,5 +1,3 @@
-
-
 // Flutter imports:
 import 'package:flutter/material.dart';
 
@@ -45,169 +43,173 @@ class _AppPasswordLockScreenState extends State<AppPasswordLockScreen> {
   @override
   Widget build(BuildContext context) {
     return PopScope(
-      canPop: false, // Prevent back button from bypassing password authentication
+      canPop:
+          false, // Prevent back button from bypassing password authentication
       child: Scaffold(
-        resizeToAvoidBottomInset: false,
-        body: TapOutsideUnfocus(
-            child: Container(
-          color: StateContainer.of(context).curTheme.backgroundDark,
-          width: double.infinity,
-          child: SafeArea(
-            minimum: EdgeInsets.only(
-              bottom: MediaQuery.of(context).size.height * 0.035,
-            ),
-            child: Column(
-              children: <Widget>[
-                // Logout button
-                Container(
-                  margin: EdgeInsetsDirectional.only(start: 16, top: 12),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    children: <Widget>[
-                      TextButton(
-                        onPressed: () {
-                          AppDialogs.showConfirmDialog(
-                              context,
-                              CaseChange.toUpperCase(
-                                  AppLocalization.of(context).warning, context),
-                              AppLocalization.of(context).logoutDetail,
-                              AppLocalization.of(context)
-                                  .logoutAction
-                                  .toUpperCase(), () {
-                            // Show another confirm dialog
+          resizeToAvoidBottomInset: false,
+          body: TapOutsideUnfocus(
+              child: Container(
+            color: StateContainer.of(context).curTheme.backgroundDark,
+            width: double.infinity,
+            child: SafeArea(
+              minimum: EdgeInsets.only(
+                bottom: MediaQuery.of(context).size.height * 0.035,
+              ),
+              child: Column(
+                children: <Widget>[
+                  // Logout button
+                  Container(
+                    margin: EdgeInsetsDirectional.only(start: 16, top: 12),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      children: <Widget>[
+                        TextButton(
+                          onPressed: () {
                             AppDialogs.showConfirmDialog(
                                 context,
-                                AppLocalization.of(context).logoutAreYouSure,
-                                AppLocalization.of(context).logoutReassurance,
                                 CaseChange.toUpperCase(
-                                    AppLocalization.of(context).yes, context),
-                                () {
-                              // Delete all data
-                              sl.get<Vault>().deleteAll().then((_) {
-                                sl
-                                    .get<SharedPrefsUtil>()
-                                    .deleteAll()
-                                    .then((result) {
-                                  StateContainer.of(context).logOut();
-                                  Navigator.of(context).pushNamedAndRemoveUntil(
-                                      '/', (Route<dynamic> route) => false);
+                                    AppLocalization.of(context).warning,
+                                    context),
+                                AppLocalization.of(context).logoutDetail,
+                                AppLocalization.of(context)
+                                    .logoutAction
+                                    .toUpperCase(), () {
+                              // Show another confirm dialog
+                              AppDialogs.showConfirmDialog(
+                                  context,
+                                  AppLocalization.of(context).logoutAreYouSure,
+                                  AppLocalization.of(context).logoutReassurance,
+                                  CaseChange.toUpperCase(
+                                      AppLocalization.of(context).yes, context),
+                                  () {
+                                // Delete all data
+                                sl.get<Vault>().deleteAll().then((_) {
+                                  sl
+                                      .get<SharedPrefsUtil>()
+                                      .deleteAll()
+                                      .then((result) {
+                                    StateContainer.of(context).logOut();
+                                    Navigator.of(context)
+                                        .pushNamedAndRemoveUntil('/',
+                                            (Route<dynamic> route) => false);
+                                  });
                                 });
                               });
                             });
-                          });
-                        },
-                        child: Container(
-                          child: Row(
-                            children: <Widget>[
-                              Icon(AppIcons.logout,
-                                  size: 16,
-                                  color:
-                                      StateContainer.of(context).curTheme.text),
-                              Container(
-                                margin: EdgeInsetsDirectional.only(start: 4),
-                                child: Text(AppLocalization.of(context).logout,
-                                    style: AppStyles.textStyleLogoutButton(
-                                        context)),
-                              ),
-                            ],
+                          },
+                          child: Container(
+                            child: Row(
+                              children: <Widget>[
+                                Icon(AppIcons.logout,
+                                    size: 16,
+                                    color: StateContainer.of(context)
+                                        .curTheme
+                                        .text),
+                                Container(
+                                  margin: EdgeInsetsDirectional.only(start: 4),
+                                  child: Text(
+                                      AppLocalization.of(context).logout,
+                                      style: AppStyles.textStyleLogoutButton(
+                                          context)),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-                Expanded(
-                    child: Column(
-                  children: <Widget>[
-                    Container(
-                      child: Icon(
-                        AppIcons.lock,
-                        size: 80,
-                        color: StateContainer.of(context).curTheme.primary,
+                  Expanded(
+                      child: Column(
+                    children: <Widget>[
+                      Container(
+                        child: Icon(
+                          AppIcons.lock,
+                          size: 80,
+                          color: StateContainer.of(context).curTheme.primary,
+                        ),
+                        margin: EdgeInsets.only(
+                            top: MediaQuery.of(context).size.height * 0.1),
                       ),
-                      margin: EdgeInsets.only(
-                          top: MediaQuery.of(context).size.height * 0.1),
-                    ),
-                    Container(
-                      child: Text(
-                        CaseChange.toUpperCase(
-                            AppLocalization.of(context).locked, context),
-                        style: AppStyles.textStyleHeaderColored(context),
+                      Container(
+                        child: Text(
+                          CaseChange.toUpperCase(
+                              AppLocalization.of(context).locked, context),
+                          style: AppStyles.textStyleHeaderColored(context),
+                        ),
+                        margin: EdgeInsets.only(top: 10),
                       ),
-                      margin: EdgeInsets.only(top: 10),
-                    ),
-                    Expanded(
-                        child: SingleChildScrollView(
-                            padding: EdgeInsets.all(40),
-                            child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                children: <Widget>[
-                                  // Enter your password Text Field
-                                  AppTextField(
-                                    topMargin: 30,
-                                    padding: EdgeInsetsDirectional.only(
-                                        start: 16, end: 16),
-                                    focusNode: enterPasswordFocusNode,
-                                    controller: enterPasswordController,
-                                    textInputAction: TextInputAction.go,
-                                    autofocus: true,
-                                    onChanged: (String newText) {
-                                      setState(() {
-                                        passwordError = null;
-                                      });
-                                                                        },
-                                    onSubmitted: (value) async {
-                                      FocusScope.of(context).unfocus();
-                                      await validateAndDecrypt();
-                                    },
-                                    hintText: AppLocalization.of(context)
-                                        .enterPasswordHint,
-                                    keyboardType: TextInputType.text,
-                                    obscureText: true,
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 16.0,
-                                      color: StateContainer.of(context)
-                                          .curTheme
-                                          .primary,
-                                      fontFamily: 'NunitoSans',
+                      Expanded(
+                          child: SingleChildScrollView(
+                              padding: EdgeInsets.all(40),
+                              child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  children: <Widget>[
+                                    // Enter your password Text Field
+                                    AppTextField(
+                                      topMargin: 30,
+                                      padding: EdgeInsetsDirectional.only(
+                                          start: 16, end: 16),
+                                      focusNode: enterPasswordFocusNode,
+                                      controller: enterPasswordController,
+                                      textInputAction: TextInputAction.go,
+                                      autofocus: true,
+                                      onChanged: (String newText) {
+                                        setState(() {
+                                          passwordError = null;
+                                        });
+                                      },
+                                      onSubmitted: (value) async {
+                                        FocusScope.of(context).unfocus();
+                                        await validateAndDecrypt();
+                                      },
+                                      hintText: AppLocalization.of(context)
+                                          .enterPasswordHint,
+                                      keyboardType: TextInputType.text,
+                                      obscureText: true,
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 16.0,
+                                        color: StateContainer.of(context)
+                                            .curTheme
+                                            .primary,
+                                        fontFamily: 'NunitoSans',
+                                      ),
                                     ),
-                                  ),
-                                  // Error Container
-                                  Container(
-                                    alignment: AlignmentDirectional(0, 0),
-                                    margin: EdgeInsets.only(top: 3),
-                                    child: Text(
-                                        this.passwordError ?? "",
-                                        style: TextStyle(
-                                          fontSize: 14.0,
-                                          color: StateContainer.of(context)
-                                              .curTheme
-                                              .primary,
-                                          fontFamily: 'NunitoSans',
-                                          fontWeight: FontWeight.w600,
-                                        )),
-                                  ),
-                                ])))
-                  ],
-                )),
-                Row(
-                  children: <Widget>[
-                    AppButton.buildAppButton(
-                        context,
-                        AppButtonType.PRIMARY,
-                        AppLocalization.of(context).unlock,
-                        Dimens.BUTTON_BOTTOM_DIMENS, onPressed: () async {
-                      await validateAndDecrypt();
-                    }),
-                  ],
-                )
-              ],
+                                    // Error Container
+                                    Container(
+                                      alignment: AlignmentDirectional(0, 0),
+                                      margin: EdgeInsets.only(top: 3),
+                                      child: Text(this.passwordError ?? "",
+                                          style: TextStyle(
+                                            fontSize: 14.0,
+                                            color: StateContainer.of(context)
+                                                .curTheme
+                                                .primary,
+                                            fontFamily: 'NunitoSans',
+                                            fontWeight: FontWeight.w600,
+                                          )),
+                                    ),
+                                  ])))
+                    ],
+                  )),
+                  Row(
+                    children: <Widget>[
+                      AppButton.buildAppButton(
+                          context,
+                          AppButtonType.PRIMARY,
+                          AppLocalization.of(context).unlock,
+                          Dimens.BUTTON_BOTTOM_DIMENS, onPressed: () async {
+                        await validateAndDecrypt();
+                      }),
+                    ],
+                  )
+                ],
+              ),
             ),
-          ),
-        ))),
+          ))),
     );
   }
 
@@ -219,12 +221,12 @@ class _AppPasswordLockScreenState extends State<AppPasswordLockScreen> {
         // Create session key if missing
         sessionKey = await sl.get<Vault>().updateSessionKey();
       }
-      
+
       String decryptedSeed = HEX.encode(AppCrypt.decrypt(
           await sl.get<Vault>().getSeed(), enterPasswordController.text));
-      StateContainer.of(context).setEncryptedSecret(HEX.encode(AppCrypt.encrypt(
-          decryptedSeed, sessionKey)));
-      
+      StateContainer.of(context).setEncryptedSecret(
+          HEX.encode(AppCrypt.encrypt(decryptedSeed, sessionKey)));
+
       // Initialize the selected account properly (this was missing!)
       await AppUtil().loginAccount(decryptedSeed, context);
       // Reset failed lock attempts on successful authentication

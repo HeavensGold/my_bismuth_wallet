@@ -1,5 +1,3 @@
-
-
 // Flutter imports:
 import 'package:flutter/material.dart';
 
@@ -15,7 +13,7 @@ class ListModel<E> {
   ListModel({
     required this.listKey,
     Iterable<E>? initialItems,
-  })  : _items = List<E>.from(initialItems ?? <E>[]);
+  }) : _items = List<E>.from(initialItems ?? <E>[]);
 
   final GlobalKey<AnimatedListState> listKey;
   final List<E> _items;

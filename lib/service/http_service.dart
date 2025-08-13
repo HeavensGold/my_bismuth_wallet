@@ -1,5 +1,3 @@
-
-
 // Dart imports:
 import 'dart:async';
 import 'dart:convert';
@@ -52,6 +50,7 @@ import 'package:my_bismuth_wallet/network/model/response/simple_price_response_e
 // import 'package:my_bismuth_wallet/network/model/response/simple_price_response_twd.dart';
 import 'package:my_bismuth_wallet/network/model/response/simple_price_response_usd.dart';
 // import 'package:my_bismuth_wallet/network/model/response/simple_price_response_zar.dart';
+import 'package:my_bismuth_wallet/network/model/response/individual_dex_prices_response.dart';
 // import 'package:my_bismuth_wallet/network/model/response/tokens_balance_get_response.dart'; // Deleted
 // import 'package:my_bismuth_wallet/network/model/response/tokens_list_get_response.dart'; // Deleted
 import 'package:my_bismuth_wallet/service_locator.dart';
@@ -65,17 +64,17 @@ class HttpService {
         <ServerWalletLegacyResponse>[];
     ServerWalletLegacyResponse serverWalletLegacyResponse =
         ServerWalletLegacyResponse(
-          active: true,
-          clients: 0,
-          ip: '',
-          port: 0,
-          label: '',
-          country: '',
-          height: 0,
-          version: '',
-          totalSlots: 0,
-          lastActive: 0,
-        );
+      active: true,
+      clients: 0,
+      ip: '',
+      port: 0,
+      label: '',
+      country: '',
+      height: 0,
+      version: '',
+      totalSlots: 0,
+      lastActive: 0,
+    );
 
     String walletServer = await sl.get<SharedPrefsUtil>().getWalletServer();
     if (walletServer != "auto") {
@@ -89,12 +88,11 @@ class HttpService {
     }
 
     try {
-      final http.Response response = await http.get(
-          Uri.parse("https://bismuth.world/api/legacy.json"),
-          headers: {
-            'content-type': 'application/json',
-            'access-Control-Allow-Origin': '*'
-          });
+      final http.Response response = await http
+          .get(Uri.parse("https://bismuth.world/api/legacy.json"), headers: {
+        'content-type': 'application/json',
+        'access-Control-Allow-Origin': '*'
+      });
 
       if (response.statusCode == 200) {
         String reply = response.body;
@@ -137,11 +135,11 @@ class HttpService {
       // Optimized: Single API call to fetch both BTC and local currency prices
       // This reduces network round-trips from 2 to 1, cutting response time in half
       String currenciesQuery = "BTC," + currency.toLowerCase();
-      
+
       http.Response response = await http.get(
           Uri.parse(
-              "https://api.coingecko.com/api/v3/simple/price?ids=bismuth&vs_currencies=" + 
-              currenciesQuery),
+              "https://api.coingecko.com/api/v3/simple/price?ids=bismuth&vs_currencies=" +
+                  currenciesQuery),
           headers: {
             'content-type': 'application/json',
             'access-Control-Allow-Origin': '*'
@@ -151,19 +149,19 @@ class HttpService {
         String reply = response.body;
         Map<String, dynamic> priceData = json.decode(reply);
         Map<String, dynamic>? bismuthData = priceData['bismuth'];
-        
+
         if (bismuthData != null) {
           // Extract BTC price
           double? btcPrice = bismuthData['btc']?.toDouble();
           simplePriceResponse.btcPrice = btcPrice ?? 0.0;
-          
+
           // Extract local currency price
           String currencyLower = currency.toLowerCase();
           double? currencyPrice = bismuthData[currencyLower]?.toDouble();
           simplePriceResponse.localCurrencyPrice = currencyPrice ?? 0.0;
         }
       }
-      
+
       // Post to callbacks
       EventTaxiImpl.singleton().fire(PriceEvent(response: simplePriceResponse));
     } catch (e) {
@@ -199,7 +197,7 @@ class HttpService {
           try {
             Map<String, dynamic> priceData = json.decode(reply);
             Map<String, dynamic>? bismuthData = priceData['bismuth'];
-            
+
             if (bismuthData != null) {
               // Get the price for the requested currency from the response
               String currencyLower = currency.toLowerCase();
@@ -234,10 +232,206 @@ class HttpService {
           }
         }
         // Post to callbacks
-        EventTaxiImpl.singleton().fire(PriceEvent(response: simplePriceResponse));
+        EventTaxiImpl.singleton()
+            .fire(PriceEvent(response: simplePriceResponse));
       } catch (e) {}
     }
     return simplePriceResponse;
+  }
+
+  // Cache for individual DEX prices (30 second cache per currency)
+  final Map<String, IndividualDexPricesResponse> _cachedDexPrices = {};
+  final Map<String, DateTime> _lastDexPriceFetch = {};
+  static const Duration _cacheTimeout = Duration(seconds: 30);
+  
+  // Cache for USD prices to avoid redundant fetches
+  SimplePriceResponse? _cachedUsdPrice;
+  DateTime? _lastUsdPriceFetch;
+
+  Future<IndividualDexPricesResponse> getIndividualDexPrices(
+      String currency) async {
+    String cacheKey = currency.toLowerCase();
+    
+    // Check if we have cached data for this currency that's still valid
+    if (_cachedDexPrices.containsKey(cacheKey) &&
+        _lastDexPriceFetch.containsKey(cacheKey) &&
+        DateTime.now().difference(_lastDexPriceFetch[cacheKey]!) < _cacheTimeout) {
+      return _cachedDexPrices[cacheKey]!;
+    }
+
+    // wBIS contract addresses
+    const String wBIS_ETH = "0xf5cb350b40726b5bcf170d12e162b6193b291b41";
+    const String wBIS_BSC = "0x56672ecb506301b1e32ed28552797037c54d36a9";
+
+    Map<DefaultDex, DexPriceData> dexPrices = {};
+
+    // Get current aggregated prices for fallback
+    SimplePriceResponse aggregatedPrices = await getSimplePrice(currency);
+
+    try {
+      // Fetch Uniswap V2 data from Ethereum network
+      try {
+        final response = await http.get(
+          Uri.parse(
+              'https://api.geckoterminal.com/api/v2/networks/eth/tokens/$wBIS_ETH/pools'),
+          headers: {
+            'accept': 'application/json',
+            'user-agent': 'BismuthWallet/1.0',
+          },
+        ).timeout(Duration(seconds: 10));
+
+        if (response.statusCode == 200) {
+          Map<String, dynamic> data = json.decode(response.body);
+          List<dynamic>? pools = data['data'];
+
+          if (pools != null && pools.isNotEmpty) {
+            // Find the pool with highest liquidity/volume
+            var bestPool = pools.reduce((a, b) {
+              // Volume is a string in the API response
+              String aVolumeStr =
+                  a['attributes']?['volume_usd']?['h24']?.toString() ?? '0';
+              String bVolumeStr =
+                  b['attributes']?['volume_usd']?['h24']?.toString() ?? '0';
+              double aVolume = double.tryParse(aVolumeStr) ?? 0.0;
+              double bVolume = double.tryParse(bVolumeStr) ?? 0.0;
+              return aVolume > bVolume ? a : b;
+            });
+
+            dexPrices[DefaultDex.UNISWAP_V2] =
+                DexPriceData.fromGeckoTerminalPool(bestPool, 'Uniswap V2');
+          }
+        }
+      } catch (e) {
+        log.w('Failed to fetch Uniswap V2 price: $e');
+      }
+
+      // Fetch PancakeSwap data from BSC network
+      try {
+        final response = await http.get(
+          Uri.parse(
+              'https://api.geckoterminal.com/api/v2/networks/bsc/tokens/$wBIS_BSC/pools'),
+          headers: {
+            'accept': 'application/json',
+            'user-agent': 'BismuthWallet/1.0',
+          },
+        ).timeout(Duration(seconds: 10));
+
+        if (response.statusCode == 200) {
+          Map<String, dynamic> data = json.decode(response.body);
+          List<dynamic>? pools = data['data'];
+
+          if (pools != null && pools.isNotEmpty) {
+            // Find the pool with highest liquidity/volume
+            var bestPool = pools.reduce((a, b) {
+              // Volume is a string in the API response
+              String aVolumeStr =
+                  a['attributes']?['volume_usd']?['h24']?.toString() ?? '0';
+              String bVolumeStr =
+                  b['attributes']?['volume_usd']?['h24']?.toString() ?? '0';
+              double aVolume = double.tryParse(aVolumeStr) ?? 0.0;
+              double bVolume = double.tryParse(bVolumeStr) ?? 0.0;
+              return aVolume > bVolume ? a : b;
+            });
+
+            dexPrices[DefaultDex.PANCAKESWAP] =
+                DexPriceData.fromGeckoTerminalPool(bestPool, 'PancakeSwap');
+          }
+        }
+      } catch (e) {
+        log.w('Failed to fetch PancakeSwap price: $e');
+      }
+
+      // Get proper BTC to USD rate and USD to target currency rate from aggregated prices
+      double btcToUsdRate = 45000.0; // Fallback estimate
+      double usdToLocalRate = 1.0;
+
+      // Calculate actual rates from aggregated prices
+      if (aggregatedPrices.btcPrice > 0 &&
+          aggregatedPrices.localCurrencyPrice > 0) {
+        if (currency.toLowerCase() == 'usd') {
+          // For USD, we can directly calculate BTC/USD rate from aggregated data
+          btcToUsdRate =
+              aggregatedPrices.localCurrencyPrice / aggregatedPrices.btcPrice;
+        } else {
+          // For other currencies, use cached USD price or fetch if needed
+          SimplePriceResponse? usdPrices = _cachedUsdPrice;
+          
+          // Check if USD cache is still valid
+          if (usdPrices == null || 
+              _lastUsdPriceFetch == null || 
+              DateTime.now().difference(_lastUsdPriceFetch!) >= _cacheTimeout) {
+            usdPrices = await getSimplePrice("USD");
+            _cachedUsdPrice = usdPrices;
+            _lastUsdPriceFetch = DateTime.now();
+          }
+          
+          if (usdPrices.localCurrencyPrice > 0 && usdPrices.btcPrice > 0) {
+            btcToUsdRate = usdPrices.localCurrencyPrice / usdPrices.btcPrice;
+            // Calculate USD to local currency rate
+            usdToLocalRate = aggregatedPrices.localCurrencyPrice /
+                usdPrices.localCurrencyPrice;
+          }
+        }
+      }
+
+      // Update DEX prices with proper BTC calculation and currency conversion
+      dexPrices.forEach((dex, data) {
+        if (data.localCurrencyPrice != '0') {
+          double usdPrice = double.tryParse(data.localCurrencyPrice) ?? 0.0;
+
+          // Calculate BTC price properly (DEX prices are in USD)
+          double btcPrice = usdPrice / btcToUsdRate;
+
+          // Convert to local currency if needed
+          String finalLocalPrice = data.localCurrencyPrice;
+          if (currency.toLowerCase() != 'usd') {
+            double localPrice = usdPrice * usdToLocalRate;
+            finalLocalPrice = localPrice.toString();
+          }
+
+          dexPrices[dex] = DexPriceData(
+            name: data.name,
+            btcPrice: btcPrice.toStringAsFixed(10),
+            localCurrencyPrice: finalLocalPrice,
+            volume24h: data.volume24h,
+            isActive: data.isActive,
+          );
+        }
+      });
+
+      // Add aggregated prices to the DEX map for consistency
+      dexPrices[DefaultDex.AGGREGATED] = DexPriceData(
+        name: 'Aggregated (by CoinGecko)',
+        btcPrice: aggregatedPrices.btcPrice.toString(),
+        localCurrencyPrice: aggregatedPrices.localCurrencyPrice.toString(),
+        volume24h: 0.0,
+        isActive: true,
+      );
+    } catch (e) {
+      log.e('Error fetching individual DEX prices: $e');
+    }
+
+    // Create the response with fallback to aggregated data
+    IndividualDexPricesResponse response = IndividualDexPricesResponse(
+      dexPrices: dexPrices,
+      aggregatedBtcPrice: aggregatedPrices.btcPrice.toString(),
+      aggregatedLocalPrice: aggregatedPrices.localCurrencyPrice.toString(),
+    );
+    
+    // Cache the response for this specific currency
+    _cachedDexPrices[cacheKey] = response;
+    _lastDexPriceFetch[cacheKey] = DateTime.now();
+
+    // Fire price event so UI components can update
+    // Use the aggregated prices from the response for the event
+    SimplePriceResponse priceEventData = SimplePriceResponse(
+      currency: currency,
+      btcPrice: double.tryParse(response.aggregatedBtcPrice) ?? 0.0,
+      localCurrencyPrice: double.tryParse(response.aggregatedLocalPrice) ?? 0.0,
+    );
+    EventTaxiImpl.singleton().fire(PriceEvent(response: priceEventData));
+
+    return response;
   }
 
   Future<bool> isTokensBalance(String address) async {
@@ -271,8 +465,8 @@ class HttpService {
     try {
       String tokensApi = await sl.get<SharedPrefsUtil>().getTokensApi();
 
-      final http.Response response =
-          await http.get(Uri.parse(tokensApi + address), headers: {
+      final http.Response response = await http
+          .get(Uri.parse(tokensApi + address), headers: {
         'content-type': 'application/json',
         'access-Control-Allow-Origin': '*'
       });
@@ -286,7 +480,8 @@ class HttpService {
           if (tokenData is List && tokenData.length >= 2) {
             BisToken bisToken = BisToken(
               tokenName: tokenData[0]?.toString(),
-              tokensQuantity: int.tryParse(tokenData[1]?.toString() ?? '0') ?? 0,
+              tokensQuantity:
+                  int.tryParse(tokenData[1]?.toString() ?? '0') ?? 0,
             );
             bisTokenList.add(bisToken);
           }
@@ -338,7 +533,8 @@ class HttpService {
       if (response.statusCode == 200) {
         String reply = response.body;
         price = int.tryParse(
-            reply.replaceAll('[', '').replaceAll(']', '').split(',')[0]) ?? 0;
+                reply.replaceAll('[', '').replaceAll(']', '').split(',')[0]) ??
+            0;
       }
     } catch (e) {}
     return price;

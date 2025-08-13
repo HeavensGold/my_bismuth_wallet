@@ -1,5 +1,3 @@
-
-
 // Dart imports:
 import 'dart:async';
 
@@ -80,8 +78,8 @@ class _ReceiveSheetStateState extends State<ReceiveSheet> {
                     ),
                     Container(
                       margin: EdgeInsets.only(top: 15.0),
-                      child: UIUtil.threeLineAddressText(
-                          context, StateContainer.of(context).wallet?.address ?? "",
+                      child: UIUtil.threeLineAddressText(context,
+                          StateContainer.of(context).wallet?.address ?? "",
                           type: ThreeLineAddressTextType.PRIMARY60),
                     ),
                   ],
@@ -193,15 +191,18 @@ class _ReceiveSheetStateState extends State<ReceiveSheet> {
                                         ""
                                 ? UIUtil.getRobohashURL(
                                     StateContainer.of(context)
-                                        .selectedAccount
-                                        .address ?? '')
+                                            .selectedAccount
+                                            .address ??
+                                        '')
                                 : UIUtil.getDragginatorURL(
                                     StateContainer.of(context)
-                                        .selectedAccount
-                                        .dragginatorDna ?? '',
+                                            .selectedAccount
+                                            .dragginatorDna ??
+                                        '',
                                     StateContainer.of(context)
-                                        .selectedAccount
-                                        .dragginatorStatus ?? ''),
+                                            .selectedAccount
+                                            .dragginatorStatus ??
+                                        ''),
                           ),
                           radius: 50.0,
                         ),
@@ -228,13 +229,14 @@ class _ReceiveSheetStateState extends State<ReceiveSheet> {
                             : AppLocalization.of(context).copyAddress,
                         Dimens.BUTTON_TOP_DIMENS, onPressed: () {
                       Clipboard.setData(new ClipboardData(
-                          text: StateContainer.of(context).wallet?.address ?? ''));
+                          text: StateContainer.of(context).wallet?.address ??
+                              ''));
                       setState(() {
                         // Set copied style
                         _addressCopied = true;
                       });
                       _addressCopiedTimer?.cancel();
-                                          _addressCopiedTimer =
+                      _addressCopiedTimer =
                           new Timer(const Duration(milliseconds: 800), () {
                         setState(() {
                           _addressCopied = false;

@@ -1,5 +1,3 @@
-
-
 // Flutter imports:
 import 'package:flutter/material.dart';
 
@@ -43,8 +41,7 @@ class _IntroWelcomePageState extends State<IntroWelcomePage> {
                     Container(
                       //
                       width: double.infinity,
-                      height:
-                          MediaQuery.of(context).size.width * 5 / 8,
+                      height: MediaQuery.of(context).size.width * 5 / 8,
                       child: Center(
                         child: Container(
                           child: SizedBox(
@@ -83,8 +80,9 @@ class _IntroWelcomePageState extends State<IntroWelcomePage> {
                           Dimens.BUTTON_TOP_DIMENS, onPressed: () {
                         // Generate a new seed for the wallet
                         String newSeed = AppSeeds.generateSeed();
-                        Navigator.of(context)
-                            .pushNamed('/intro_password_on_launch', arguments: newSeed);
+                        Navigator.of(context).pushNamed(
+                            '/intro_password_on_launch',
+                            arguments: newSeed);
                       }),
                     ],
                   ),

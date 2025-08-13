@@ -1,5 +1,3 @@
-
-
 // Dart imports:
 import 'dart:ui' as ui;
 
@@ -77,7 +75,10 @@ class AppStyles {
         fontFamily: "Roboto",
         fontSize: AppFontSizes._large,
         fontWeight: FontWeight.w700,
-        color: StateContainer.of(context).curTheme.background.withValues(alpha: 0.6));
+        color: StateContainer.of(context)
+            .curTheme
+            .background
+            .withValues(alpha: 0.6));
   }
 
   // Green primary button
@@ -243,8 +244,8 @@ class AppStyles {
         fontSize: AppFontSizes.small,
         fontWeight: FontWeight.w600,
         foreground: Paint()
-          ..shader = ui.Gradient.linear(
-              Offset.zero, Offset(0, 60), [Colors.red[200]!, Colors.red[800]!]));
+          ..shader = ui.Gradient.linear(Offset.zero, Offset(0, 60),
+              [Colors.red[200]!, Colors.red[800]!]));
   }
 
   // Amount

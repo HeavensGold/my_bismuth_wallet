@@ -1,5 +1,3 @@
-
-
 class SimplePriceResponse {
   SimplePriceResponse({
     required this.currency,

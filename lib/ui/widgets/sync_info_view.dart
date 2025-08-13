@@ -1,5 +1,3 @@
-
-
 // Dart imports:
 import 'dart:async';
 
@@ -56,7 +54,7 @@ class _SyncInfoViewState extends State<SyncInfoView> {
 
   void _destroyBus() {
     _connStatusEventSub.cancel();
-    }
+  }
 
   @override
   Widget build(BuildContext context) {

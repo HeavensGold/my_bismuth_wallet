@@ -1,5 +1,3 @@
-
-
 // Dart imports:
 import 'dart:async';
 import 'dart:io';
@@ -43,10 +41,9 @@ class AppService {
       IOWebSocketChannel? _webSocket;
       Socket? _socket;
       if (kIsWeb) {
-        _webSocket = IOWebSocketChannel.connect(
-            serverWalletLegacyResponse.ip +
-                ':' +
-                serverWalletLegacyResponse.port.toString());
+        _webSocket = IOWebSocketChannel.connect(serverWalletLegacyResponse.ip +
+            ':' +
+            serverWalletLegacyResponse.port.toString());
       } else {
         _socket = await Socket.connect(
             serverWalletLegacyResponse.ip, serverWalletLegacyResponse.port,
@@ -97,7 +94,7 @@ class AppService {
               wStatusGetResponseFromJson(message);
             }
           }
-                  }, onError: ((error, StackTrace trace) {
+        }, onError: ((error, StackTrace trace) {
           //print("Error");
         }), onDone: () {
           //print("Done");
@@ -113,7 +110,7 @@ class AppService {
       } else {
         _socket?.write((getLengthBuffer(method) ?? '') + method);
       }
-        } catch (e) {
+    } catch (e) {
       //print("pb socket" + e.toString());
       EventTaxiImpl.singleton().fire(
           ConnStatusEvent(status: ConnectionStatus.DISCONNECTED, server: ""));
@@ -142,7 +139,8 @@ class AppService {
         message += new String.fromCharCodes(data).trim();
         if (message.length >= 10 &&
             int.tryParse(message.substring(0, 10)) != null &&
-            message.length == 10 + (int.tryParse(message.substring(0, 10)) ?? 0)) {
+            message.length ==
+                10 + (int.tryParse(message.substring(0, 10)) ?? 0)) {
           int? parsedLength = int.tryParse(message.substring(0, 10));
           if (parsedLength != null) {
             message = message.substring(10, 10 + parsedLength);
@@ -151,7 +149,7 @@ class AppService {
           //print("fire AliasListEvent");
           EventTaxiImpl.singleton().fire(AliasListEvent(response: alias));
         }
-              }, onError: ((error, StackTrace trace) {
+      }, onError: ((error, StackTrace trace) {
         //print("Error");
       }), onDone: () {
         //print("Done");
@@ -162,9 +160,11 @@ class AppService {
       String method = '"aliasget"';
       String param = '"' + address + '"';
 
-      _socket.write(
-          (getLengthBuffer(method) ?? '') + method + (getLengthBuffer(param) ?? '') + param);
-        } catch (e) {
+      _socket.write((getLengthBuffer(method) ?? '') +
+          method +
+          (getLengthBuffer(param) ?? '') +
+          param);
+    } catch (e) {
       //print("pb socket" + e.toString());
       EventTaxiImpl.singleton().fire(
           ConnStatusEvent(status: ConnectionStatus.DISCONNECTED, server: ""));
@@ -178,13 +178,13 @@ class AppService {
     if (openfield.startsWith("alias=")) {
       fees += 1;
     }
-      if (operation == "token:issue") {
+    if (operation == "token:issue") {
       fees += 10;
     }
     if (operation == "alias:register") {
       fees += 1;
     }
-  
+
     //print("getFeesEstimation: " + fees.toString());
     return fees;
   }
@@ -204,10 +204,9 @@ class AppService {
       IOWebSocketChannel? _webSocket;
       Socket? _socket;
       if (kIsWeb) {
-        _webSocket = IOWebSocketChannel.connect(
-            serverWalletLegacyResponse.ip +
-                ':' +
-                serverWalletLegacyResponse.port.toString());
+        _webSocket = IOWebSocketChannel.connect(serverWalletLegacyResponse.ip +
+            ':' +
+            serverWalletLegacyResponse.port.toString());
       } else {
         _socket = await Socket.connect(
             serverWalletLegacyResponse.ip, serverWalletLegacyResponse.port,
@@ -245,22 +244,30 @@ class AppService {
 
                 List blockChainTxs = [];
                 // Parse blockchain tx if available
-                print("Message length: ${message.length}, mempoolTxListStringEnd: $mempoolTxListStringEnd");
+                print(
+                    "Message length: ${message.length}, mempoolTxListStringEnd: $mempoolTxListStringEnd");
                 if (message.length > mempoolTxListStringEnd) {
                   // Check if we have at least 10 bytes for the blockchain length
                   if (message.length >= mempoolTxListStringEnd + 10) {
-                    String lengthStr = message.substring(mempoolTxListStringEnd,
-                            mempoolTxListStringEnd + 10);
+                    String lengthStr = message.substring(
+                        mempoolTxListStringEnd, mempoolTxListStringEnd + 10);
                     print("Blockchain length string: '$lengthStr'");
                     int? blockchainTxListStringLength = int.tryParse(lengthStr);
-                    print("Parsed blockchain length: $blockchainTxListStringLength");
-                    print("Required message length: ${mempoolTxListStringEnd + 10 + (blockchainTxListStringLength ?? 0)}");
+                    print(
+                        "Parsed blockchain length: $blockchainTxListStringLength");
+                    print(
+                        "Required message length: ${mempoolTxListStringEnd + 10 + (blockchainTxListStringLength ?? 0)}");
                     print("Actual message length: ${message.length}");
-                    
+
                     // Try to read what we have even if it's truncated
-                    if (blockchainTxListStringLength != null && blockchainTxListStringLength > 0) {
-                      int availableLength = message.length - mempoolTxListStringEnd - 10;
-                      int readLength = availableLength < blockchainTxListStringLength ? availableLength : blockchainTxListStringLength;
+                    if (blockchainTxListStringLength != null &&
+                        blockchainTxListStringLength > 0) {
+                      int availableLength =
+                          message.length - mempoolTxListStringEnd - 10;
+                      int readLength =
+                          availableLength < blockchainTxListStringLength
+                              ? availableLength
+                              : blockchainTxListStringLength;
                       if (readLength > 0) {
                         String blockchainTxListString = message.substring(
                             mempoolTxListStringEnd + 10,
@@ -268,10 +275,11 @@ class AppService {
                         print("getAddressTxsResponse (blockchain) : " +
                             blockchainTxListString);
                         try {
-                          blockChainTxs =
-                              addlistlimResponseFromJson(blockchainTxListString);
+                          blockChainTxs = addlistlimResponseFromJson(
+                              blockchainTxListString);
                         } catch (e) {
-                          print("Error parsing blockchain transactions (truncated data): $e");
+                          print(
+                              "Error parsing blockchain transactions (truncated data): $e");
                           // Try to parse what we can from the truncated data
                           // The data might be cut off but still contain valid transactions
                         }
@@ -285,12 +293,17 @@ class AppService {
                 txs.addAll(mempoolTxs);
                 txs.addAll(blockChainTxs);
 
-                print("Total transactions found: mempool=" + mempoolTxs.length.toString() + " blockchain=" + blockChainTxs.length.toString() + " combined=" + txs.length.toString());
+                print("Total transactions found: mempool=" +
+                    mempoolTxs.length.toString() +
+                    " blockchain=" +
+                    blockChainTxs.length.toString() +
+                    " combined=" +
+                    txs.length.toString());
 
                 // Always fire the event, even if empty
                 EventTaxiImpl.singleton()
                     .fire(TransactionsListEvent(response: txs));
-                    
+
                 for (int i = txs.length - 1; i >= 0; i--) {
                   AddressTxsResponseResult addressTxResponse =
                       new AddressTxsResponseResult();
@@ -324,29 +337,35 @@ class AppService {
               String mempoolTxListString =
                   message.substring(10, 10 + mempoolTxListStringLength);
               int mempoolTxListStringEnd = 10 + mempoolTxListStringLength;
-              print(
-                  "getAddressTxsResponse (memPool) : " + mempoolTxListString);
-              List mempoolTxs =
-                  addlistlimResponseFromJson(mempoolTxListString);
+              print("getAddressTxsResponse (memPool) : " + mempoolTxListString);
+              List mempoolTxs = addlistlimResponseFromJson(mempoolTxListString);
 
               List blockChainTxs = [];
               // Parse blockchain tx if available
-              print("Message length: ${message.length}, mempoolTxListStringEnd: $mempoolTxListStringEnd");
+              print(
+                  "Message length: ${message.length}, mempoolTxListStringEnd: $mempoolTxListStringEnd");
               if (message.length > mempoolTxListStringEnd) {
                 // Check if we have at least 10 bytes for the blockchain length
                 if (message.length >= mempoolTxListStringEnd + 10) {
-                  String lengthStr = message.substring(mempoolTxListStringEnd,
-                          mempoolTxListStringEnd + 10);
+                  String lengthStr = message.substring(
+                      mempoolTxListStringEnd, mempoolTxListStringEnd + 10);
                   print("Blockchain length string: '$lengthStr'");
                   int? blockchainTxListStringLength = int.tryParse(lengthStr);
-                  print("Parsed blockchain length: $blockchainTxListStringLength");
-                  print("Required message length: ${mempoolTxListStringEnd + 10 + (blockchainTxListStringLength ?? 0)}");
+                  print(
+                      "Parsed blockchain length: $blockchainTxListStringLength");
+                  print(
+                      "Required message length: ${mempoolTxListStringEnd + 10 + (blockchainTxListStringLength ?? 0)}");
                   print("Actual message length: ${message.length}");
-                  
+
                   // Try to read what we have even if it's truncated
-                  if (blockchainTxListStringLength != null && blockchainTxListStringLength > 0) {
-                    int availableLength = message.length - mempoolTxListStringEnd - 10;
-                    int readLength = availableLength < blockchainTxListStringLength ? availableLength : blockchainTxListStringLength;
+                  if (blockchainTxListStringLength != null &&
+                      blockchainTxListStringLength > 0) {
+                    int availableLength =
+                        message.length - mempoolTxListStringEnd - 10;
+                    int readLength =
+                        availableLength < blockchainTxListStringLength
+                            ? availableLength
+                            : blockchainTxListStringLength;
                     if (readLength > 0) {
                       String blockchainTxListString = message.substring(
                           mempoolTxListStringEnd + 10,
@@ -357,7 +376,8 @@ class AppService {
                         blockChainTxs =
                             addlistlimResponseFromJson(blockchainTxListString);
                       } catch (e) {
-                        print("Error parsing blockchain transactions (truncated data): $e");
+                        print(
+                            "Error parsing blockchain transactions (truncated data): $e");
                         // Try to parse what we can from the truncated data
                         // The data might be cut off but still contain valid transactions
                       }
@@ -371,12 +391,17 @@ class AppService {
               txs.addAll(mempoolTxs);
               txs.addAll(blockChainTxs);
 
-              print("Total transactions found: mempool=" + mempoolTxs.length.toString() + " blockchain=" + blockChainTxs.length.toString() + " combined=" + txs.length.toString());
+              print("Total transactions found: mempool=" +
+                  mempoolTxs.length.toString() +
+                  " blockchain=" +
+                  blockChainTxs.length.toString() +
+                  " combined=" +
+                  txs.length.toString());
 
               // Always fire the event, even if empty
               EventTaxiImpl.singleton()
                   .fire(TransactionsListEvent(response: txs));
-                  
+
               for (int i = txs.length - 1; i >= 0; i--) {
                 AddressTxsResponseResult addressTxResponse =
                     new AddressTxsResponseResult();
@@ -388,7 +413,7 @@ class AppService {
           } else {
             //print("response length ko : " + message.length.toString());
           }
-                  }, onError: ((error, StackTrace trace) {
+        }, onError: ((error, StackTrace trace) {
           //print("Error");
         }), onDone: () {
           //print("Done");
@@ -403,42 +428,43 @@ class AppService {
       String method2 = '"mpgetfor"';
       if (kIsWeb) {
         _webSocket?.sink.add((getLengthBuffer(method2) ?? '') +
-          method2 +
-          (getLengthBuffer(param1) ?? '') +
-          param1 +
-          (getLengthBuffer(method) ?? '') +
-          method +
-          (getLengthBuffer(param1) ?? '') +
-          param1 +
-          (getLengthBuffer(param2) ?? '') +
-          param2);
+            method2 +
+            (getLengthBuffer(param1) ?? '') +
+            param1 +
+            (getLengthBuffer(method) ?? '') +
+            method +
+            (getLengthBuffer(param1) ?? '') +
+            param1 +
+            (getLengthBuffer(param2) ?? '') +
+            param2);
       } else {
         _socket?.write((getLengthBuffer(method2) ?? '') +
-          method2 +
-          (getLengthBuffer(param1) ?? '') +
-          param1 +
-          (getLengthBuffer(method) ?? '') +
-          method +
-          (getLengthBuffer(param1) ?? '') +
-          param1 +
-          (getLengthBuffer(param2) ?? '') +
-          param2);
+            method2 +
+            (getLengthBuffer(param1) ?? '') +
+            param1 +
+            (getLengthBuffer(method) ?? '') +
+            method +
+            (getLengthBuffer(param1) ?? '') +
+            param1 +
+            (getLengthBuffer(param2) ?? '') +
+            param2);
       }
-        } catch (e) {
+    } catch (e) {
       log.e("Transaction history fetch failed: ${e.toString()}");
-      
+
       // Fire connection status event
       EventTaxiImpl.singleton().fire(
           ConnStatusEvent(status: ConnectionStatus.DISCONNECTED, server: ""));
-      
+
       // Fire network error event for user feedback
       EventTaxiImpl.singleton().fire(NetworkErrorEvent(
         errorType: NetworkErrorType.TRANSACTION_HISTORY_FAILED,
-        message: "Failed to load transaction history. Please check your internet connection.",
+        message:
+            "Failed to load transaction history. Please check your internet connection.",
         operation: "Load Transactions",
         canRetry: true,
       ));
-      
+
       // IMPORTANT: Fire empty TransactionsListEvent to clear loading states
       // This prevents the UI from getting stuck in loading state
       EventTaxiImpl.singleton().fire(TransactionsListEvent(response: []));
@@ -462,10 +488,9 @@ class AppService {
       IOWebSocketChannel? _webSocket;
       Socket? _socket;
       if (kIsWeb) {
-        _webSocket = IOWebSocketChannel.connect(
-            serverWalletLegacyResponse.ip +
-                ':' +
-                serverWalletLegacyResponse.port.toString());
+        _webSocket = IOWebSocketChannel.connect(serverWalletLegacyResponse.ip +
+            ':' +
+            serverWalletLegacyResponse.port.toString());
       } else {
         _socket = await Socket.connect(
             serverWalletLegacyResponse.ip, serverWalletLegacyResponse.port,
@@ -526,7 +551,7 @@ class AppService {
                   .fire(BalanceGetEvent(response: balanceGetResponse));
             }
           }
-                  }, onError: ((error, StackTrace trace) {
+        }, onError: ((error, StackTrace trace) {
           //print("Error");
         }), onDone: () {
           //print("Done");
@@ -539,21 +564,28 @@ class AppService {
       String param = '"' + address + '"';
 
       if (kIsWeb) {
-        _webSocket?.sink.add((getLengthBuffer(method) ?? '') + method + (getLengthBuffer(param) ?? '') + param);
+        _webSocket?.sink.add((getLengthBuffer(method) ?? '') +
+            method +
+            (getLengthBuffer(param) ?? '') +
+            param);
       } else {
-        _socket?.write((getLengthBuffer(method) ?? '') + method + (getLengthBuffer(param) ?? '') + param);
+        _socket?.write((getLengthBuffer(method) ?? '') +
+            method +
+            (getLengthBuffer(param) ?? '') +
+            param);
       }
-        } catch (e) {
+    } catch (e) {
       log.e("Balance fetch failed: ${e.toString()}");
-      
+
       // Fire connection status event
       EventTaxiImpl.singleton().fire(
           ConnStatusEvent(status: ConnectionStatus.DISCONNECTED, server: ""));
-      
+
       // Fire network error event for user feedback
       EventTaxiImpl.singleton().fire(NetworkErrorEvent(
         errorType: NetworkErrorType.BALANCE_FETCH_FAILED,
-        message: "Failed to fetch wallet balance. Please check your internet connection.",
+        message:
+            "Failed to fetch wallet balance. Please check your internet connection.",
         operation: "Balance Update",
         canRetry: true,
       ));
@@ -618,17 +650,19 @@ class AppService {
         String message = new String.fromCharCodes(data).trim();
         if (message.length >= 10 &&
             int.tryParse(message.substring(0, 10)) != null &&
-            message.length == 10 + (int.tryParse(message.substring(0, 10)) ?? 0)) {
+            message.length ==
+                10 + (int.tryParse(message.substring(0, 10)) ?? 0)) {
           int? parsedLength = int.tryParse(message.substring(0, 10));
           if (parsedLength != null) {
             message = message.substring(10, 10 + parsedLength);
           }
           //print("Response sendTx : " + message);
           List<String> sendTxResponse = message.split(',');
-          
+
           if (sendTxResponse.length < 4 ||
               sendTxResponse[3].contains("Success") == false) {
-            String errorResponse = sendTxResponse.length > 1 ? sendTxResponse[1] : "Unknown Error";
+            String errorResponse =
+                sendTxResponse.length > 1 ? sendTxResponse[1] : "Unknown Error";
             EventTaxiImpl.singleton()
                 .fire(TransactionSendEvent(response: errorResponse));
           } else {
@@ -636,7 +670,7 @@ class AppService {
                 .fire(TransactionSendEvent(response: "Success"));
           }
         }
-              }, onError: ((error, StackTrace trace) {
+      }, onError: ((error, StackTrace trace) {
         //print("Error");
       }), onDone: () {
         //print("Done");
@@ -674,27 +708,31 @@ class AppService {
 
       String method = '"mpinsert"';
       String param = sendTxRequest.buildCommand();
-      String message =
-          (getLengthBuffer(method) ?? '') + method + (getLengthBuffer(param) ?? '') + param;
+      String message = (getLengthBuffer(method) ?? '') +
+          method +
+          (getLengthBuffer(param) ?? '') +
+          param;
       //print("message: " + message);
       _socket.write(message);
-        } catch (e) {
+    } catch (e) {
       log.e("Send transaction failed: ${e.toString()}");
-      
+
       // Fire connection status event
       EventTaxiImpl.singleton().fire(
           ConnStatusEvent(status: ConnectionStatus.DISCONNECTED, server: ""));
-      
-      // Fire network error event for user feedback  
+
+      // Fire network error event for user feedback
       EventTaxiImpl.singleton().fire(NetworkErrorEvent(
         errorType: NetworkErrorType.SEND_TRANSACTION_FAILED,
-        message: "Failed to send transaction. Please check your internet connection and try again.",
+        message:
+            "Failed to send transaction. Please check your internet connection and try again.",
         operation: "Send Transaction",
         canRetry: true,
       ));
-      
+
       // Also fire transaction send event with error
-      EventTaxiImpl.singleton().fire(TransactionSendEvent(response: "Network Error"));
+      EventTaxiImpl.singleton()
+          .fire(TransactionSendEvent(response: "Network Error"));
     } finally {}
   }
 }

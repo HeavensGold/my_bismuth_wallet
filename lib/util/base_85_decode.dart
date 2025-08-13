@@ -1,5 +1,3 @@
-
-
 // Dart imports:
 import 'dart:typed_data';
 
@@ -14,7 +12,7 @@ class Base85Decode {
     try {
       var codec = Base85Codec(RFC1924, AlgoType.rfc1924);
       return codec.encode(Uint8List.fromList(buffer.codeUnits));
-        } catch (e) {
+    } catch (e) {
       return "";
     }
   }

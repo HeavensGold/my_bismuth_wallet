@@ -1,5 +1,3 @@
-
-
 // Dart imports:
 import 'dart:async';
 
@@ -178,7 +176,7 @@ class AppSeedBackupSheet {
                                     _mnemonicCopied = true;
                                   });
                                   _mnemonicCopiedTimer?.cancel();
-                                                                  _mnemonicCopiedTimer = new Timer(
+                                  _mnemonicCopiedTimer = new Timer(
                                       const Duration(milliseconds: 1000), () {
                                     try {
                                       setState(() {
@@ -210,7 +208,7 @@ class AppSeedBackupSheet {
                                     _seedCopied = true;
                                   });
                                   _seedCopiedTimer?.cancel();
-                                                                  _seedCopiedTimer = new Timer(
+                                  _seedCopiedTimer = new Timer(
                                       const Duration(milliseconds: 1000), () {
                                     setState(() {
                                       _seedCopied = false;

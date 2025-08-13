@@ -1,5 +1,3 @@
-
-
 // Flutter imports:
 import 'package:flutter/material.dart';
 
@@ -33,7 +31,7 @@ class AppDialogs {
               onPressed: () {
                 Navigator.of(context).pop();
                 cancelAction?.call();
-                            },
+              },
             ),
             TextButton(
               child: Container(
@@ -91,7 +89,7 @@ class AnimationLoadingOverlay extends ModalRoute<void> {
   @override
   void didComplete(void result) {
     this.onPoppedCallback?.call();
-      super.didComplete(result);
+    super.didComplete(result);
   }
 
   @override

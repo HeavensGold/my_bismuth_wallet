@@ -26,7 +26,9 @@ import 'package:my_bismuth_wallet/model/db/hiveDB.dart';
 import 'package:my_bismuth_wallet/model/device_lock_timeout.dart';
 import 'package:my_bismuth_wallet/model/device_unlock_option.dart';
 import 'package:my_bismuth_wallet/model/vault.dart';
+import 'package:my_bismuth_wallet/network/model/response/individual_dex_prices_response.dart';
 // import 'package:my_bismuth_wallet/service/dragginator_service.dart'; // Deleted
+import 'package:my_bismuth_wallet/service/http_service.dart';
 import 'package:my_bismuth_wallet/service_locator.dart';
 import 'package:my_bismuth_wallet/styles.dart';
 import 'package:my_bismuth_wallet/util/app_ffi/apputil.dart';
@@ -41,6 +43,7 @@ import 'package:my_bismuth_wallet/ui/settings/custom_url_widget.dart';
 import 'package:my_bismuth_wallet/ui/settings/disable_password_sheet.dart';
 import 'package:my_bismuth_wallet/ui/settings/set_password_sheet.dart';
 import 'package:my_bismuth_wallet/ui/settings/settings_list_item.dart';
+import 'package:my_bismuth_wallet/ui/settings/exchanges_sheet.dart';
 // import 'package:my_bismuth_wallet/ui/settings/tokens_widget.dart'; // Deleted
 import 'package:my_bismuth_wallet/ui/util/ui_util.dart';
 import 'package:my_bismuth_wallet/ui/widgets/app_simpledialog.dart';
@@ -83,6 +86,9 @@ class _SettingsSheetState extends State<SettingsSheet>
 
   late bool _customUrlOpen;
   late bool _contactsOpen;
+  
+  // Price event subscription for auto-refresh
+  StreamSubscription<PriceEvent>? _priceEventSub;
 
   bool notNull(Object o) => o != null;
 
@@ -127,6 +133,15 @@ class _SettingsSheetState extends State<SettingsSheet>
         _curTimeoutSetting = lockTimeout;
       });
     });
+    // Subscribe to price events for auto-refresh
+    _priceEventSub = EventTaxiImpl.singleton().registerTo<PriceEvent>().listen((event) {
+      if (mounted) {
+        setState(() {
+          // Price update will trigger rebuild of _getPriceInfo()
+        });
+      }
+    });
+    
     // For security menu
     _securityController = AnimationController(
       vsync: this,
@@ -162,6 +177,7 @@ class _SettingsSheetState extends State<SettingsSheet>
 
   @override
   void dispose() {
+    _priceEventSub?.cancel();
     _securityController.dispose();
     _customUrlController.dispose();
     _contactsController.dispose();
@@ -911,6 +927,9 @@ class _SettingsSheetState extends State<SettingsSheet>
                       AppLocalization.of(context).bisPrice,
                       _getPriceInfo(context),
                       FontAwesome.money,
+                      onPressed: () {
+                        _showExchangesSheet(context);
+                      },
                     ),
                     Divider(
                       height: 2,
@@ -1457,36 +1476,88 @@ class _SettingsSheetState extends State<SettingsSheet>
   String _getPriceInfo(BuildContext context) {
     final wallet = StateContainer.of(context).wallet;
     final currency = StateContainer.of(context).curCurrency;
+    final selectedDex =
+        StateContainer.of(context).selectedDefaultDex ?? DefaultDex.PANCAKESWAP;
 
-    if (wallet?.rawBtcPrice == null || wallet?.rawLocalCurrencyPrice == null) {
+    if (wallet == null) {
       return "Loading...";
     }
 
+    // Get DEX-specific raw prices (per BIS, not wallet total)
+    String btcPriceStr = "0";
+    String localPriceStr = "0";
+
+    if (wallet.dexPrices != null && wallet.dexPrices![selectedDex] != null) {
+      DexPriceData dexData = wallet.dexPrices![selectedDex]!;
+      if (dexData.isActive) {
+        btcPriceStr = dexData.btcPrice;
+        localPriceStr = dexData.localCurrencyPrice;
+      }
+    } else {
+      // Fallback to aggregated prices
+      btcPriceStr = wallet.rawBtcPrice ?? '0';
+      localPriceStr = wallet.rawLocalCurrencyPrice ?? '0';
+    }
+
     // Parse the prices
-    double btcPrice = double.tryParse(wallet?.rawBtcPrice ?? '0') ?? 0;
-    double localPrice =
-        double.tryParse(wallet?.rawLocalCurrencyPrice ?? '0') ?? 0;
+    double btcPrice = double.tryParse(btcPriceStr) ?? 0;
+    double localPrice = double.tryParse(localPriceStr) ?? 0;
 
     if (btcPrice == 0 && localPrice == 0) {
       return "Price unavailable";
     }
 
     // Format BTC price (show more decimal places for small values)
-    String btcPriceStr = btcPrice < 0.001
+    String formattedBtcPrice = btcPrice < 0.001
         ? btcPrice.toStringAsFixed(8)
         : btcPrice.toStringAsFixed(6);
-    btcPriceStr = btcPriceStr
+    formattedBtcPrice = formattedBtcPrice
         .replaceAll(RegExp(r'0+$'), '')
         .replaceAll(RegExp(r'\.$'), '');
 
     // Format local currency price
-    String localPriceStr = localPrice < 1
+    String formattedLocalPrice = localPrice < 1
         ? localPrice.toStringAsFixed(6)
         : localPrice.toStringAsFixed(2);
-    localPriceStr = localPriceStr
+    formattedLocalPrice = formattedLocalPrice
         .replaceAll(RegExp(r'0+$'), '')
         .replaceAll(RegExp(r'\.$'), '');
 
-    return "$btcPriceStr BTC\n${currency.getCurrencySymbol()}$localPriceStr";
+    // Add source indicator based on selected DEX
+    String source = "";
+    switch (selectedDex) {
+      case DefaultDex.AGGREGATED:
+        source = " (Aggregated)";
+        break;
+      case DefaultDex.UNISWAP_V2:
+        source = " (via Uniswap V2)";
+        break;
+      case DefaultDex.PANCAKESWAP:
+        source = " (via PancakeSwap)";
+        break;
+    }
+
+    return "$formattedBtcPrice BTC\n${currency.getCurrencySymbol()}$formattedLocalPrice$source";
+  }
+
+  void _showExchangesSheet(BuildContext context) async {
+    // Fetch individual DEX prices if not available
+    try {
+      final httpService = sl.get<HttpService>();
+      final currency = StateContainer.of(context).curCurrency;
+      final dexPricesResponse =
+          await httpService.getIndividualDexPrices(currency.getIso4217Code());
+
+      // Update wallet with DEX prices
+      StateContainer.of(context)
+          .wallet
+          ?.updateDexPrices(dexPricesResponse.dexPrices);
+
+      AppExchangesSheet(dexPricesResponse.dexPrices).mainBottomSheet(context);
+    } catch (e) {
+      print('Error fetching DEX prices: $e');
+      // Fallback to show sheet without DEX prices
+      AppExchangesSheet(null).mainBottomSheet(context);
+    }
   }
 }

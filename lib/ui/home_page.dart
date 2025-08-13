@@ -1,5 +1,3 @@
-
-
 // Dart imports:
 import 'dart:async';
 
@@ -13,7 +11,7 @@ import 'package:auto_size_text/auto_size_text.dart';
 import 'package:event_taxi/event_taxi.dart';
 import 'package:hex/hex.dart';
 // import 'package:flare_flutter/base/animation/actor_animation.dart'; // Removed - deprecated
-// import 'package:flare_flutter/flare.dart'; // Removed - deprecated  
+// import 'package:flare_flutter/flare.dart'; // Removed - deprecated
 // import 'package:flare_flutter/flare_actor.dart'; // Removed - deprecated
 // import 'package:flare_flutter/flare_controller.dart'; // Removed - deprecated
 import 'package:fluttericon/font_awesome5_icons.dart';
@@ -44,6 +42,7 @@ import 'package:my_bismuth_wallet/ui/popup_button.dart';
 import 'package:my_bismuth_wallet/ui/receive/receive_sheet.dart';
 import 'package:my_bismuth_wallet/ui/send/send_sheet.dart';
 import 'package:my_bismuth_wallet/ui/settings/settings_drawer.dart';
+import 'package:my_bismuth_wallet/ui/settings/exchanges_sheet.dart';
 // import 'package:my_bismuth_wallet/ui/tokens/my_tokens_list.dart'; // Commented out - file deleted
 import 'package:my_bismuth_wallet/ui/util/routes.dart';
 import 'package:my_bismuth_wallet/ui/util/ui_util.dart';
@@ -69,9 +68,7 @@ class AppHomePage extends StatefulWidget {
 }
 
 class _AppHomePageState extends State<AppHomePage>
-    with
-        WidgetsBindingObserver,
-        SingleTickerProviderStateMixin {
+    with WidgetsBindingObserver, SingleTickerProviderStateMixin {
   final GlobalKey<ScaffoldState> _scaffoldKey = new GlobalKey<ScaffoldState>();
   final Logger log = sl.get<Logger>();
 
@@ -98,10 +95,11 @@ class _AppHomePageState extends State<AppHomePage>
   late PriceConversion _priceConversion;
 
   bool _isRefreshing = false;
-  int _historyVersion = 0; // bump to force list rebuild when content changes without length change
+  int _historyVersion =
+      0; // bump to force list rebuild when content changes without length change
 
   bool _lockDisabled = false; // whether we should avoid locking the app
-  
+
   Timer? _updateTimer; // Timer for periodic updates
   DateTime? _lastBackPressed; // Track back button presses for double-tap exit
 
@@ -113,7 +111,7 @@ class _AppHomePageState extends State<AppHomePage>
 
   // Simplified animation methods (flare_flutter removed)
   // void initialize(FlutterActorArtboard actor) - removed
-  // void setViewTransform(Mat2D viewTransform) - removed  
+  // void setViewTransform(Mat2D viewTransform) - removed
   // bool advance(FlutterActorArtboard artboard, double elapsed) - removed
 
   _checkVersionApp() async {
@@ -140,12 +138,12 @@ class _AppHomePageState extends State<AppHomePage>
     _getEggPrice();
     _registerBus();
     _startPeriodicUpdates();
-    
+
     // Initialize receive sheet
     receive = ReceiveSheet();
     WidgetsBinding.instance.addObserver(this);
     _priceConversion = widget.priceConversion ?? PriceConversion.BTC;
-    
+
     // Generate initial QR code after frame is rendered
     // This fixes the issue where QR code is not generated on first app launch
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -153,7 +151,7 @@ class _AppHomePageState extends State<AppHomePage>
         paintQrCode(address: StateContainer.of(context).wallet!.address!);
       }
     });
-      // Main Card Size
+    // Main Card Size
     if (_priceConversion == PriceConversion.BTC) {
       mainCardHeight = 120;
       settingsIconMarginTop = 7;
@@ -228,9 +226,8 @@ class _AppHomePageState extends State<AppHomePage>
     bool contactAdded = await sl.get<SharedPrefsUtil>().getFirstContactAdded();
     if (!contactAdded && StateContainer.of(context).wallet?.address != null) {
       String mainAddress = StateContainer.of(context).wallet!.address!;
-      bool addressExists = await sl
-          .get<DBHelper>()
-          .contactExistsWithAddress(mainAddress);
+      bool addressExists =
+          await sl.get<DBHelper>().contactExistsWithAddress(mainAddress);
       if (addressExists) {
         return;
       }
@@ -275,7 +272,9 @@ class _AppHomePageState extends State<AppHomePage>
         // The transaction history data is already updated in StateContainer
         // This setState ensures the UI reflects the changes
       });
-      print("HistoryHomeEvent received - UI refreshed with " + (event.items?.length ?? 0).toString() + " transactions");
+      print("HistoryHomeEvent received - UI refreshed with " +
+          (event.items?.length ?? 0).toString() +
+          " transactions");
       // TODO: Fix deep link handling
       // if (StateContainer.of(context).initialDeepLink != null) {
       //   handleDeepLink(StateContainer.of(context).initialDeepLink);
@@ -305,9 +304,9 @@ class _AppHomePageState extends State<AppHomePage>
         StateContainer.of(context).wallet?.historyLoading = true;
 
         _startAnimation();
-          StateContainer.of(context).updateWallet(account: event.account!);
+        StateContainer.of(context).updateWallet(account: event.account!);
 
-          // Do not immediately flip loading flags here; let StateContainer manage them after data loads
+        // Do not immediately flip loading flags here; let StateContainer manage them after data loads
       });
       paintQrCode(address: event.account?.address ?? '');
       if (event.delayPop) {
@@ -318,18 +317,17 @@ class _AppHomePageState extends State<AppHomePage>
         Navigator.of(context).popUntil(RouteUtils.withNameLike("/home"));
       }
     });
-    
+
     // Network error handling
     _networkErrorSub = EventTaxiImpl.singleton()
         .registerTo<NetworkErrorEvent>()
         .listen((event) {
       _showNetworkError(event);
     });
-    
+
     // Balance updates
-    _balanceGetSub = EventTaxiImpl.singleton()
-        .registerTo<BalanceGetEvent>()
-        .listen((event) {
+    _balanceGetSub =
+        EventTaxiImpl.singleton().registerTo<BalanceGetEvent>().listen((event) {
       if (mounted && event.response != null) {
         setState(() {
           if (StateContainer.of(context).wallet != null) {
@@ -342,7 +340,7 @@ class _AppHomePageState extends State<AppHomePage>
         });
       }
     });
-    
+
     // Transaction updates - Legacy handler removed to prevent conflicts with sophisticated handler in appstate_container.dart
     // The sophisticated handler preserves unconfirmed transactions properly
   }
@@ -359,13 +357,13 @@ class _AppHomePageState extends State<AppHomePage>
 
   void _destroyBus() {
     _historySub.cancel();
-      _contactModifiedSub.cancel();
-      _disableLockSub.cancel();
-      _switchAccountSub.cancel();
-      _networkErrorSub.cancel();
-      _balanceGetSub.cancel();
-      // _transactionsListSub.cancel(); // removed - no longer using this subscription
-    }
+    _contactModifiedSub.cancel();
+    _disableLockSub.cancel();
+    _switchAccountSub.cancel();
+    _networkErrorSub.cancel();
+    _balanceGetSub.cancel();
+    // _transactionsListSub.cancel(); // removed - no longer using this subscription
+  }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
@@ -382,12 +380,12 @@ class _AppHomePageState extends State<AppHomePage>
         ScaffoldMessenger.of(context).clearSnackBars();
         // Reset error flag
         _isShowingNetworkError = false;
-        
+
         // Check if we need to re-authenticate in password mode
         // Check if encryptedSecret is null OR if it's invalid/corrupted
         sl.get<Vault>().getSeed().then((vaultSeed) async {
           bool needsReauth = false;
-          
+
           if (AppUtil.isSeedEncrypted(vaultSeed)) {
             // In password mode, validate that encryptedSecret works
             if (StateContainer.of(context).encryptedSecret == null) {
@@ -398,11 +396,12 @@ class _AppHomePageState extends State<AppHomePage>
                 await StateContainer.of(context).getSeed();
               } catch (e) {
                 // Decryption failed, encryptedSecret is corrupted
-                log.w("encryptedSecret validation failed after resume: ${e.toString()}");
+                log.w(
+                    "encryptedSecret validation failed after resume: ${e.toString()}");
                 needsReauth = true;
               }
             }
-            
+
             if (needsReauth) {
               // Navigate to password lock screen
               Navigator.of(context).pushNamedAndRemoveUntil(
@@ -414,19 +413,18 @@ class _AppHomePageState extends State<AppHomePage>
               String sessionKey = await sl.get<Vault>().getSessionKey();
               if (sessionKey.isNotEmpty) {
                 StateContainer.of(context).setEncryptedSecret(
-                    HEX.encode(AppCrypt.encrypt(vaultSeed, sessionKey))
-                );
+                    HEX.encode(AppCrypt.encrypt(vaultSeed, sessionKey)));
               }
             }
           }
         });
-        
+
         // Don't refresh if already loading to prevent duplicate requests
         if (!(StateContainer.of(context).wallet?.loading ?? false)) {
           // Add a longer delay for Android to stabilize network connections
           // Especially important for Android 15+ with aggressive power management
           Future.delayed(Duration(milliseconds: 1500), () {
-            if (mounted && 
+            if (mounted &&
                 StateContainer.of(context).wallet != null &&
                 !(StateContainer.of(context).wallet?.loading ?? false)) {
               // Trigger a refresh to update data
@@ -434,9 +432,8 @@ class _AppHomePageState extends State<AppHomePage>
             }
           });
         }
-        
-        if (!(StateContainer.of(context).wallet?.loading ?? false) &&
-            false) {
+
+        if (!(StateContainer.of(context).wallet?.loading ?? false) && false) {
           // TODO: Fix deep link handling
           // handleDeepLink(StateContainer.of(context).initialDeepLink);
         }
@@ -456,7 +453,7 @@ class _AppHomePageState extends State<AppHomePage>
             StateContainer.of(context).encryptedSecret != null) &&
         !_lockDisabled) {
       lockStreamListener?.cancel();
-          Future<dynamic> delayed = new Future.delayed(
+      Future<dynamic> delayed = new Future.delayed(
           (await sl.get<SharedPrefsUtil>().getLockTimeout()).getDuration());
       delayed.then((_) {
         return true;
@@ -477,55 +474,60 @@ class _AppHomePageState extends State<AppHomePage>
 
   Future<void> cancelLockEvent() async {
     lockStreamListener?.cancel();
-    }
+  }
 
   // Track if we're already showing a network error to prevent duplicates
   bool _isShowingNetworkError = false;
-  
+
   // Show user-friendly network error messages with retry option
   void _showNetworkError(NetworkErrorEvent event) {
     if (!mounted) return;
-    
+
     // Prevent duplicate error messages
     if (_isShowingNetworkError) return;
     _isShowingNetworkError = true;
-    
+
     // Clear any existing snackbars first
     ScaffoldMessenger.of(context).clearSnackBars();
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            Icon(Icons.error_outline, color: Colors.white),
-            SizedBox(width: 8),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    event.operation ?? "Network Error",
-                    style: TextStyle(fontWeight: FontWeight.bold),
+
+    ScaffoldMessenger.of(context)
+        .showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.error_outline, color: Colors.white),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        event.operation ?? "Network Error",
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      Text(event.message ?? "Network connection failed"),
+                    ],
                   ),
-                  Text(event.message ?? "Network connection failed"),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
-        ),
-        backgroundColor: Colors.red.shade600,
-        duration: Duration(seconds: event.canRetry ? 6 : 4),
-        action: event.canRetry ? SnackBarAction(
-          label: "Retry",
-          textColor: Colors.white,
-          onPressed: () {
-            _isShowingNetworkError = false;
-            _retryNetworkOperation(event.errorType);
-          },
-        ) : null,
-      ),
-    ).closed.then((_) {
+            backgroundColor: Colors.red.shade600,
+            duration: Duration(seconds: event.canRetry ? 6 : 4),
+            action: event.canRetry
+                ? SnackBarAction(
+                    label: "Retry",
+                    textColor: Colors.white,
+                    onPressed: () {
+                      _isShowingNetworkError = false;
+                      _retryNetworkOperation(event.errorType);
+                    },
+                  )
+                : null,
+          ),
+        )
+        .closed
+        .then((_) {
       // Reset flag when snackbar is dismissed
       _isShowingNetworkError = false;
     });
@@ -537,16 +539,12 @@ class _AppHomePageState extends State<AppHomePage>
       case NetworkErrorType.BALANCE_FETCH_FAILED:
         // Retry balance fetch
         sl.get<AppService>().getBalanceGetResponse(
-          StateContainer.of(context).selectedAccount.address ?? '', 
-          true
-        );
+            StateContainer.of(context).selectedAccount.address ?? '', true);
         break;
       case NetworkErrorType.TRANSACTION_HISTORY_FAILED:
         // Retry transaction history
         sl.get<AppService>().getAddressTxsResponse(
-          StateContainer.of(context).selectedAccount.address ?? '', 
-          100
-        );
+            StateContainer.of(context).selectedAccount.address ?? '', 100);
         break;
       case NetworkErrorType.SEND_TRANSACTION_FAILED:
         ScaffoldMessenger.of(context).showSnackBar(
@@ -559,9 +557,7 @@ class _AppHomePageState extends State<AppHomePage>
       default:
         // Generic retry - refresh the wallet state
         sl.get<AppService>().getBalanceGetResponse(
-          StateContainer.of(context).selectedAccount.address ?? '', 
-          true
-        );
+            StateContainer.of(context).selectedAccount.address ?? '', true);
         break;
     }
   }
@@ -572,10 +568,18 @@ class _AppHomePageState extends State<AppHomePage>
     // Reverse the index to show newest transactions first
     int totalItems = StateContainer.of(context).wallet?.history.length ?? 0;
     int reversedIndex = totalItems - 1 - index;
-    
+
     String displayName = smallScreen(context)
-        ? StateContainer.of(context).wallet?.history[reversedIndex].getShorterString() ?? ""
-        : StateContainer.of(context).wallet?.history[reversedIndex].getShortString() ?? "";
+        ? StateContainer.of(context)
+                .wallet
+                ?.history[reversedIndex]
+                .getShorterString() ??
+            ""
+        : StateContainer.of(context)
+                .wallet
+                ?.history[reversedIndex]
+                .getShortString() ??
+            "";
     _contacts.forEach((contact) {
       if (StateContainer.of(context).wallet?.history[reversedIndex].type ==
           BlockTypes.RECEIVE) {
@@ -585,13 +589,17 @@ class _AppHomePageState extends State<AppHomePage>
         }
       } else {
         if (contact.address ==
-            StateContainer.of(context).wallet?.history[reversedIndex].recipient) {
+            StateContainer.of(context)
+                .wallet
+                ?.history[reversedIndex]
+                .recipient) {
           displayName = contact.name ?? "";
         }
       }
     });
     return _buildTransactionCard(
-        StateContainer.of(context).wallet?.history[reversedIndex] ?? AddressTxsResponseResult(),
+        StateContainer.of(context).wallet?.history[reversedIndex] ??
+            AddressTxsResponseResult(),
         animation,
         displayName,
         context);
@@ -661,9 +669,16 @@ class _AppHomePageState extends State<AppHomePage>
     return ReactiveRefreshIndicator(
       backgroundColor: StateContainer.of(context).curTheme.backgroundDark,
       child: AnimatedList(
-        key: ValueKey((StateContainer.of(context).wallet?.address ?? "unknown") + "_" + (StateContainer.of(context).wallet?.history.length ?? 0).toString() + "_" + _historyVersion.toString()),
+        key: ValueKey(
+            (StateContainer.of(context).wallet?.address ?? "unknown") +
+                "_" +
+                (StateContainer.of(context).wallet?.history.length ?? 0)
+                    .toString() +
+                "_" +
+                _historyVersion.toString()),
         padding: EdgeInsetsDirectional.fromSTEB(0, 5.0, 0, 15.0),
-        initialItemCount: StateContainer.of(context).wallet?.history.length ?? 0,
+        initialItemCount:
+            StateContainer.of(context).wallet?.history.length ?? 0,
         itemBuilder: _buildItem,
       ),
       onRefresh: _refresh,
@@ -675,14 +690,14 @@ class _AppHomePageState extends State<AppHomePage>
   void _startPeriodicUpdates() {
     // Cancel existing timer if any
     _updateTimer?.cancel();
-    
+
     // Start new timer for periodic updates
     _updateTimer = Timer.periodic(Duration(seconds: 30), (timer) {
       if (mounted && StateContainer.of(context).wallet?.address != null) {
         StateContainer.of(context).requestUpdate();
       }
     });
-    
+
     // Also request an initial update
     Future.delayed(Duration(seconds: 2), () {
       if (mounted) {
@@ -736,16 +751,16 @@ class _AppHomePageState extends State<AppHomePage>
   }
 
   void paintQrCode({required String address}) {
-    final qrData = address.isEmpty 
-        ? StateContainer.of(context).wallet?.address ?? "" 
+    final qrData = address.isEmpty
+        ? StateContainer.of(context).wallet?.address ?? ""
         : address;
-    
+
     // Validate QR data
     if (qrData.isEmpty) {
       print('Warning: Empty QR data');
       return;
     }
-    
+
     try {
       QrPainter painter = QrPainter(
         data: qrData,
@@ -753,17 +768,19 @@ class _AppHomePageState extends State<AppHomePage>
         gapless: false,
         errorCorrectionLevel: QrErrorCorrectLevel.Q,
       );
-      
+
       // Use a fixed size for consistency
       final double imageSize = 800.0;
-      
-      painter.toImageData(imageSize, format: ui.ImageByteFormat.png).then((byteData) {
+
+      painter
+          .toImageData(imageSize, format: ui.ImageByteFormat.png)
+          .then((byteData) {
         if (!mounted) return;
-        
+
         if (byteData != null && byteData.buffer.asUint8List().length > 100) {
           // Check if the image data looks valid (should be larger than 100 bytes for a QR code)
           final imageBytes = byteData.buffer.asUint8List();
-          
+
           setState(() {
             receive = ReceiveSheet(
               qrWidget: Container(
@@ -776,7 +793,8 @@ class _AppHomePageState extends State<AppHomePage>
             );
           });
         } else {
-          print('QR generation produced invalid data (size: ${byteData?.buffer.asUint8List().length ?? 0})');
+          print(
+              'QR generation produced invalid data (size: ${byteData?.buffer.asUint8List().length ?? 0})');
           // Fallback to QrImageView
           setState(() {
             receive = ReceiveSheet(
@@ -815,7 +833,7 @@ class _AppHomePageState extends State<AppHomePage>
       });
     } catch (e) {
       print('Exception in QR generation: $e');
-      // Fallback to QrImageView  
+      // Fallback to QrImageView
       if (mounted) {
         setState(() {
           receive = ReceiveSheet(
@@ -838,11 +856,12 @@ class _AppHomePageState extends State<AppHomePage>
   void _handleBackButton() {
     final now = DateTime.now();
     const exitDuration = Duration(seconds: 2);
-    
-    if (_lastBackPressed == null || now.difference(_lastBackPressed!) > exitDuration) {
+
+    if (_lastBackPressed == null ||
+        now.difference(_lastBackPressed!) > exitDuration) {
       // First back press or too much time has passed - show warning
       _lastBackPressed = now;
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Press back again to exit'),
@@ -864,7 +883,8 @@ class _AppHomePageState extends State<AppHomePage>
         : null;
 
     return PopScope(
-      canPop: false, // Prevent accidental exits, but allow intentional double-tap
+      canPop:
+          false, // Prevent accidental exits, but allow intentional double-tap
       onPopInvokedWithResult: (didPop, result) {
         _handleBackButton();
       },
@@ -884,145 +904,148 @@ class _AppHomePageState extends State<AppHomePage>
               top: MediaQuery.of(context).size.height * 0.045,
               bottom: MediaQuery.of(context).size.height * 0.035),
           child: Column(
-          children: <Widget>[
-            Expanded(
-              child: Stack(
-                alignment: Alignment.bottomCenter,
-                children: <Widget>[
-                  //Everything else
-                  Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: <Widget>[
-                      //Main Card
-                      _buildMainCard(context, _scaffoldKey),
-                      //Main Card End
+            children: <Widget>[
+              Expanded(
+                child: Stack(
+                  alignment: Alignment.bottomCenter,
+                  children: <Widget>[
+                    //Everything else
+                    Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: <Widget>[
+                        //Main Card
+                        _buildMainCard(context, _scaffoldKey),
+                        //Main Card End
 
-                      //Transactions Text
-                      Container(
-                        margin: EdgeInsetsDirectional.fromSTEB(
-                            30.0, 20.0, 26.0, 0.0),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: <Widget>[
-                            Text(
-                              CaseChange.toUpperCase(
-                                  AppLocalization.of(context).transactions,
-                                  context),
-                              textAlign: TextAlign.start,
-                              style: TextStyle(
-                                fontSize: 14.0,
-                                fontWeight: FontWeight.w100,
-                                color: StateContainer.of(context).curTheme.text,
-                              ),
-                            ),
-                            SyncInfoView(),
-                          ],
-                        ),
-                      ), //Transactions Text End
-
-                      //Transactions List
-                      Expanded(
-                        child: Stack(
-                          children: <Widget>[
-                            _getListWidget(context),
-                            //List Top Gradient End
-                            Align(
-                              alignment: Alignment.topCenter,
-                              child: Container(
-                                height: 10.0,
-                                width: double.infinity,
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    colors: [
-                                      StateContainer.of(context)
-                                          .curTheme
-                                          .background00,
-                                      StateContainer.of(context)
-                                          .curTheme
-                                          .background
-                                    ],
-                                    begin: AlignmentDirectional(0.5, 1.0),
-                                    end: AlignmentDirectional(0.5, -1.0),
-                                  ),
+                        //Transactions Text
+                        Container(
+                          margin: EdgeInsetsDirectional.fromSTEB(
+                              30.0, 20.0, 26.0, 0.0),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: <Widget>[
+                              Text(
+                                CaseChange.toUpperCase(
+                                    AppLocalization.of(context).transactions,
+                                    context),
+                                textAlign: TextAlign.start,
+                                style: TextStyle(
+                                  fontSize: 14.0,
+                                  fontWeight: FontWeight.w100,
+                                  color:
+                                      StateContainer.of(context).curTheme.text,
                                 ),
                               ),
-                            ), // List Top Gradient End
-
-                            //List Bottom Gradient
-                            Align(
-                              alignment: Alignment.bottomCenter,
-                              child: Container(
-                                height: 30.0,
-                                width: double.infinity,
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    colors: [
-                                      StateContainer.of(context)
-                                          .curTheme
-                                          .background00,
-                                      StateContainer.of(context)
-                                          .curTheme
-                                          .background
-                                    ],
-                                    begin: AlignmentDirectional(0.5, -1),
-                                    end: AlignmentDirectional(0.5, 0.5),
-                                  ),
-                                ),
-                              ),
-                            ), //List Bottom Gradient End
-                          ],
-                        ),
-                      ), //Transactions List End
-                      //Buttons background
-                      SizedBox(
-                        height: 55,
-                        width: MediaQuery.of(context).size.width,
-                      ), //Buttons background
-                    ],
-                  ),
-                  // Buttons
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: <Widget>[
-                      Container(
-                        decoration: BoxDecoration(
-                          color: StateContainer.of(context).curTheme.primary,
-                          borderRadius: BorderRadius.circular(100),
-                          boxShadow: [
-                            StateContainer.of(context).curTheme.boxShadowButton
-                          ],
-                        ),
-                        height: 55,
-                        width: (MediaQuery.of(context).size.width - 18) / 3,
-                        margin: EdgeInsetsDirectional.only(
-                            start: 14, top: 0.0, end: 7.0),
-                        child: TextButton(
-                          child: AutoSizeText(
-                            AppLocalization.of(context).receive,
-                            textAlign: TextAlign.center,
-                            style: receive != null
-                                ? AppStyles.textStyleButtonPrimary(context)
-                                : AppStyles.textStyleButtonPrimary60(context),
-                            maxLines: 1,
-                            stepGranularity: 0.5,
+                              SyncInfoView(),
+                            ],
                           ),
-                          onPressed: () {
-                            Sheets.showAppHeightEightSheet(
-                                context: context, widget: receive);
-                          },
+                        ), //Transactions Text End
+
+                        //Transactions List
+                        Expanded(
+                          child: Stack(
+                            children: <Widget>[
+                              _getListWidget(context),
+                              //List Top Gradient End
+                              Align(
+                                alignment: Alignment.topCenter,
+                                child: Container(
+                                  height: 10.0,
+                                  width: double.infinity,
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: [
+                                        StateContainer.of(context)
+                                            .curTheme
+                                            .background00,
+                                        StateContainer.of(context)
+                                            .curTheme
+                                            .background
+                                      ],
+                                      begin: AlignmentDirectional(0.5, 1.0),
+                                      end: AlignmentDirectional(0.5, -1.0),
+                                    ),
+                                  ),
+                                ),
+                              ), // List Top Gradient End
+
+                              //List Bottom Gradient
+                              Align(
+                                alignment: Alignment.bottomCenter,
+                                child: Container(
+                                  height: 30.0,
+                                  width: double.infinity,
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: [
+                                        StateContainer.of(context)
+                                            .curTheme
+                                            .background00,
+                                        StateContainer.of(context)
+                                            .curTheme
+                                            .background
+                                      ],
+                                      begin: AlignmentDirectional(0.5, -1),
+                                      end: AlignmentDirectional(0.5, 0.5),
+                                    ),
+                                  ),
+                                ),
+                              ), //List Bottom Gradient End
+                            ],
+                          ),
+                        ), //Transactions List End
+                        //Buttons background
+                        SizedBox(
+                          height: 55,
+                          width: MediaQuery.of(context).size.width,
+                        ), //Buttons background
+                      ],
+                    ),
+                    // Buttons
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: <Widget>[
+                        Container(
+                          decoration: BoxDecoration(
+                            color: StateContainer.of(context).curTheme.primary,
+                            borderRadius: BorderRadius.circular(100),
+                            boxShadow: [
+                              StateContainer.of(context)
+                                  .curTheme
+                                  .boxShadowButton
+                            ],
+                          ),
+                          height: 55,
+                          width: (MediaQuery.of(context).size.width - 18) / 3,
+                          margin: EdgeInsetsDirectional.only(
+                              start: 14, top: 0.0, end: 7.0),
+                          child: TextButton(
+                            child: AutoSizeText(
+                              AppLocalization.of(context).receive,
+                              textAlign: TextAlign.center,
+                              style: receive != null
+                                  ? AppStyles.textStyleButtonPrimary(context)
+                                  : AppStyles.textStyleButtonPrimary60(context),
+                              maxLines: 1,
+                              stepGranularity: 0.5,
+                            ),
+                            onPressed: () {
+                              Sheets.showAppHeightEightSheet(
+                                  context: context, widget: receive);
+                            },
+                          ),
                         ),
-                      ),
-                      Expanded(child: Container()),
-                      AppPopupButton(),
-                    ],
-                  ),
-                ],
-              ), // Close Stack
-            ), // Close Expanded  
-          ], // Close Column children
-        ), // Close Column (SafeArea child)
-      ), // Close SafeArea
-        ), // Close Scaffold
+                        Expanded(child: Container()),
+                        AppPopupButton(),
+                      ],
+                    ),
+                  ],
+                ), // Close Stack
+              ), // Close Expanded
+            ], // Close Column children
+          ), // Close Column (SafeArea child)
+        ), // Close SafeArea
+      ), // Close Scaffold
     ); // Close PopScope
   }
 
@@ -1065,7 +1088,10 @@ class _AppHomePageState extends State<AppHomePage>
           });
         } else {
           // See if a contact
-          sl.get<DBHelper>().getContactWithAddress(item.from ?? '').then((contact) {
+          sl
+              .get<DBHelper>()
+              .getContactWithAddress(item.from ?? '')
+              .then((contact) {
             // Go to send with address
             Sheets.showAppHeightNineSheet(
                 context: context,
@@ -1102,16 +1128,19 @@ class _AppHomePageState extends State<AppHomePage>
               alignment: AlignmentDirectional(-0.5, 0),
               constraints: BoxConstraints.expand(),
               child: Container(
-                  decoration: BoxDecoration(
-                    color: StateContainer.of(context).curTheme.primary.withValues(alpha: 0.3),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(
-                    Icons.swipe,
-                    color: StateContainer.of(context).curTheme.primary,
-                    size: 24,
-                  ),
+                decoration: BoxDecoration(
+                  color: StateContainer.of(context)
+                      .curTheme
+                      .primary
+                      .withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(8),
                 ),
+                child: Icon(
+                  Icons.swipe,
+                  color: StateContainer.of(context).curTheme.primary,
+                  size: 24,
+                ),
+              ),
             ),
           ),
         ),
@@ -1131,7 +1160,8 @@ class _AppHomePageState extends State<AppHomePage>
                   context: context,
                   widget: TransactionDetailsSheet(
                       item: item,
-                      address: (item.type == BlockTypes.SEND || item.type == BlockTypes.UNCONFIRMED)
+                      address: (item.type == BlockTypes.SEND ||
+                              item.type == BlockTypes.UNCONFIRMED)
                           ? item.recipient
                           : item.from,
                       displayName: displayName),
@@ -1192,8 +1222,9 @@ class _AppHomePageState extends State<AppHomePage>
                               crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
                                 (double.tryParse(item
-                                            .getFormattedAmount()
-                                            .replaceAll(",", "")) ?? 0) >
+                                                .getFormattedAmount()
+                                                .replaceAll(",", "")) ??
+                                            0) >
                                         0
                                     ? Container(
                                         child: RichText(
@@ -1207,13 +1238,21 @@ class _AppHomePageState extends State<AppHomePage>
                                                     ? "- " +
                                                         item
                                                             .getFormattedAmount() +
-                                                        ( (item.blockHeight == -1)
-                                                          ? " BIS (pending)"
-                                                          : " BIS")
-                                                    : (item.type ==
-                                                                BlockTypes.UNCONFIRMED ||
-                                                            item.blockHeight == -1)
-                                                        ? (item.recipient == StateContainer.of(context).selectedAccount.address
+                                                        ((item.blockHeight ==
+                                                                -1)
+                                                            ? " BIS (pending)"
+                                                            : " BIS")
+                                                    : (item
+                                                                    .type ==
+                                                                BlockTypes
+                                                                    .UNCONFIRMED ||
+                                                            item.blockHeight ==
+                                                                -1)
+                                                        ? (item.recipient ==
+                                                                StateContainer.of(
+                                                                        context)
+                                                                    .selectedAccount
+                                                                    .address
                                                             ? "+ " +
                                                                 item
                                                                     .getFormattedAmount() +
@@ -1227,28 +1266,26 @@ class _AppHomePageState extends State<AppHomePage>
                                                             " BIS",
                                                 style: item.type ==
                                                         BlockTypes.SEND
-                                                    ? AppStyles
-                                                        .textStyleTransactionTypeRed(
-                                                            context)
+                                                    ? AppStyles.textStyleTransactionTypeRed(
+                                                        context)
                                                     : (item.type ==
-                                                                BlockTypes.UNCONFIRMED ||
-                                                            item.blockHeight == -1)
-                                                        ? (item.recipient == StateContainer.of(context).selectedAccount.address
-                                                            ? AppStyles
-                                                                .textStyleTransactionTypeGreen(
-                                                                    context)
+                                                                BlockTypes
+                                                                    .UNCONFIRMED ||
+                                                            item.blockHeight ==
+                                                                -1)
+                                                        ? (item.recipient ==
+                                                                StateContainer.of(context)
+                                                                    .selectedAccount
+                                                                    .address
+                                                            ? AppStyles.textStyleTransactionTypeGreen(context)
                                                                 .copyWith(
                                                                     color: Colors
                                                                         .orange)
-                                                            : AppStyles
-                                                                .textStyleTransactionTypeRed(
-                                                                    context)
+                                                            : AppStyles.textStyleTransactionTypeRed(context)
                                                                 .copyWith(
                                                                     color: Colors
                                                                         .orange))
-                                                        : AppStyles
-                                                            .textStyleTransactionTypeGreen(
-                                                                context),
+                                                        : AppStyles.textStyleTransactionTypeGreen(context),
                                               ),
                                             ],
                                           ),
@@ -1272,12 +1309,18 @@ class _AppHomePageState extends State<AppHomePage>
                                                             .toString() +
                                                         " " +
                                                         (item
-                                                            .getBisToken()
-                                                            .tokenName ?? '') +
-                                                        ( (item.blockHeight == -1)
-                                                          ? " (pending)"
-                                                          : "")
-                                                    : (item.type == BlockTypes.UNCONFIRMED || item.blockHeight == -1)
+                                                                .getBisToken()
+                                                                .tokenName ??
+                                                            '') +
+                                                        ((item.blockHeight ==
+                                                                -1)
+                                                            ? " (pending)"
+                                                            : "")
+                                                    : (item.type ==
+                                                                BlockTypes
+                                                                    .UNCONFIRMED ||
+                                                            item.blockHeight ==
+                                                                -1)
                                                         ? "- " +
                                                             item
                                                                 .getBisToken()
@@ -1285,8 +1328,9 @@ class _AppHomePageState extends State<AppHomePage>
                                                                 .toString() +
                                                             " " +
                                                             (item
-                                                                .getBisToken()
-                                                                .tokenName ?? '') +
+                                                                    .getBisToken()
+                                                                    .tokenName ??
+                                                                '') +
                                                             " (pending)"
                                                         : "+ " +
                                                             item
@@ -1295,17 +1339,22 @@ class _AppHomePageState extends State<AppHomePage>
                                                                 .toString() +
                                                             " " +
                                                             (item
-                                                                .getBisToken()
-                                                                .tokenName ?? ''),
+                                                                    .getBisToken()
+                                                                    .tokenName ??
+                                                                ''),
                                                 style: item.type ==
                                                         BlockTypes.SEND
                                                     ? AppStyles
                                                         .textStyleTransactionTypeRed(
                                                             context)
-                                                    : (item.type == BlockTypes.UNCONFIRMED || item.blockHeight == -1)
+                                                    : (item.type ==
+                                                                BlockTypes
+                                                                    .UNCONFIRMED ||
+                                                            item.blockHeight ==
+                                                                -1)
                                                         ? AppStyles
-                                                            .textStyleTransactionTypeRed(
-                                                                context)
+                                                                .textStyleTransactionTypeRed(
+                                                                    context)
                                                             .copyWith(
                                                                 color: Colors
                                                                     .orange)
@@ -1353,8 +1402,9 @@ class _AppHomePageState extends State<AppHomePage>
                                                 children: [
                                                   TextSpan(
                                                     text: item.openfield
-                                                        ?.replaceAll(
-                                                            "alias=", "") ?? '',
+                                                            ?.replaceAll(
+                                                                "alias=", "") ??
+                                                        '',
                                                     style: AppStyles
                                                         .textStyleTransactionTypeBlue(
                                                             context),
@@ -1438,8 +1488,8 @@ class _AppHomePageState extends State<AppHomePage>
                                                               TextSpan(
                                                                 text: "   " +
                                                                     (item.operation
-                                                                        ?.split(
-                                                                            ":")[1] ?? ''),
+                                                                            ?.split(":")[1] ??
+                                                                        ''),
                                                                 style: AppStyles
                                                                     .textStyleTransactionTypeBlue(
                                                                         context),
@@ -1937,8 +1987,9 @@ class _AppHomePageState extends State<AppHomePage>
                             return UIUtil.showAccountWebview(
                                 context,
                                 StateContainer.of(context)
-                                    .selectedAccount
-                                    .address ?? '');
+                                        .selectedAccount
+                                        .address ??
+                                    '');
                           }));
                         },
                         child: CircleAvatar(
@@ -1955,15 +2006,18 @@ class _AppHomePageState extends State<AppHomePage>
                                         ""
                                 ? UIUtil.getRobohashURL(
                                     StateContainer.of(context)
-                                        .selectedAccount
-                                        .address ?? '')
+                                            .selectedAccount
+                                            .address ??
+                                        '')
                                 : UIUtil.getDragginatorURL(
                                     StateContainer.of(context)
-                                        .selectedAccount
-                                        .dragginatorDna ?? '',
+                                            .selectedAccount
+                                            .dragginatorDna ??
+                                        '',
                                     StateContainer.of(context)
-                                        .selectedAccount
-                                        .dragginatorStatus ?? ''),
+                                            .selectedAccount
+                                            .dragginatorStatus ??
+                                        ''),
                           ),
                           radius: 50.0,
                         ),
@@ -2109,13 +2163,8 @@ class _AppHomePageState extends State<AppHomePage>
     return GestureDetector(
       onTap: () {
         if (_priceConversion == PriceConversion.BTC) {
-          // Hide prices
-          setState(() {
-            _priceConversion = PriceConversion.NONE;
-            mainCardHeight = 64;
-            settingsIconMarginTop = 7;
-          });
-          sl.get<SharedPrefsUtil>().setPriceConversion(PriceConversion.NONE);
+          // Open exchanges selection sheet
+          _showExchangesSheet(context);
         } else if (_priceConversion == PriceConversion.NONE) {
           // Cycle to hidden
           setState(() {
@@ -2161,11 +2210,16 @@ class _AppHomePageState extends State<AppHomePage>
                     _priceConversion == PriceConversion.BTC
                         ? Text(
                             StateContainer.of(context)
-                                .wallet
-                                ?.getLocalCurrencyPrice(
-                                    StateContainer.of(context).curCurrency,
-                                    locale: StateContainer.of(context)
-                                        .currencyLocale ?? '') ?? '0.00',
+                                    .wallet
+                                    ?.getLocalCurrencyPriceByDex(
+                                        StateContainer.of(context)
+                                                .selectedDefaultDex ??
+                                            DefaultDex.PANCAKESWAP,
+                                        StateContainer.of(context).curCurrency,
+                                        locale: StateContainer.of(context)
+                                                .currencyLocale ??
+                                            '') ??
+                                '0.00',
                             textAlign: TextAlign.center,
                             style: AppStyles.textStyleCurrencyAlt(context))
                         : SizedBox(height: 0),
@@ -2185,8 +2239,9 @@ class _AppHomePageState extends State<AppHomePage>
                                   // Main balance text
                                   TextSpan(
                                     text: (StateContainer.of(context)
-                                            .wallet
-                                            ?.getAccountBalanceDisplay() ?? '0.00') +
+                                                .wallet
+                                                ?.getAccountBalanceDisplay() ??
+                                            '0.00') +
                                         " BIS",
                                     style: _priceConversion ==
                                             PriceConversion.BTC
@@ -2222,7 +2277,8 @@ class _AppHomePageState extends State<AppHomePage>
                       final String pendingText = (pendingDelta > 0 ? "+" : "") +
                           wallet.getPendingDeltaDisplay() +
                           " BIS(pending)";
-                      final Color color = Colors.orange; // Keep pending as orange
+                      final Color color =
+                          Colors.orange; // Keep pending as orange
                       final TextStyle baseStyle = pendingDelta > 0
                           ? AppStyles.textStyleTransactionTypeGreen(context)
                           : AppStyles.textStyleTransactionTypeRed(context);
@@ -2250,7 +2306,10 @@ class _AppHomePageState extends State<AppHomePage>
                                               .curTheme
                                               .text60,
                                   size: 14),
-                              Text(StateContainer.of(context).wallet?.btcPrice ?? '0.00',
+                              Text(
+                                  StateContainer.of(context).wallet?.getBtcPriceByDex(
+                                        StateContainer.of(context).selectedDefaultDex ?? DefaultDex.PANCAKESWAP) ??
+                                      '0.00',
                                   textAlign: TextAlign.center,
                                   style:
                                       AppStyles.textStyleCurrencyAlt(context)),
@@ -2260,8 +2319,29 @@ class _AppHomePageState extends State<AppHomePage>
                   ],
                 ),
               ),
-      ), // Close WillPopScope child (Scaffold)  
+      ), // Close WillPopScope child (Scaffold)
     );
+  }
+
+  void _showExchangesSheet(BuildContext context) async {
+    // Fetch individual DEX prices if not available
+    try {
+      final httpService = sl.get<HttpService>();
+      final currency = StateContainer.of(context).curCurrency;
+      final dexPricesResponse =
+          await httpService.getIndividualDexPrices(currency.getIso4217Code());
+
+      // Update wallet with DEX prices
+      StateContainer.of(context)
+          .wallet
+          ?.updateDexPrices(dexPricesResponse.dexPrices);
+
+      AppExchangesSheet(dexPricesResponse.dexPrices).mainBottomSheet(context);
+    } catch (e) {
+      print('Error fetching DEX prices: $e');
+      // Fallback to show sheet without DEX prices
+      AppExchangesSheet(null).mainBottomSheet(context);
+    }
   }
 }
 
@@ -2362,7 +2442,8 @@ class _TransactionDetailsSheetState extends State<TransactionDetailsSheet> {
                                       .transactionDetailBlock),
                                   (widget.item?.blockHeight ?? 0) == -1
                                       ? SizedBox()
-                                      : SelectableText(widget.item?.blockHash ?? '',
+                                      : SelectableText(
+                                          widget.item?.blockHash ?? '',
                                           style: AppStyles
                                               .textStyleTransactionUnit(
                                                   context),
@@ -2392,7 +2473,8 @@ class _TransactionDetailsSheetState extends State<TransactionDetailsSheet> {
                                               Localizations.localeOf(context)
                                                   .languageCode)
                                           .add_Hms()
-                                          .format(widget.item?.timestamp ?? DateTime.now())
+                                          .format(widget.item?.timestamp ??
+                                              DateTime.now())
                                           .toString(),
                                       style: AppStyles.textStyleTransactionUnit(
                                           context)),
@@ -2419,21 +2501,36 @@ class _TransactionDetailsSheetState extends State<TransactionDetailsSheet> {
                                   Text(AppLocalization.of(context)
                                       .transactionDetailAmount),
                                   Text(
-                                      (widget.item?.type ?? BlockTypes.RECEIVE) == BlockTypes.SEND
+                                      (widget.item?.type ??
+                                                  BlockTypes.RECEIVE) ==
+                                              BlockTypes.SEND
                                           ? "- " +
-                                              (widget.item?.getFormattedAmount() ?? '0.00') +
+                                              (widget.item
+                                                      ?.getFormattedAmount() ??
+                                                  '0.00') +
                                               " BIS"
-                                          : (widget.item?.type ?? BlockTypes.RECEIVE) == BlockTypes.UNCONFIRMED
-                                          ? (widget.item?.recipient == StateContainer.of(context).selectedAccount.address
-                                              ? "+ " +
-                                                  (widget.item?.getFormattedAmount() ?? '0.00') +
-                                                  " BIS (pending)"
-                                              : "- " +
-                                                  (widget.item?.getFormattedAmount() ?? '0.00') +
-                                                  " BIS (pending)")
-                                          : "+ " +
-                                              (widget.item?.getFormattedAmount() ?? '0.00') +
-                                              " BIS",
+                                          : (widget.item?.type ??
+                                                      BlockTypes.RECEIVE) ==
+                                                  BlockTypes.UNCONFIRMED
+                                              ? (widget.item?.recipient ==
+                                                      StateContainer.of(context)
+                                                          .selectedAccount
+                                                          .address
+                                                  ? "+ " +
+                                                      (widget.item
+                                                              ?.getFormattedAmount() ??
+                                                          '0.00') +
+                                                      " BIS (pending)"
+                                                  : "- " +
+                                                      (widget.item
+                                                              ?.getFormattedAmount() ??
+                                                          '0.00') +
+                                                      " BIS (pending)")
+                                              : "+ " +
+                                                  (widget.item
+                                                          ?.getFormattedAmount() ??
+                                                      '0.00') +
+                                                  " BIS",
                                       style: AppStyles.textStyleTransactionUnit(
                                           context)),
                                   SizedBox(height: 10),
@@ -2448,7 +2545,9 @@ class _TransactionDetailsSheetState extends State<TransactionDetailsSheet> {
                                   SizedBox(height: 10),
                                   Text(AppLocalization.of(context)
                                       .transactionDetailReward),
-                                  Text((widget.item?.reward ?? 0).toString() + " BIS",
+                                  Text(
+                                      (widget.item?.reward ?? 0).toString() +
+                                          " BIS",
                                       style: AppStyles.textStyleTransactionUnit(
                                           context)),
                                   SizedBox(height: 10),
@@ -2504,7 +2603,8 @@ class _TransactionDetailsSheetState extends State<TransactionDetailsSheet> {
                                                   onPressed: () {
                                                 Clipboard.setData(
                                                     new ClipboardData(
-                                                        text: widget.address ?? ""));
+                                                        text: widget.address ??
+                                                            ""));
                                                 if (mounted) {
                                                   setState(() {
                                                     // Set copied style
@@ -2543,7 +2643,9 @@ class _TransactionDetailsSheetState extends State<TransactionDetailsSheet> {
                                                   width: 55,
                                                   // Add Contact Button
                                                   child: !(widget.displayName
-                                                          ?.startsWith("@") ?? false)
+                                                              ?.startsWith(
+                                                                  "@") ??
+                                                          false)
                                                       ? TextButton(
                                                           onPressed: () {
                                                             Navigator.of(

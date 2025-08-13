@@ -1,5 +1,3 @@
-
-
 // Flutter imports:
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -170,18 +168,24 @@ class _IntroImportSeedState extends State<IntroImportSeedPage> {
                                                   return;
                                                 }
                                                 // Scan QR for seed
-                                                UserDataUtil.getQRData(DataType.RAW, context)
+                                                UserDataUtil.getQRData(
+                                                        DataType.RAW, context)
                                                     .then((result) {
-                                                  if (result != null && !QRScanErrs.ERROR_LIST.contains(result)) {
-                                                    if (AppSeeds.isValidSeed(result)) {
-                                                      _seedInputController.text = result;
+                                                  if (result != null &&
+                                                      !QRScanErrs.ERROR_LIST
+                                                          .contains(result)) {
+                                                    if (AppSeeds.isValidSeed(
+                                                        result)) {
+                                                      _seedInputController
+                                                          .text = result;
                                                       setState(() {
                                                         _seedIsValid = true;
                                                       });
                                                     } else if (AppMnemomics
-                                                            .validateMnemonic(
-                                                                result.split(' '))) {
-                                                      _mnemonicController.text = result;
+                                                        .validateMnemonic(result
+                                                            .split(' '))) {
+                                                      _mnemonicController.text =
+                                                          result;
                                                       _mnemonicFocusNode
                                                           .unfocus();
                                                       _seedInputFocusNode
@@ -215,11 +219,13 @@ class _IntroImportSeedState extends State<IntroImportSeedPage> {
                                                   return;
                                                 }
                                                 Clipboard.getData("text/plain")
-                                                    .then((ClipboardData? data) {
+                                                    .then(
+                                                        (ClipboardData? data) {
                                                   if (data?.text == null) {
                                                     return;
                                                   } else if (AppSeeds
-                                                      .isValidSeed(data?.text ?? "")) {
+                                                      .isValidSeed(
+                                                          data?.text ?? "")) {
                                                     _seedInputController.text =
                                                         data?.text ?? "";
                                                     setState(() {
@@ -227,8 +233,9 @@ class _IntroImportSeedState extends State<IntroImportSeedPage> {
                                                     });
                                                   } else if (AppMnemomics
                                                       .validateMnemonic(data
-                                                          ?.text
-                                                          ?.split(' ') ?? [])) {
+                                                              ?.text
+                                                              ?.split(' ') ??
+                                                          [])) {
                                                     _mnemonicController.text =
                                                         data?.text ?? "";
                                                     _mnemonicFocusNode
@@ -296,22 +303,29 @@ class _IntroImportSeedState extends State<IntroImportSeedPage> {
                                                 if (AppMnemomics
                                                     .validateMnemonic(
                                                         _mnemonicController.text
-                                                            ?.split(' ') ?? [])) {
+                                                                ?.split(' ') ??
+                                                            [])) {
                                                   return;
                                                 }
                                                 // Scan QR for mnemonic
-                                                UserDataUtil.getQRData(DataType.RAW, context)
+                                                UserDataUtil.getQRData(
+                                                        DataType.RAW, context)
                                                     .then((result) {
-                                                  if (result != null && !QRScanErrs.ERROR_LIST.contains(result)) {
+                                                  if (result != null &&
+                                                      !QRScanErrs.ERROR_LIST
+                                                          .contains(result)) {
                                                     if (AppMnemomics
-                                                            .validateMnemonic(
-                                                                result.split(' '))) {
-                                                      _mnemonicController.text = result;
+                                                        .validateMnemonic(result
+                                                            .split(' '))) {
+                                                      _mnemonicController.text =
+                                                          result;
                                                       setState(() {
                                                         _mnemonicIsValid = true;
                                                       });
-                                                    } else if (AppSeeds.isValidSeed(result)) {
-                                                      _seedInputController.text = result;
+                                                    } else if (AppSeeds
+                                                        .isValidSeed(result)) {
+                                                      _seedInputController
+                                                          .text = result;
                                                       _mnemonicFocusNode
                                                           .unfocus();
                                                       _seedInputFocusNode
@@ -343,24 +357,28 @@ class _IntroImportSeedState extends State<IntroImportSeedPage> {
                                                 if (AppMnemomics
                                                     .validateMnemonic(
                                                         _mnemonicController.text
-                                                            ?.split(' ') ?? [])) {
+                                                                ?.split(' ') ??
+                                                            [])) {
                                                   return;
                                                 }
                                                 Clipboard.getData("text/plain")
-                                                    .then((ClipboardData? data) {
+                                                    .then(
+                                                        (ClipboardData? data) {
                                                   if (data?.text == null) {
                                                     return;
                                                   } else if (AppMnemomics
                                                       .validateMnemonic(data
-                                                          ?.text
-                                                          ?.split(' ') ?? [])) {
+                                                              ?.text
+                                                              ?.split(' ') ??
+                                                          [])) {
                                                     _mnemonicController.text =
                                                         data?.text ?? "";
                                                     setState(() {
                                                       _mnemonicIsValid = true;
                                                     });
                                                   } else if (AppSeeds
-                                                      .isValidSeed(data?.text ?? "")) {
+                                                      .isValidSeed(
+                                                          data?.text ?? "")) {
                                                     _seedInputController.text =
                                                         data?.text ?? "";
                                                     _mnemonicFocusNode
@@ -393,14 +411,14 @@ class _IntroImportSeedState extends State<IntroImportSeedPage> {
                                                 setState(() {
                                                   _mnemonicError = null;
                                                 });
-                                              } else                                              if (!text.contains(
+                                              } else if (!text.contains(
                                                   (_mnemonicError ?? "")
                                                       .split(' ')[0])) {
                                                 setState(() {
                                                   _mnemonicError = null;
                                                 });
                                               }
-                                            
+
                                               // If valid mnemonic, clear focus/close keyboard
                                               if (AppMnemomics.validateMnemonic(
                                                   text.split(' '))) {

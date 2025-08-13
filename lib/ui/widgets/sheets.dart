@@ -1,5 +1,3 @@
-
-
 // Dart imports:
 import 'dart:io';
 
@@ -148,7 +146,8 @@ class _AppHeightNineModalRoute<T> extends PopupRoute<T> {
     assert(_animationController == null);
     _animationController =
         BottomSheet.createAnimationController(navigator!.overlay!);
-    _animationController!.duration = Duration(milliseconds: animationDurationMs);
+    _animationController!.duration =
+        Duration(milliseconds: animationDurationMs);
     this.appSheetAnimation = CurvedAnimation(
         parent: _animationController!,
         curve: Curves.easeOut,
@@ -285,7 +284,8 @@ class _AppHeightEightModalRoute<T> extends PopupRoute<T> {
     assert(_animationController == null);
     _animationController =
         BottomSheet.createAnimationController(navigator!.overlay!);
-    _animationController!.duration = Duration(milliseconds: animationDurationMs);
+    _animationController!.duration =
+        Duration(milliseconds: animationDurationMs);
     this.appSheetAnimation = CurvedAnimation(
         parent: _animationController!,
         curve: Curves.easeOut,

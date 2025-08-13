@@ -1,5 +1,3 @@
-
-
 // Dart imports:
 import 'dart:async';
 
@@ -73,7 +71,8 @@ class ContactDetailsSheet {
                                             .removeContact,
                                         AppLocalization.of(context)
                                             .removeContactConfirmation
-                                            .replaceAll('%1', contact.name ?? ""),
+                                            .replaceAll(
+                                                '%1', contact.name ?? ""),
                                         CaseChange.toUpperCase(
                                             AppLocalization.of(context).yes,
                                             context), () {
@@ -90,7 +89,8 @@ class ContactDetailsSheet {
                                         UIUtil.showSnackbar(
                                             AppLocalization.of(context)
                                                 .contactRemoved
-                                                .replaceAll("%1", contact.name ?? ""),
+                                                .replaceAll(
+                                                    "%1", contact.name ?? ""),
                                             context);
                                         Navigator.of(context).pop();
                                       });
@@ -202,8 +202,8 @@ class ContactDetailsSheet {
                             // Contact Address
                             GestureDetector(
                               onTap: () {
-                                Clipboard.setData(
-                                    new ClipboardData(text: contact.address ?? ""));
+                                Clipboard.setData(new ClipboardData(
+                                    text: contact.address ?? ""));
                                 setState(() {
                                   _addressCopied = true;
                                 });
@@ -273,8 +273,9 @@ class ContactDetailsSheet {
                                   AppLocalization.of(context).send,
                                   Dimens.BUTTON_TOP_DIMENS,
                                   disabled: (StateContainer.of(context)
-                                          .wallet
-                                          ?.accountBalance ?? BigInt.zero) ==
+                                              .wallet
+                                              ?.accountBalance ??
+                                          BigInt.zero) ==
                                       BigInt.zero, onPressed: () {
                                 Navigator.of(context).pop();
                                 Sheets.showAppHeightNineSheet(

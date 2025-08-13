@@ -5,8 +5,10 @@ import 'package:intl/intl.dart';
 // Project imports:
 import 'package:my_bismuth_wallet/model/available_currency.dart';
 import 'package:my_bismuth_wallet/network/model/response/address_txs_response.dart';
+import 'package:my_bismuth_wallet/network/model/response/individual_dex_prices_response.dart';
 import 'package:my_bismuth_wallet/network/model/block_types.dart';
 import 'package:my_bismuth_wallet/util/numberutil.dart';
+import 'package:my_bismuth_wallet/util/sharedprefsutil.dart';
 
 /// Main wallet object that's passed around the app via state
 class AppWallet {
@@ -23,6 +25,9 @@ class AppWallet {
   late String _btcPrice;
   late List<AddressTxsResponseResult> _history;
   late List<BisToken> _tokens;
+
+  // Individual DEX prices
+  Map<DefaultDex, DexPriceData>? _dexPrices;
 
   AppWallet(
       {String? address,
@@ -43,6 +48,7 @@ class AppWallet {
     _tokens = tokens ?? <BisToken>[];
     _loading = loading ?? true;
     _historyLoading = historyLoading ?? true;
+    _dexPrices = null;
   }
 
   String get address => _address;
@@ -202,4 +208,99 @@ class AppWallet {
   // Raw price getters for display purposes
   String get rawBtcPrice => _btcPrice;
   String get rawLocalCurrencyPrice => _localCurrencyPrice;
+
+  // Individual DEX prices management
+  void updateDexPrices(Map<DefaultDex, DexPriceData>? dexPrices) {
+    _dexPrices = dexPrices;
+  }
+
+  Map<DefaultDex, DexPriceData>? get dexPrices => _dexPrices;
+
+  // Add methods to get raw per-BIS prices by DEX
+  String getRawLocalCurrencyPriceByDex(DefaultDex selectedDex) {
+    String priceToUse = _localCurrencyPrice;
+
+    if (_dexPrices != null && _dexPrices![selectedDex] != null) {
+      DexPriceData dexData = _dexPrices![selectedDex]!;
+      if (dexData.isActive && dexData.localCurrencyPrice != '0') {
+        priceToUse = dexData.localCurrencyPrice;
+      }
+    }
+
+    return priceToUse; // Return raw per-BIS price, not multiplied by balance
+  }
+
+  String getRawBtcPriceByDex(DefaultDex selectedDex) {
+    String priceToUse = _btcPrice;
+
+    if (_dexPrices != null && _dexPrices![selectedDex] != null) {
+      DexPriceData dexData = _dexPrices![selectedDex]!;
+      if (dexData.isActive && dexData.btcPrice != '0') {
+        priceToUse = dexData.btcPrice;
+      }
+    }
+
+    return priceToUse; // Return raw per-BIS price, not multiplied by balance
+  }
+
+  // Get local currency price by selected DEX
+  String getLocalCurrencyPriceByDex(
+      DefaultDex selectedDex, AvailableCurrency currency,
+      {String locale = "en_US"}) {
+    String priceToUse = _localCurrencyPrice;
+
+    // Use DEX-specific price if available and active
+    if (_dexPrices != null && _dexPrices![selectedDex] != null) {
+      DexPriceData dexData = _dexPrices![selectedDex]!;
+      if (dexData.isActive && dexData.localCurrencyPrice != '0') {
+        priceToUse = dexData.localCurrencyPrice;
+      }
+    }
+
+    Decimal converted = Decimal.parse(priceToUse) *
+        NumberUtil.getRawAsUsableDecimal(_accountBalance.toString());
+
+    // Adaptive decimal precision to prevent very low prices from showing as 0.00
+    int decimalDigits;
+    if (converted >= Decimal.parse("0.01")) {
+      decimalDigits = 2; // Standard currency format for amounts >= 0.01
+    } else if (converted >= Decimal.parse("0.0001")) {
+      decimalDigits = 4; // 4 decimals for amounts >= 0.0001
+    } else if (converted >= Decimal.parse("0.000001")) {
+      decimalDigits = 6; // 6 decimals for amounts >= 0.000001
+    } else {
+      decimalDigits = 8; // Up to 8 decimals for very small amounts
+    }
+
+    return NumberFormat.currency(
+            locale: locale,
+            symbol: currency.getCurrencySymbol(),
+            decimalDigits: decimalDigits)
+        .format(converted.toDouble());
+  }
+
+  // Get BTC price by selected DEX
+  String getBtcPriceByDex(DefaultDex selectedDex) {
+    String priceToUse = _btcPrice;
+
+    // Use DEX-specific price if available and active
+    if (_dexPrices != null && _dexPrices![selectedDex] != null) {
+      DexPriceData dexData = _dexPrices![selectedDex]!;
+      if (dexData.isActive && dexData.btcPrice != '0') {
+        priceToUse = dexData.btcPrice;
+      }
+    }
+
+    Decimal converted = Decimal.parse(priceToUse) *
+        NumberUtil.getRawAsUsableDecimal(_accountBalance.toString());
+
+    // Show 4 decimal places for BTC price if its >= 0.0001 BTC, otherwise 6 decimals
+    if (converted >= Decimal.parse("0.0001")) {
+      return new NumberFormat("#,##0.0000", "en_US")
+          .format(converted.toDouble());
+    } else {
+      return new NumberFormat("#,##0.000000000", "en_US")
+          .format(converted.toDouble());
+    }
+  }
 }

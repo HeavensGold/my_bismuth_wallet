@@ -90,8 +90,7 @@ class MessageLookup extends MessageLookupByLibrary {
         "createPasswordSheetHeader":
             MessageLookupByLibrary.simpleMessage("Créer"),
         "currency": MessageLookupByLibrary.simpleMessage("Devise"),
-        "customUrlHeader":
-            MessageLookupByLibrary.simpleMessage("Serveurs"),
+        "customUrlHeader": MessageLookupByLibrary.simpleMessage("Serveurs"),
         "defaultAccountName":
             MessageLookupByLibrary.simpleMessage("@Compte principal"),
         "defaultNewAccountName":

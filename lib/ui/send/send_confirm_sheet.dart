@@ -1,5 +1,3 @@
-
-
 // Dart imports:
 import 'dart:async';
 
@@ -90,27 +88,34 @@ class _SendConfirmSheetState extends State<SendConfirmSheet> {
         if (animationOpen) {
           Navigator.of(context).pop();
         }
-        
-        String cleanErrorMessage = (event.response ?? "Unknown error").replaceAll('"', '').replaceAll(']', '');
+
+        String cleanErrorMessage = (event.response ?? "Unknown error")
+            .replaceAll('"', '')
+            .replaceAll(']', '');
         UIUtil.showSnackbar(
-            AppLocalization.of(context).sendError + " (" + cleanErrorMessage + ")",
+            AppLocalization.of(context).sendError +
+                " (" +
+                cleanErrorMessage +
+                ")",
             context);
         Navigator.of(context).pop();
       } else {
         // Success case is now handled immediately after broadcast
         // This listener only confirms the transaction was accepted by the network
-        print("Transaction broadcast confirmed by network: " + event.response.toString());
+        print("Transaction broadcast confirmed by network: " +
+            event.response.toString());
       }
     });
   }
 
-  Future<void> _handleTransactionSuccess(String destinationAltered, String openfield) async {
+  Future<void> _handleTransactionSuccess(
+      String destinationAltered, String openfield) async {
     // Dismiss sending animation first
     if (animationOpen) {
       Navigator.of(context).pop();
       animationOpen = false;
     }
-    
+
     // Server-mempool-only flow: do not mutate local balance or add local placeholders.
     // Trigger a refresh to fetch mempool + confirmed from server so both sender & receiver see the same pending item.
     StateContainer.of(context).requestUpdate();
@@ -119,9 +124,8 @@ class _SendConfirmSheetState extends State<SendConfirmSheet> {
     await Future.delayed(Duration(milliseconds: 100));
 
     // Show complete
-    Contact? contact = await sl
-        .get<DBHelper>()
-        .getContactWithAddress(widget.destination);
+    Contact? contact =
+        await sl.get<DBHelper>().getContactWithAddress(widget.destination);
     String? contactName = contact?.name;
     Navigator.of(context).popUntil(RouteUtils.withNameLike('/home'));
     // Ensure the home screen has a fresh state
@@ -129,7 +133,7 @@ class _SendConfirmSheetState extends State<SendConfirmSheet> {
 
     // Give main screen time to fully load before showing success sheet
     await Future.delayed(Duration(milliseconds: 200));
-    
+
     Sheets.showAppHeightNineSheet(
         context: context,
         closeOnTap: true,
@@ -144,8 +148,8 @@ class _SendConfirmSheetState extends State<SendConfirmSheet> {
 
   void _destroyBus() {
     _authSub.cancel();
-      _sendTxSub.cancel();
-    }
+    _sendTxSub.cancel();
+  }
 
   @override
   void initState() {
@@ -657,22 +661,22 @@ class _SendConfirmSheetState extends State<SendConfirmSheet> {
         openfield += ':{"Message":"' + widget.comment + '"}';
       }
       String seed = await StateContainer.of(context).getSeed();
-      
+
       // Validate seed
       if (seed.isEmpty) {
         throw Exception('Wallet seed is not available');
       }
-      
+
       int index = StateContainer.of(context).selectedAccount.index ?? 0;
       String publicKeyBase64 =
           await AppUtil().seedToPublicKeyBase64(seed, index);
       String privateKey = await AppUtil().seedToPrivateKey(seed, index);
-      
+
       // Validate private key
       if (privateKey.isEmpty) {
         throw Exception('Failed to generate private key from seed');
       }
-      
+
       //print("send tx");
       // Broadcast transaction to network (fire and forget - don't wait for response)
       sl.get<AppService>().sendTx(
@@ -683,7 +687,7 @@ class _SendConfirmSheetState extends State<SendConfirmSheet> {
           widget.operation,
           publicKeyBase64,
           privateKey);
-          
+
       // Immediately proceed with success flow - don't wait for server response
       await _handleTransactionSuccess(destinationAltered, openfield);
     } catch (e) {

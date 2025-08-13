@@ -59,7 +59,7 @@ class _WebViewScreenState extends State<WebViewScreen> {
           },
         ),
       );
-    
+
     // Load the URL
     _controller.loadRequest(Uri.parse(widget.url));
   }
@@ -118,7 +118,8 @@ class _WebViewScreenState extends State<WebViewScreen> {
                     },
                     child: Text('Retry'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: StateContainer.of(context).curTheme.primary,
+                      backgroundColor:
+                          StateContainer.of(context).curTheme.primary,
                     ),
                   ),
                 ],

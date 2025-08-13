@@ -1,5 +1,3 @@
-
-
 // Dart imports:
 import 'dart:async';
 import 'dart:io';
@@ -87,11 +85,14 @@ class _AppState extends State<App> {
           primaryColor: StateContainer.of(context).curTheme.primary,
           fontFamily: 'Roboto',
           brightness: Brightness.dark,
-          colorScheme: ColorScheme.fromSwatch(brightness: Brightness.dark).copyWith(
+          colorScheme:
+              ColorScheme.fromSwatch(brightness: Brightness.dark).copyWith(
             secondary: StateContainer.of(context).curTheme.primary10,
             surface: StateContainer.of(context).curTheme.backgroundDark,
           ),
-          dialogTheme: DialogThemeData(backgroundColor: StateContainer.of(context).curTheme.backgroundDark),
+          dialogTheme: DialogThemeData(
+              backgroundColor:
+                  StateContainer.of(context).curTheme.backgroundDark),
         ),
         localizationsDelegates: [
           AppLocalizationsDelegate(StateContainer.of(context).curLanguage),
@@ -100,7 +101,7 @@ class _AppState extends State<App> {
           GlobalWidgetsLocalizations.delegate
         ],
         locale: StateContainer.of(context).curLanguage.language ==
-                    AvailableLanguage.DEFAULT
+                AvailableLanguage.DEFAULT
             ? null
             : StateContainer.of(context).curLanguage.getLocale(),
         supportedLocales: [
@@ -176,14 +177,14 @@ class _AppState extends State<App> {
               );
             case '/home':
               return NoTransitionRoute(
-                builder: (_) =>
-                    AppHomePage(priceConversion: settings.arguments as PriceConversion?),
+                builder: (_) => AppHomePage(
+                    priceConversion: settings.arguments as PriceConversion?),
                 settings: settings,
               );
             case '/home_transition':
               return NoPopTransitionRoute(
-                builder: (_) =>
-                    AppHomePage(priceConversion: settings.arguments as PriceConversion?),
+                builder: (_) => AppHomePage(
+                    priceConversion: settings.arguments as PriceConversion?),
                 settings: settings,
               );
             case '/intro_welcome':
@@ -193,18 +194,20 @@ class _AppState extends State<App> {
               );
             case '/intro_password_on_launch':
               return MaterialPageRoute(
-                builder: (_) => IntroPasswordOnLaunch(seed: settings.arguments as String),
+                builder: (_) =>
+                    IntroPasswordOnLaunch(seed: settings.arguments as String),
                 settings: settings,
               );
             case '/intro_password':
               return MaterialPageRoute(
-                builder: (_) => IntroPassword(seed: settings.arguments as String? ?? ""),
+                builder: (_) =>
+                    IntroPassword(seed: settings.arguments as String? ?? ""),
                 settings: settings,
               );
             case '/intro_backup':
               return MaterialPageRoute(
-                builder: (_) =>
-                    IntroBackupSeedPage(encryptedSeed: settings.arguments as String? ?? ""),
+                builder: (_) => IntroBackupSeedPage(
+                    encryptedSeed: settings.arguments as String? ?? ""),
                 settings: settings,
               );
             case '/intro_backup_safety':
@@ -332,11 +335,12 @@ class SplashState extends State<Splash> with WidgetsBindingObserver {
       // If we have a seed set, but not a pin - or vice versa
       // Then delete the seed and pin from device and start over.
       // This would mean user did not complete the intro screen completely.
-      bool isLoggedIn = seed != null && seed.isNotEmpty && pin != null && pin.isNotEmpty;
+      bool isLoggedIn =
+          seed != null && seed.isNotEmpty && pin != null && pin.isNotEmpty;
       if (isLoggedIn) {
         isEncrypted = seedIsEncrypted(seed);
       }
-    
+
       if (isLoggedIn) {
         if (isEncrypted) {
           Navigator.of(context).pushNamedAndRemoveUntil(

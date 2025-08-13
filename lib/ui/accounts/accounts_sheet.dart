@@ -1,5 +1,3 @@
-
-
 // Dart imports:
 import 'dart:async';
 
@@ -107,7 +105,8 @@ class _AppAccountsWidgetState extends State<AppAccountsWidget> {
           widget.accounts.removeWhere((a) => a.index == event.account?.index);
           if (event.account != null) {
             widget.accounts.add(event.account!);
-            widget.accounts.sort((a, b) => (a.index ?? 0).compareTo(b.index ?? 0));
+            widget.accounts
+                .sort((a, b) => (a.index ?? 0).compareTo(b.index ?? 0));
           }
         });
       }
@@ -116,7 +115,7 @@ class _AppAccountsWidgetState extends State<AppAccountsWidget> {
 
   void _destroyBus() {
     _accountModifiedSub?.cancel();
-    }
+  }
 
   Future<void> _changeAccount(Account account, StateSetter setState) async {
     // Change account
@@ -277,52 +276,54 @@ class _AppAccountsWidgetState extends State<AppAccountsWidget> {
                                 _addingAccount = true;
                               });
                               try {
-                                String? seed = await AppUtil.getSeedSafely(context);
+                                String? seed =
+                                    await AppUtil.getSeedSafely(context);
                                 if (seed == null) {
                                   // Password mode but not unlocked
                                   setState(() {
                                     _addingAccount = false;
                                   });
                                   UIUtil.showSnackbar(
-                                      AppLocalization.of(context).unlock, 
+                                      AppLocalization.of(context).unlock,
                                       context);
                                   return;
                                 }
-                                
+
                                 Account newAccount = await sl
                                     .get<DBHelper>()
                                     .addAccount(seed,
                                         nameBuilder: AppLocalization.of(context)
                                             .defaultNewAccountName);
-                                            
+
                                 StateContainer.of(context)
                                     .updateRecentlyUsedAccounts();
                                 widget.accounts.add(newAccount);
                                 setState(() {
                                   _addingAccount = false;
-                                  widget.accounts.sort(
-                                      (a, b) => (a.index ?? 0).compareTo(b.index ?? 0));
-                                    // Scroll if list is full
-                                    if (expandedKey.currentContext != null) {
-                                      RenderBox? box = expandedKey.currentContext
-                                          ?.findRenderObject() as RenderBox?;
-                                      if (box != null && widget.accounts.length * 72.0 >=
-                                          box.size.height) {
-                                        _scrollController.animateTo(
-                                          (newAccount.index ?? 0) * 72.0 >
-                                                  _scrollController
-                                                      .position.maxScrollExtent
-                                              ? _scrollController.position
-                                                      .maxScrollExtent +
-                                                  72.0
-                                              : (newAccount.index ?? 0) * 72.0,
-                                          curve: Curves.easeOut,
-                                          duration:
-                                              const Duration(milliseconds: 200),
-                                        );
-                                      }
+                                  widget.accounts.sort((a, b) =>
+                                      (a.index ?? 0).compareTo(b.index ?? 0));
+                                  // Scroll if list is full
+                                  if (expandedKey.currentContext != null) {
+                                    RenderBox? box = expandedKey.currentContext
+                                        ?.findRenderObject() as RenderBox?;
+                                    if (box != null &&
+                                        widget.accounts.length * 72.0 >=
+                                            box.size.height) {
+                                      _scrollController.animateTo(
+                                        (newAccount.index ?? 0) * 72.0 >
+                                                _scrollController
+                                                    .position.maxScrollExtent
+                                            ? _scrollController
+                                                    .position.maxScrollExtent +
+                                                72.0
+                                            : (newAccount.index ?? 0) * 72.0,
+                                        curve: Curves.easeOut,
+                                        duration:
+                                            const Duration(milliseconds: 200),
+                                      );
                                     }
-                                  });
+                                  }
+                                });
                               } catch (e) {
                                 setState(() {
                                   _addingAccount = false;
@@ -406,9 +407,8 @@ class _AppAccountsWidgetState extends State<AppAccountsWidget> {
                               width: 64.0,
                               height: 64.0,
                               child: CircleAvatar(
-                                backgroundColor: StateContainer.of(context)
-                                    .curTheme
-                                    .text05,
+                                backgroundColor:
+                                    StateContainer.of(context).curTheme.text05,
                                 backgroundImage: NetworkImage(
                                   account.dragginatorDna == null ||
                                           account.dragginatorDna == ""
@@ -424,12 +424,10 @@ class _AppAccountsWidgetState extends State<AppAccountsWidget> {
                             // Account name and address
                             Expanded(
                               child: Container(
-                                margin:
-                                    EdgeInsetsDirectional.only(start: 8.0),
+                                margin: EdgeInsetsDirectional.only(start: 8.0),
                                 child: Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.start,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: <Widget>[
                                     // Account name
                                     AutoSizeText(
@@ -469,7 +467,8 @@ class _AppAccountsWidgetState extends State<AppAccountsWidget> {
                             ),
                             // Balance
                             Container(
-                              margin: EdgeInsetsDirectional.only(start: 8.0, end: 8.0),
+                              margin: EdgeInsetsDirectional.only(
+                                  start: 8.0, end: 8.0),
                               child: AutoSizeText.rich(
                                 TextSpan(
                                   children: [
@@ -520,7 +519,7 @@ class _AppAccountsWidgetState extends State<AppAccountsWidget> {
   List<Widget> _getSlideActionsForAccount(
       BuildContext context, Account account, StateSetter setState) {
     List<Widget> _actions = <Widget>[];
-    
+
     // Copy address action (always shown)
     _actions.add(SlidableAction(
         backgroundColor: StateContainer.of(context).curTheme.primary,
@@ -531,7 +530,7 @@ class _AppAccountsWidgetState extends State<AppAccountsWidget> {
           UIUtil.showSnackbar(
               AppLocalization.of(context).addressCopied, context);
         }));
-    
+
     // Edit action (always shown)
     _actions.add(SlidableAction(
         backgroundColor: StateContainer.of(context).curTheme.primary,
@@ -540,7 +539,7 @@ class _AppAccountsWidgetState extends State<AppAccountsWidget> {
         onPressed: (context) {
           AccountDetailsSheet(account).mainBottomSheet(context);
         }));
-    
+
     // Delete action (only for non-primary accounts with zero balance)
     if ((account.index ?? 0) > 0) {
       // Check if account has zero balance
@@ -551,7 +550,7 @@ class _AppAccountsWidgetState extends State<AppAccountsWidget> {
       } catch (e) {
         balanceValue = 0;
       }
-      
+
       // Only show delete if balance is zero
       if (balanceValue == 0) {
         _actions.add(SlidableAction(
@@ -572,7 +571,8 @@ class _AppAccountsWidgetState extends State<AppAccountsWidget> {
                   EventTaxiImpl.singleton().fire(
                       AccountModifiedEvent(account: account, deleted: true));
                   setState(() {
-                    widget.accounts.removeWhere((a) => a.index == account.index);
+                    widget.accounts
+                        .removeWhere((a) => a.index == account.index);
                   });
                 });
               },

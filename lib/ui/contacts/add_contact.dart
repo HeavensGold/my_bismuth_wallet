@@ -1,5 +1,3 @@
-
-
 // Flutter imports:
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -38,7 +36,7 @@ class AddContactSheet extends StatefulWidget {
 
 class _AddContactSheetState extends State<AddContactSheet> {
   static String? _pendingQRResult;
-  
+
   late FocusNode _nameFocusNode;
   late FocusNode _addressFocusNode;
   late TextEditingController _nameController;
@@ -100,12 +98,12 @@ class _AddContactSheetState extends State<AddContactSheet> {
         });
       }
     });
-    
+
     // Check for pending QR result from previous widget instance
     if (_AddContactSheetState._pendingQRResult != null) {
       final pendingResult = _AddContactSheetState._pendingQRResult!;
       _AddContactSheetState._pendingQRResult = null; // Clear it
-      
+
       // Process the pending result
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _processQRResult(pendingResult);
@@ -201,7 +199,7 @@ class _AddContactSheetState extends State<AddContactSheet> {
                     ],
                     onSubmitted: (text) {
                       FocusScope.of(context).unfocus();
-                                        },
+                    },
                   ),
                   // Enter Name Error Container
                   Container(
@@ -239,14 +237,15 @@ class _AddContactSheetState extends State<AddContactSheet> {
                           UIUtil.cancelLockEvent();
                           String? scanResult = await UserDataUtil.getQRData(
                               DataType.ADDRESS, context);
-                          
-                          if (scanResult == null || QRScanErrs.ERROR_LIST.contains(scanResult)) {
+
+                          if (scanResult == null ||
+                              QRScanErrs.ERROR_LIST.contains(scanResult)) {
                             return;
                           }
-                          
+
                           // Store result for the recreated widget to process
                           _AddContactSheetState._pendingQRResult = scanResult;
-                          
+
                           // Also try to process immediately if widget is still mounted
                           if (mounted) {
                             _processQRResult(scanResult);
@@ -269,7 +268,7 @@ class _AddContactSheetState extends State<AddContactSheet> {
                           _addressValidAndUnfocused = true;
                         });
                         _addressFocusNode.unfocus();
-                                            },
+                      },
                     ),
                     fadeSuffixOnCondition: true,
                     suffixShowFirstCondition: _showPasteButton,
@@ -298,8 +297,7 @@ class _AddContactSheetState extends State<AddContactSheet> {
                                     .requestFocus(_addressFocusNode);
                               });
                             },
-                            child: UIUtil.threeLineAddressText(
-                                context,
+                            child: UIUtil.threeLineAddressText(context,
                                 widget.address ?? _addressController.text))
                         : null,
                   ),
@@ -374,7 +372,7 @@ class _AddContactSheetState extends State<AddContactSheet> {
 
   void _processQRResult(String scanResult) {
     if (!mounted) return;
-    
+
     setState(() {
       _addressController.text = scanResult;
       _addressValidationText = "";

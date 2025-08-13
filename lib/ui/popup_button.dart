@@ -1,5 +1,3 @@
-
-
 // Flutter imports:
 import 'package:flutter/material.dart';
 
@@ -57,18 +55,20 @@ class _AppPopupButtonState extends State<AppPopupButton> {
       Contact? contact =
           await sl.get<DBHelper>().getContactWithAddress(address.address);
       // If amount is present, fill it and go to SendConfirm
-      double amount =
-          address.amount != null ? (double.tryParse(address.amount) ?? 0.0) : 0.0;
+      double amount = address.amount != null
+          ? (double.tryParse(address.amount) ?? 0.0)
+          : 0.0;
       if ((StateContainer.of(context).wallet?.accountBalance ?? 0) > amount) {
         // Go to confirm sheet
         Sheets.showAppHeightNineSheet(
             context: context,
             widget: SendConfirmSheet(
                 amountRaw: address.amount,
-                destination:
-                    contact?.address ?? address.address,
+                destination: contact?.address ?? address.address,
                 contactName: contact?.name,
-                localCurrency: StateContainer.of(context).curCurrency.getDisplayName(context),
+                localCurrency: StateContainer.of(context)
+                    .curCurrency
+                    .getDisplayName(context),
                 openfield: "",
                 operation: "",
                 comment: "",
@@ -81,10 +81,9 @@ class _AppPopupButtonState extends State<AppPopupButton> {
                 sendATokenActive: true,
                 localCurrency: StateContainer.of(context).curCurrency,
                 contact: contact,
-                address:
-                    contact?.address ?? address.address));
+                address: contact?.address ?? address.address));
       }
-        }
+    }
   }
 
   @override
@@ -112,30 +111,37 @@ class _AppPopupButtonState extends State<AppPopupButton> {
         ),
         // Send Button
         GestureDetector(
-          onVerticalDragStart: ((StateContainer.of(context).wallet?.accountBalance ?? 0) > 0)
-              ? (value) {
-                  setState(() {
-                    popupColor = StateContainer.of(context).curTheme.primary;
-                  });
-                }
-              : (value) {},
-          onVerticalDragEnd: ((StateContainer.of(context).wallet?.accountBalance ?? 0) > 0)
-              ? (value) {
-                  isSendButtonColorPrimary = true;
-                  firstTime = true;
-                  if (isScrolledUpEnough) {
-                    setState(() {
-                      popupColor = Colors.white;
-                    });
-                    scanAndHandlResult();
-                  }
-                  isScrolledUpEnough = false;
-                  setState(() {
-                    scanButtonSize = 0;
-                  });
-                }
-              : (value) {},
-          onVerticalDragUpdate: ((StateContainer.of(context).wallet?.accountBalance ?? 0) > 0)
+          onVerticalDragStart:
+              ((StateContainer.of(context).wallet?.accountBalance ?? 0) > 0)
+                  ? (value) {
+                      setState(() {
+                        popupColor =
+                            StateContainer.of(context).curTheme.primary;
+                      });
+                    }
+                  : (value) {},
+          onVerticalDragEnd:
+              ((StateContainer.of(context).wallet?.accountBalance ?? 0) > 0)
+                  ? (value) {
+                      isSendButtonColorPrimary = true;
+                      firstTime = true;
+                      if (isScrolledUpEnough) {
+                        setState(() {
+                          popupColor = Colors.white;
+                        });
+                        scanAndHandlResult();
+                      }
+                      isScrolledUpEnough = false;
+                      setState(() {
+                        scanButtonSize = 0;
+                      });
+                    }
+                  : (value) {},
+          onVerticalDragUpdate: ((StateContainer.of(context)
+                          .wallet
+                          ?.accountBalance ??
+                      0) >
+                  0)
               ? (dragUpdateDetails) {
                   if (dragUpdateDetails.localPosition.dy < -60) {
                     isScrolledUpEnough = true;
@@ -175,13 +181,15 @@ class _AppPopupButtonState extends State<AppPopupButton> {
           child: AnimatedContainer(
             duration: Duration(milliseconds: 100),
             decoration: BoxDecoration(
-              color: ((StateContainer.of(context).wallet?.accountBalance ?? 0) > 0) 
-                  ? StateContainer.of(context).curTheme.primary
-                  : StateContainer.of(context).curTheme.text30,
+              color:
+                  ((StateContainer.of(context).wallet?.accountBalance ?? 0) > 0)
+                      ? StateContainer.of(context).curTheme.primary
+                      : StateContainer.of(context).curTheme.text30,
               borderRadius: BorderRadius.circular(100),
-              boxShadow: ((StateContainer.of(context).wallet?.accountBalance ?? 0) > 0)
-                  ? [StateContainer.of(context).curTheme.boxShadowButton]
-                  : [],
+              boxShadow:
+                  ((StateContainer.of(context).wallet?.accountBalance ?? 0) > 0)
+                      ? [StateContainer.of(context).curTheme.boxShadowButton]
+                      : [],
             ),
             height: 55,
             width: (MediaQuery.of(context).size.width - 18) / 3,
@@ -191,19 +199,22 @@ class _AppPopupButtonState extends State<AppPopupButton> {
               child: AutoSizeText(
                 AppLocalization.of(context).send,
                 textAlign: TextAlign.center,
-                style: ((StateContainer.of(context).wallet?.accountBalance ?? 0) > 0)
-                    ? AppStyles.textStyleButtonPrimary(context)
-                    : TextStyle(
-                        color: StateContainer.of(context).curTheme.text60,
-                        fontSize: 16.0,
-                        fontWeight: FontWeight.w600,
-                        fontFamily: 'NunitoSans',
-                      ),
+                style:
+                    ((StateContainer.of(context).wallet?.accountBalance ?? 0) >
+                            0)
+                        ? AppStyles.textStyleButtonPrimary(context)
+                        : TextStyle(
+                            color: StateContainer.of(context).curTheme.text60,
+                            fontSize: 16.0,
+                            fontWeight: FontWeight.w600,
+                            fontFamily: 'NunitoSans',
+                          ),
                 maxLines: 1,
                 stepGranularity: 0.5,
               ),
               onPressed: () {
-                if ((StateContainer.of(context).wallet?.accountBalance ?? 0) > 0) {
+                if ((StateContainer.of(context).wallet?.accountBalance ?? 0) >
+                    0) {
                   Sheets.showAppHeightNineSheet(
                       context: context,
                       widget: SendSheet(

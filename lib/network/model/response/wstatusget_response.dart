@@ -2,7 +2,6 @@
 //
 //     final wStatusGetResponse = wStatusGetResponseFromJson(jsonString);
 
-
 // Dart imports:
 import 'dart:convert';
 

@@ -1,5 +1,3 @@
-
-
 // Dart imports:
 
 // Flutter imports:
@@ -308,8 +306,12 @@ class AvailableCurrency extends SettingSelectionItem {
   }
 
   // Get best currency for a given locale
-  // Default to USD
+  // Always return USD as the default, regardless of locale
+  // This can be changed later by the user in settings
   static AvailableCurrency getBestForLocale(Locale locale) {
+    return AvailableCurrency(AvailableCurrencyEnum.USD);
+
+    /* Original locale-based logic commented out
     for (AvailableCurrencyEnum value in AvailableCurrencyEnum.values) {
       AvailableCurrency currency = AvailableCurrency(value);
       if (locale.countryCode != null) {
@@ -343,5 +345,6 @@ class AvailableCurrency extends SettingSelectionItem {
       }
     }
     return AvailableCurrency(AvailableCurrencyEnum.USD);
+    */
   }
 }

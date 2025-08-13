@@ -1,5 +1,3 @@
-
-
 // Dart imports:
 import 'dart:async';
 
@@ -160,7 +158,7 @@ class _MnemonicDisplayState extends State<MnemonicDisplay> {
                     _seedCopied = true;
                   });
                   _seedCopiedTimer?.cancel();
-                                  _seedCopiedTimer =
+                  _seedCopiedTimer =
                       new Timer(const Duration(milliseconds: 1500), () {
                     setState(() {
                       _seedCopied = false;

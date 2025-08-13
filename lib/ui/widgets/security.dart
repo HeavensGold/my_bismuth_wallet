@@ -1,5 +1,3 @@
-
-
 // Dart imports:
 import 'dart:math';
 
@@ -57,7 +55,8 @@ class _PinScreenState extends State<PinScreen>
   List<IconData> _dotStates = [];
   String _pin = '';
   String _pinConfirmed = '';
-  bool _awaitingConfirmation = false; // true if pin has been entered once, false if not entered once
+  bool _awaitingConfirmation =
+      false; // true if pin has been entered once, false if not entered once
   String _header = '';
   int _failedAttempts = 0;
 
@@ -181,7 +180,8 @@ class _PinScreenState extends State<PinScreen>
         setState(() {
           _dotStates[lastFilledIndex] = AppIcons.dotemtpy;
           if (_awaitingConfirmation) {
-            _pinConfirmed = _pinConfirmed.substring(0, _pinConfirmed.length - 1);
+            _pinConfirmed =
+                _pinConfirmed.substring(0, _pinConfirmed.length - 1);
           } else {
             _pin = _pin.substring(0, _pin.length - 1);
           }

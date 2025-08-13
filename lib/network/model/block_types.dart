@@ -1,5 +1,3 @@
-
-
 class BlockTypes {
   static const String SEND = "send";
   static const String RECEIVE = "receive";

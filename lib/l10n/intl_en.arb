@@ -741,6 +741,18 @@
     "description": "current_bis_price_header",
     "type": "text",
     "placeholders": {}
+  },
+  "exchanges": "Exchanges",
+  "@exchanges": {
+    "description": "exchanges_sheet_title",
+    "type": "text",
+    "placeholders": {}
+  },
+  "selectDefaultExchange": "Select your default price source",
+  "@selectDefaultExchange": {
+    "description": "exchanges_sheet_subtitle",
+    "type": "text",
+    "placeholders": {}
   }, 
   "tokensListHeader": "Token List",
   "@tokensListHeader": {

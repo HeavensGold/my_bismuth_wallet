@@ -2,10 +2,10 @@
 import 'package:event_taxi/event_taxi.dart';
 
 // Bus event for network errors
-enum NetworkErrorType { 
-  CONNECTION_FAILED, 
-  TIMEOUT, 
-  SERVER_ERROR, 
+enum NetworkErrorType {
+  CONNECTION_FAILED,
+  TIMEOUT,
+  SERVER_ERROR,
   UNKNOWN_ERROR,
   BALANCE_FETCH_FAILED,
   TRANSACTION_HISTORY_FAILED,

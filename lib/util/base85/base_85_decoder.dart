@@ -1,5 +1,3 @@
-
-
 // Dart imports:
 import 'dart:convert';
 import 'dart:math';
@@ -93,10 +91,12 @@ class Base85Decoder extends Converter<String, Uint8List> {
       num = ((_baseMap[bytes[i]]).toInt() * QUAD85).toInt();
 
       i = nextValidByte(i + 1);
-      num += ((i >= bufferEnd ? 84 : _baseMap[bytes[i]]).toInt() * TRIO85).toInt();
+      num +=
+          ((i >= bufferEnd ? 84 : _baseMap[bytes[i]]).toInt() * TRIO85).toInt();
 
       i = nextValidByte(i + 1);
-      num += ((i >= bufferEnd ? 84 : _baseMap[bytes[i]]).toInt() * DUO85).toInt();
+      num +=
+          ((i >= bufferEnd ? 84 : _baseMap[bytes[i]]).toInt() * DUO85).toInt();
 
       i = nextValidByte(i + 1);
       num += (i >= bufferEnd ? 84 : _baseMap[bytes[i]]) * SING85;

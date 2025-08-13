@@ -1,5 +1,3 @@
-
-
 // Dart imports:
 import 'dart:async';
 import 'dart:ui';
@@ -20,11 +18,15 @@ import 'package:my_bismuth_wallet/util/encrypt.dart';
 /// Price conversion preference values
 enum PriceConversion { BTC, NONE, HIDDEN }
 
+/// Default DEX preference values
+enum DefaultDex { AGGREGATED, UNISWAP_V2, PANCAKESWAP }
+
 /// Singleton wrapper for shared preferences
 class SharedPrefsUtil {
   // Keys
   static const String first_launch_key = 'fbismuth_first_launch';
   static const String price_conversion = 'fbismuth_price_conversion_pref';
+  static const String default_dex = 'fbismuth_default_dex_pref';
   static const String auth_method = 'fbismuth_auth_method';
   static const String cur_currency = 'fbismuth_currency_pref';
   static const String cur_language = 'fbismuth_language_pref';
@@ -119,6 +121,15 @@ class SharedPrefsUtil {
         await get(price_conversion, defaultValue: PriceConversion.BTC.index)];
   }
 
+  Future<void> setDefaultDex(DefaultDex dex) async {
+    return await set(default_dex, dex.index);
+  }
+
+  Future<DefaultDex> getDefaultDex() async {
+    return DefaultDex.values[
+        await get(default_dex, defaultValue: DefaultDex.PANCAKESWAP.index)];
+  }
+
   Future<void> setAuthMethod(AuthenticationMethod method) async {
     return await set(auth_method, method.getIndex());
   }
@@ -136,7 +147,7 @@ class SharedPrefsUtil {
     return AvailableCurrency(AvailableCurrencyEnum.values[await get(
         cur_currency,
         defaultValue:
-            AvailableCurrency.getBestForLocale(deviceLocale).currency.index)]);
+            AvailableCurrencyEnum.USD.index)]); // Always default to USD
   }
 
   Future<void> setLanguage(LanguageSetting language) async {
@@ -145,7 +156,8 @@ class SharedPrefsUtil {
 
   Future<LanguageSetting> getLanguage() async {
     return LanguageSetting(AvailableLanguage.values[await get(cur_language,
-        defaultValue: AvailableLanguage.DEFAULT.index)]);
+        defaultValue:
+            AvailableLanguage.ENGLISH.index)]); // Always default to English
   }
 
   Future<void> setVersionApp(String v) async {

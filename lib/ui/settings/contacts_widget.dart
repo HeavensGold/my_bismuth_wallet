@@ -1,5 +1,3 @@
-
-
 // Dart imports:
 import 'dart:async';
 
@@ -68,8 +66,9 @@ class _ContactsListState extends State<ContactsList> {
       setState(() {
         if (event.contact != null) _contacts.add(event.contact!);
         //Sort by name
-        _contacts.sort(
-            (a, b) => (a.name ?? "").toLowerCase().compareTo((b.name ?? "").toLowerCase()));
+        _contacts.sort((a, b) => (a.name ?? "")
+            .toLowerCase()
+            .compareTo((b.name ?? "").toLowerCase()));
       });
       // Full update
       _updateContacts();
@@ -95,8 +94,9 @@ class _ContactsListState extends State<ContactsList> {
       }
       // Re-sort list
       setState(() {
-        _contacts.sort(
-            (a, b) => (a.name ?? "").toLowerCase().compareTo((b.name ?? "").toLowerCase()));
+        _contacts.sort((a, b) => (a.name ?? "")
+            .toLowerCase()
+            .compareTo((b.name ?? "").toLowerCase()));
       });
     });
   }
@@ -260,8 +260,8 @@ class _ContactsListState extends State<ContactsList> {
                   alignment: Alignment.centerLeft,
                   child: CircleAvatar(
                     backgroundColor: StateContainer.of(context).curTheme.text05,
-                    backgroundImage:
-                        NetworkImage(UIUtil.getRobohashURL(contact.address ?? "")),
+                    backgroundImage: NetworkImage(
+                        UIUtil.getRobohashURL(contact.address ?? "")),
                     radius: 50.0,
                   ),
                 ),

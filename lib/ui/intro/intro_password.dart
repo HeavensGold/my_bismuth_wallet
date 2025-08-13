@@ -1,5 +1,3 @@
-
-
 // Flutter imports:
 import 'package:flutter/material.dart';
 
@@ -139,7 +137,7 @@ class _IntroPasswordState extends State<IntroPassword> {
                                         setState(() {
                                           passwordError = null;
                                         });
-                                                                              if (confirmPasswordController.text ==
+                                        if (confirmPasswordController.text ==
                                             createPasswordController.text) {
                                           if (mounted) {
                                             setState(() {
@@ -189,7 +187,7 @@ class _IntroPasswordState extends State<IntroPassword> {
                                         setState(() {
                                           passwordError = null;
                                         });
-                                                                              if (confirmPasswordController.text ==
+                                        if (confirmPasswordController.text ==
                                             createPasswordController.text) {
                                           if (mounted) {
                                             setState(() {
@@ -226,8 +224,7 @@ class _IntroPasswordState extends State<IntroPassword> {
                                     Container(
                                       alignment: AlignmentDirectional(0, 0),
                                       margin: EdgeInsets.only(top: 3),
-                                      child: Text(
-                                          passwordError ?? "",
+                                      child: Text(passwordError ?? "",
                                           style: TextStyle(
                                             fontSize: 14.0,
                                             color: StateContainer.of(context)
@@ -294,16 +291,16 @@ class _IntroPasswordState extends State<IntroPassword> {
       }
     } else {
       String encryptedSeed = HEX.encode(
-        AppCrypt.encrypt(widget.seed, confirmPasswordController.text));
+          AppCrypt.encrypt(widget.seed, confirmPasswordController.text));
       await sl.get<Vault>().setSeed(encryptedSeed);
-      
+
       // Ensure session key exists (same pattern as password_lock_screen.dart)
       String sessionKey = await sl.get<Vault>().getSessionKey();
       if (sessionKey.isEmpty) {
         sessionKey = await sl.get<Vault>().updateSessionKey();
       }
-      StateContainer.of(context).setEncryptedSecret(HEX.encode(AppCrypt.encrypt(
-          widget.seed, sessionKey)));
+      StateContainer.of(context).setEncryptedSecret(
+          HEX.encode(AppCrypt.encrypt(widget.seed, sessionKey)));
       await sl.get<DBHelper>().dropAccounts();
       await AppUtil().loginAccount(widget.seed, context);
       StateContainer.of(context).requestUpdate();

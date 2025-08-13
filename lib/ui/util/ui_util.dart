@@ -1,5 +1,3 @@
-
-
 // Dart imports:
 import 'dart:async';
 
@@ -20,6 +18,7 @@ import 'package:my_bismuth_wallet/ui/util/exceptions.dart';
 import 'package:my_bismuth_wallet/ui/util/webview_screen.dart';
 
 enum ThreeLineAddressTextType { PRIMARY60, PRIMARY, SUCCESS, SUCCESS_FULL }
+
 enum OneLineAddressTextType { PRIMARY60, PRIMARY, SUCCESS }
 
 class UIUtil {
@@ -400,7 +399,8 @@ class UIUtil {
           } else {
             return Scaffold(
               appBar: AppBar(
-                backgroundColor: StateContainer.of(context).curTheme.backgroundDark,
+                backgroundColor:
+                    StateContainer.of(context).curTheme.backgroundDark,
                 iconTheme: IconThemeData(
                   color: StateContainer.of(context).curTheme.text,
                 ),
@@ -486,7 +486,7 @@ class UIUtil {
   static Future<void> cancelLockEvent() async {
     // Cancel auto-lock event, usually if we are launching another intent
     _lockDisableSub?.cancel();
-      EventTaxiImpl.singleton().fire(DisableLockTimeoutEvent(disable: true));
+    EventTaxiImpl.singleton().fire(DisableLockTimeoutEvent(disable: true));
     Future<dynamic> delayed = Future.delayed(Duration(seconds: 10));
     delayed.then((_) {
       return true;
@@ -505,7 +505,7 @@ class UIUtil {
 
   static String getRobohashURL(String address) {
     return "https://robohash.org/$address?set=set4";
-    }
+  }
 
   static String getDragginatorURL(String dna, String status) {
     if (status == "egg") {

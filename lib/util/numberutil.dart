@@ -1,5 +1,3 @@
-
-
 // Dart imports:
 import 'dart:math';
 
@@ -20,13 +18,13 @@ class NumberUtil {
     if (raw.isEmpty) {
       return Decimal.zero;
     }
-    
+
     // Remove any whitespace
     String cleanRaw = raw.trim();
     if (cleanRaw.isEmpty) {
       return Decimal.zero;
     }
-    
+
     try {
       Decimal amount = Decimal.parse(cleanRaw);
       return amount;
@@ -43,7 +41,8 @@ class NumberUtil {
   ///
   static double truncateDecimal(Decimal input,
       {int digits = maxDecimalDigits}) {
-    return (input * Decimal.fromInt(pow(10, digits).toInt())).truncateToDouble() /
+    return (input * Decimal.fromInt(pow(10, digits).toInt()))
+            .truncateToDouble() /
         pow(10, digits);
   }
 

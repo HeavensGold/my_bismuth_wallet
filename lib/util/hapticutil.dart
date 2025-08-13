@@ -10,21 +10,21 @@ class HapticUtil {
       await HapticFeedback.vibrate();
     }
   }
-  
+
   /// Light feedback
   static Future<void> lightFeedback() async {
     if (!kIsWeb) {
       await HapticFeedback.lightImpact();
     }
   }
-  
+
   /// Medium feedback
   static Future<void> mediumFeedback() async {
     if (!kIsWeb) {
       await HapticFeedback.mediumImpact();
     }
   }
-  
+
   /// Heavy feedback
   static Future<void> heavyFeedback() async {
     if (!kIsWeb) {

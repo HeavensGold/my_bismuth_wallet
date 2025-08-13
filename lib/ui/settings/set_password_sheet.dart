@@ -1,5 +1,3 @@
-
-
 // Flutter imports:
 import 'package:flutter/material.dart';
 
@@ -125,7 +123,7 @@ class _SetPasswordSheetState extends State<SetPasswordSheet> {
                                     setState(() {
                                       passwordError = null;
                                     });
-                                                                      if (confirmPasswordController.text ==
+                                    if (confirmPasswordController.text ==
                                         createPasswordController.text) {
                                       if (mounted) {
                                         setState(() {
@@ -175,7 +173,7 @@ class _SetPasswordSheetState extends State<SetPasswordSheet> {
                                     setState(() {
                                       passwordError = null;
                                     });
-                                                                      if (confirmPasswordController.text ==
+                                    if (confirmPasswordController.text ==
                                         createPasswordController.text) {
                                       if (mounted) {
                                         setState(() {
@@ -292,12 +290,12 @@ class _SetPasswordSheetState extends State<SetPasswordSheet> {
         // Create session key if missing
         sessionKey = await sl.get<Vault>().updateSessionKey();
       }
-      
+
       String encryptedSeed =
           HEX.encode(AppCrypt.encrypt(seed, confirmPasswordController.text));
       await sl.get<Vault>().setSeed(encryptedSeed);
-      StateContainer.of(context).setEncryptedSecret(HEX.encode(
-          AppCrypt.encrypt(seed, sessionKey)));
+      StateContainer.of(context)
+          .setEncryptedSecret(HEX.encode(AppCrypt.encrypt(seed, sessionKey)));
       UIUtil.showSnackbar(
           AppLocalization.of(context).setPasswordSuccess, context);
       Navigator.pop(context);

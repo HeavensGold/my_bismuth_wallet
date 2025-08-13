@@ -1,5 +1,3 @@
-
-
 // Flutter imports:
 import 'package:flutter/material.dart';
 
@@ -119,7 +117,7 @@ class _DisablePasswordSheetState extends State<DisablePasswordSheet> {
                                     setState(() {
                                       passwordError = null;
                                     });
-                                                                    },
+                                  },
                                   hintText: AppLocalization.of(context)
                                       .enterPasswordHint,
                                   keyboardType: TextInputType.text,
@@ -205,21 +203,19 @@ class _DisablePasswordSheetState extends State<DisablePasswordSheet> {
             .encode(AppCrypt.decrypt(encryptedSeed, passwordController.text));
         throwIf(!AppSeeds.isValidSeed(decryptedSeed), FormatException());
         await sl.get<Vault>().setSeed(decryptedSeed);
-        
+
         // After saving plaintext seed, setup encryptedSecret with session key
         String sessionKey = await sl.get<Vault>().getSessionKey();
         if (sessionKey.isNotEmpty) {
           StateContainer.of(context).setEncryptedSecret(
-              HEX.encode(AppCrypt.encrypt(decryptedSeed, sessionKey))
-          );
+              HEX.encode(AppCrypt.encrypt(decryptedSeed, sessionKey)));
         } else {
           // If session key is missing, create one
           sessionKey = await sl.get<Vault>().updateSessionKey();
           StateContainer.of(context).setEncryptedSecret(
-              HEX.encode(AppCrypt.encrypt(decryptedSeed, sessionKey))
-          );
+              HEX.encode(AppCrypt.encrypt(decryptedSeed, sessionKey)));
         }
-        
+
         UIUtil.showSnackbar(
             AppLocalization.of(context).disablePasswordSuccess, context);
         Navigator.pop(context);

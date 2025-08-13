@@ -1,5 +1,3 @@
-
-
 // Dart imports:
 import 'dart:async';
 
@@ -41,7 +39,7 @@ class UserDataUtil {
 
   static String? parseData(String data, DataType type) {
     data = data.trim();
-    
+
     if (type == DataType.RAW) {
       return data;
     } else if (type == DataType.URL) {
@@ -74,14 +72,14 @@ class UserDataUtil {
 
   static Future<String?> getQRData(DataType type, BuildContext context) async {
     UIUtil.cancelLockEvent();
-    
+
     // Navigate to QR scanner page and wait for result
     final result = await Navigator.of(context).push<String>(
       MaterialPageRoute(
         builder: (context) => QRScannerPage(dataType: type),
       ),
     );
-    
+
     // The scanner page already returns parsed data or error codes
     return result;
   }
@@ -134,7 +132,7 @@ class _QRScannerPageState extends State<QRScannerPage> {
               controller: cameraController,
               onDetect: (BarcodeCapture capture) {
                 if (isProcessing) return;
-                
+
                 final List<Barcode> barcodes = capture.barcodes;
                 if (barcodes.isNotEmpty) {
                   final barcode = barcodes.first;
@@ -160,23 +158,20 @@ class _QRScannerPageState extends State<QRScannerPage> {
 
   void _processScanResult(String scannedData) {
     if (isProcessing) return;
-    
+
     setState(() {
       isProcessing = true;
     });
 
     try {
       final parsedData = UserDataUtil.parseData(scannedData, widget.dataType);
-      
+
       if (parsedData != null) {
         // Valid data found, return the parsed data
         Navigator.of(context).pop(parsedData);
       } else {
         // Invalid data, show error and continue scanning
-        UIUtil.showSnackbar(
-          'Invalid QR code format for this field',
-          context
-        );
+        UIUtil.showSnackbar('Invalid QR code format for this field', context);
         // Reset processing flag to allow continued scanning
         Future.delayed(const Duration(seconds: 2), () {
           if (mounted) {

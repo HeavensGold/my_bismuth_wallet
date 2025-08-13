@@ -2,7 +2,6 @@
 //
 //     final addressTxsResponse = addressTxsResponseFromJson(jsonString);
 
-
 // Project imports:
 import 'package:my_bismuth_wallet/model/address.dart';
 import 'package:my_bismuth_wallet/network/model/block_types.dart';
@@ -162,7 +161,9 @@ class AddressTxsResponseResult {
     recipient = txs[3];
     amount = txs[4].toString();
     signature = txs[5];
-    hash = signature != null && signature!.length > 56 ? signature!.substring(0, 55) : signature;
+    hash = signature != null && signature!.length > 56
+        ? signature!.substring(0, 55)
+        : signature;
     publicKey = txs[6];
     blockHash = txs[7];
     fee = txs[8].toDouble();

@@ -1,5 +1,3 @@
-
-
 // Flutter imports:
 import 'package:flutter/services.dart';
 
@@ -93,7 +91,8 @@ class LocalCurrencyFormatter extends TextInputFormatter {
       String shouldBeText =
           NumberUtil.sanitizeNumber(curText.replaceAll(",", "."));
       shouldBeText = (currencyFormat?.currencySymbol ?? '') +
-          shouldBeText.replaceAll(".", currencyFormat?.symbols.DECIMAL_SEP ?? '.');
+          shouldBeText.replaceAll(
+              ".", currencyFormat?.symbols.DECIMAL_SEP ?? '.');
       if (shouldBeText != curText) {
         return newValue.copyWith(
             text: shouldBeText,

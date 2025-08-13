@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-
 // Dart imports:
 import 'dart:async';
 import 'dart:math' as math;
@@ -101,7 +100,7 @@ class ReactiveRefreshIndicator extends StatefulWidget {
     this.notificationPredicate = defaultScrollNotificationPredicate,
     this.semanticsLabel,
     this.semanticsValue,
-  })  : super(key: key);
+  }) : super(key: key);
 
   /// The widget below this widget in the tree.
   ///
@@ -192,8 +191,10 @@ class ReactiveRefreshIndicatorState extends State<ReactiveRefreshIndicator>
     final ThemeData theme = Theme.of(context);
     _valueColor = _positionController?.drive(
       ColorTween(
-              begin: (widget.color ?? theme.colorScheme.secondary).withValues(alpha: 0.0),
-              end: (widget.color ?? theme.colorScheme.secondary).withValues(alpha: 1.0))
+              begin: (widget.color ?? theme.colorScheme.secondary)
+                  .withValues(alpha: 0.0),
+              end: (widget.color ?? theme.colorScheme.secondary)
+                  .withValues(alpha: 1.0))
           .chain(CurveTween(
               curve: const Interval(0.0, 1.0 / _kDragSizeFactorLimit))),
     );
@@ -251,7 +252,8 @@ class ReactiveRefreshIndicatorState extends State<ReactiveRefreshIndicator>
         if (notification.metrics.extentBefore > 0.0) {
           _dismiss(_RefreshIndicatorMode.canceled);
         } else {
-          _dragOffset = (_dragOffset ?? 0.0) - (notification.scrollDelta ?? 0.0);
+          _dragOffset =
+              (_dragOffset ?? 0.0) - (notification.scrollDelta ?? 0.0);
           _checkDragOffset(notification.metrics.viewportDimension);
         }
       }
@@ -316,8 +318,8 @@ class ReactiveRefreshIndicatorState extends State<ReactiveRefreshIndicator>
   void _checkDragOffset(double containerExtent) {
     assert(_mode == _RefreshIndicatorMode.drag ||
         _mode == _RefreshIndicatorMode.armed);
-    double newValue =
-        (_dragOffset ?? 0.0) / (containerExtent * _kDragContainerExtentPercentage);
+    double newValue = (_dragOffset ?? 0.0) /
+        (containerExtent * _kDragContainerExtentPercentage);
     if (_mode == _RefreshIndicatorMode.armed)
       newValue = math.max(newValue, 1.0 / _kDragSizeFactorLimit);
     _positionController?.value =

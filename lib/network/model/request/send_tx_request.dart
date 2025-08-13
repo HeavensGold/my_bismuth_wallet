@@ -2,7 +2,6 @@
 //
 //     final sendTxRequest = sendTxRequestFromJson(jsonString);
 
-
 // Dart imports:
 import 'dart:convert';
 import 'dart:math';
@@ -47,7 +46,7 @@ class SendTxRequest {
     if (privateKey.isEmpty) {
       throw Exception('Private key is empty');
     }
-    
+
     // Remove any whitespace and ensure it's valid hex
     String cleanPrivateKey = privateKey.trim();
     if (!RegExp(r'^[0-9a-fA-F]+$').hasMatch(cleanPrivateKey)) {
@@ -70,7 +69,8 @@ class SendTxRequest {
 
     signer.reset();
     signer.init(true, new ParametersWithRandom(privParams, rnd));
-    ECSignature sig = signer.generateSignature(utf8.encode(msgToSign)) as ECSignature;
+    ECSignature sig =
+        signer.generateSignature(utf8.encode(msgToSign)) as ECSignature;
     sig = sig.normalize(ECDomainParameters('secp256k1'));
 
     var topLevel = new asn1lib.ASN1Sequence();
