@@ -736,6 +736,12 @@
     "type": "text",
     "placeholders": {}
   }, 
+  "bisPrice": "BIS Price",
+  "@bisPrice": {
+    "description": "current_bis_price_header",
+    "type": "text",
+    "placeholders": {}
+  }, 
   "tokensListHeader": "Token List",
   "@tokensListHeader": {
     "description": "settings_tokens_list_header",

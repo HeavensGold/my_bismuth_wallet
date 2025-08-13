@@ -1,5 +1,3 @@
-
-
 // Package imports:
 import 'package:decimal/decimal.dart';
 import 'package:intl/intl.dart';
@@ -7,7 +5,7 @@ import 'package:intl/intl.dart';
 // Project imports:
 import 'package:my_bismuth_wallet/model/available_currency.dart';
 import 'package:my_bismuth_wallet/network/model/response/address_txs_response.dart';
-  import 'package:my_bismuth_wallet/network/model/block_types.dart';
+import 'package:my_bismuth_wallet/network/model/block_types.dart';
 import 'package:my_bismuth_wallet/util/numberutil.dart';
 
 /// Main wallet object that's passed around the app via state
@@ -74,8 +72,23 @@ class AppWallet {
       {String locale = "en_US"}) {
     Decimal converted = Decimal.parse(_localCurrencyPrice) *
         NumberUtil.getRawAsUsableDecimal(_accountBalance.toString());
+
+    // Adaptive decimal precision to prevent very low prices from showing as 0.00
+    int decimalDigits;
+    if (converted >= Decimal.parse("0.01")) {
+      decimalDigits = 2; // Standard currency format for amounts >= 0.01
+    } else if (converted >= Decimal.parse("0.0001")) {
+      decimalDigits = 4; // 4 decimals for amounts >= 0.0001
+    } else if (converted >= Decimal.parse("0.000001")) {
+      decimalDigits = 6; // 6 decimals for amounts >= 0.000001
+    } else {
+      decimalDigits = 8; // Up to 8 decimals for very small amounts
+    }
+
     return NumberFormat.currency(
-            locale: locale, symbol: currency.getCurrencySymbol())
+            locale: locale,
+            symbol: currency.getCurrencySymbol(),
+            decimalDigits: decimalDigits)
         .format(converted.toDouble());
   }
 
@@ -85,10 +98,23 @@ class AppWallet {
     double value = _accountBalance - estimationFees;
     Decimal converted = Decimal.parse(_localCurrencyPrice) *
         NumberUtil.getRawAsUsableDecimal(value.toString());
+
+    // Adaptive decimal precision to prevent very low prices from showing as 0.00
+    int decimalDigits;
+    if (converted >= Decimal.parse("0.01")) {
+      decimalDigits = 2; // Standard currency format for amounts >= 0.01
+    } else if (converted >= Decimal.parse("0.0001")) {
+      decimalDigits = 4; // 4 decimals for amounts >= 0.0001
+    } else if (converted >= Decimal.parse("0.000001")) {
+      decimalDigits = 6; // 6 decimals for amounts >= 0.000001
+    } else {
+      decimalDigits = 8; // Up to 8 decimals for very small amounts
+    }
+
     return NumberFormat.currency(
             locale: locale,
             symbol: currency.getCurrencySymbol(),
-            decimalDigits: 5)
+            decimalDigits: decimalDigits)
         .format(converted.toDouble());
   }
 
@@ -172,4 +198,8 @@ class AppWallet {
   set historyLoading(bool value) {
     _historyLoading = value;
   }
+
+  // Raw price getters for display purposes
+  String get rawBtcPrice => _btcPrice;
+  String get rawLocalCurrencyPrice => _localCurrencyPrice;
 }

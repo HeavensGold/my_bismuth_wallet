@@ -134,73 +134,109 @@ class HttpService {
     );
 
     try {
+      // Optimized: Single API call to fetch both BTC and local currency prices
+      // This reduces network round-trips from 2 to 1, cutting response time in half
+      String currenciesQuery = "BTC," + currency.toLowerCase();
+      
       http.Response response = await http.get(
           Uri.parse(
-              "https://api.coingecko.com/api/v3/simple/price?ids=bismuth&vs_currencies=BTC"),
+              "https://api.coingecko.com/api/v3/simple/price?ids=bismuth&vs_currencies=" + 
+              currenciesQuery),
           headers: {
             'content-type': 'application/json',
             'access-Control-Allow-Origin': '*'
-          });
+          }).timeout(Duration(seconds: 10)); // Add 10 second timeout
 
       if (response.statusCode == 200) {
         String reply = response.body;
-        SimplePriceBtcResponse simplePriceBtcResponse =
-            simplePriceBtcResponseFromJson(reply);
-        simplePriceResponse.btcPrice = simplePriceBtcResponse.bismuth.btc;
-      }
-
-      response = await http.get(
-          Uri.parse(
-              "https://api.coingecko.com/api/v3/simple/price?ids=bismuth&vs_currencies=" +
-                  currency),
-          headers: {
-            'content-type': 'application/json',
-            'access-Control-Allow-Origin': '*'
-          });
-
-      if (response.statusCode == 200) {
-        String reply = response.body;
-        // Parse the response dynamically based on available currencies
-        try {
-          Map<String, dynamic> priceData = json.decode(reply);
-          Map<String, dynamic>? bismuthData = priceData['bismuth'];
+        Map<String, dynamic> priceData = json.decode(reply);
+        Map<String, dynamic>? bismuthData = priceData['bismuth'];
+        
+        if (bismuthData != null) {
+          // Extract BTC price
+          double? btcPrice = bismuthData['btc']?.toDouble();
+          simplePriceResponse.btcPrice = btcPrice ?? 0.0;
           
-          if (bismuthData != null) {
-            // Get the price for the requested currency from the response
-            String currencyLower = currency.toLowerCase();
-            double? price = bismuthData[currencyLower]?.toDouble();
-            simplePriceResponse.localCurrencyPrice = price ?? 0.0;
-          }
-        } catch (e) {
-          // If parsing fails, try specific currency handlers for supported ones
-          switch (currency.toUpperCase()) {
-            case "EUR":
-              try {
-                SimplePriceEurResponse simplePriceLocalResponse =
-                    simplePriceEurResponseFromJson(reply);
-                simplePriceResponse.localCurrencyPrice =
-                    simplePriceLocalResponse.bismuth.eur;
-              } catch (e) {
-                simplePriceResponse.localCurrencyPrice = 0.0;
-              }
-              break;
-            case "USD":
-            default:
-              try {
-                SimplePriceUsdResponse simplePriceLocalResponse =
-                    simplePriceUsdResponseFromJson(reply);
-                simplePriceResponse.localCurrencyPrice =
-                    simplePriceLocalResponse.bismuth.usd;
-              } catch (e) {
-                simplePriceResponse.localCurrencyPrice = 0.0;
-              }
-              break;
-          }
+          // Extract local currency price
+          String currencyLower = currency.toLowerCase();
+          double? currencyPrice = bismuthData[currencyLower]?.toDouble();
+          simplePriceResponse.localCurrencyPrice = currencyPrice ?? 0.0;
         }
       }
+      
       // Post to callbacks
       EventTaxiImpl.singleton().fire(PriceEvent(response: simplePriceResponse));
-    } catch (e) {}
+    } catch (e) {
+      // If the optimized single call fails, fallback to legacy behavior for reliability
+      try {
+        http.Response response = await http.get(
+            Uri.parse(
+                "https://api.coingecko.com/api/v3/simple/price?ids=bismuth&vs_currencies=BTC"),
+            headers: {
+              'content-type': 'application/json',
+              'access-Control-Allow-Origin': '*'
+            }).timeout(Duration(seconds: 10));
+
+        if (response.statusCode == 200) {
+          String reply = response.body;
+          SimplePriceBtcResponse simplePriceBtcResponse =
+              simplePriceBtcResponseFromJson(reply);
+          simplePriceResponse.btcPrice = simplePriceBtcResponse.bismuth.btc;
+        }
+
+        response = await http.get(
+            Uri.parse(
+                "https://api.coingecko.com/api/v3/simple/price?ids=bismuth&vs_currencies=" +
+                    currency),
+            headers: {
+              'content-type': 'application/json',
+              'access-Control-Allow-Origin': '*'
+            }).timeout(Duration(seconds: 10));
+
+        if (response.statusCode == 200) {
+          String reply = response.body;
+          // Parse the response dynamically based on available currencies
+          try {
+            Map<String, dynamic> priceData = json.decode(reply);
+            Map<String, dynamic>? bismuthData = priceData['bismuth'];
+            
+            if (bismuthData != null) {
+              // Get the price for the requested currency from the response
+              String currencyLower = currency.toLowerCase();
+              double? price = bismuthData[currencyLower]?.toDouble();
+              simplePriceResponse.localCurrencyPrice = price ?? 0.0;
+            }
+          } catch (e) {
+            // If parsing fails, try specific currency handlers for supported ones
+            switch (currency.toUpperCase()) {
+              case "EUR":
+                try {
+                  SimplePriceEurResponse simplePriceLocalResponse =
+                      simplePriceEurResponseFromJson(reply);
+                  simplePriceResponse.localCurrencyPrice =
+                      simplePriceLocalResponse.bismuth.eur;
+                } catch (e) {
+                  simplePriceResponse.localCurrencyPrice = 0.0;
+                }
+                break;
+              case "USD":
+              default:
+                try {
+                  SimplePriceUsdResponse simplePriceLocalResponse =
+                      simplePriceUsdResponseFromJson(reply);
+                  simplePriceResponse.localCurrencyPrice =
+                      simplePriceLocalResponse.bismuth.usd;
+                } catch (e) {
+                  simplePriceResponse.localCurrencyPrice = 0.0;
+                }
+                break;
+            }
+          }
+        }
+        // Post to callbacks
+        EventTaxiImpl.singleton().fire(PriceEvent(response: simplePriceResponse));
+      } catch (e) {}
+    }
     return simplePriceResponse;
   }
 

@@ -1,5 +1,3 @@
-
-
 // Dart imports:
 import 'dart:async';
 
@@ -32,7 +30,8 @@ class AppLocalization {
   }
 
   static AppLocalization of(BuildContext context) {
-    return Localizations.of<AppLocalization>(context, AppLocalization) ?? AppLocalization();
+    return Localizations.of<AppLocalization>(context, AppLocalization) ??
+        AppLocalization();
   }
 
   /// -- GENERIC ITEMS
@@ -743,6 +742,11 @@ class AppLocalization {
         desc: 'settings_informations_header', name: 'informations');
   }
 
+  String get bisPrice {
+    return Intl.message("BIS Price",
+        desc: 'current_bis_price_header', name: 'bisPrice');
+  }
+
   String get letsPlay {
     return Intl.message("Let's play", desc: '', name: 'letsPlay');
   }
@@ -1320,7 +1324,17 @@ class AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalization> {
 
   @override
   bool isSupported(Locale locale) {
-    return true;
+    // Only support locales for which we have language files
+    List<String> supportedLanguages = [
+      'de',
+      'en',
+      'es',
+      'fr',
+      'id',
+      'it',
+      'nl'
+    ];
+    return supportedLanguages.contains(locale.languageCode);
   }
 
   @override

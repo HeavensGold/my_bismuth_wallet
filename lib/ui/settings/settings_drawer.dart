@@ -1,5 +1,3 @@
-
-
 // Dart imports:
 import 'dart:async';
 
@@ -353,7 +351,7 @@ class _SettingsSheetState extends State<SettingsSheet>
         }
       });
     }
-    }
+  }
 
   List<Widget> _buildLanguageOptions() {
     List<Widget> ret = <Widget>[];
@@ -402,7 +400,7 @@ class _SettingsSheetState extends State<SettingsSheet>
         }
       });
     }
-    }
+  }
 
   List<Widget> _buildLockTimeoutOptions() {
     List<Widget> ret = <Widget>[];
@@ -581,15 +579,18 @@ class _SettingsSheetState extends State<SettingsSheet>
                                                 ""
                                         ? UIUtil.getRobohashURL(
                                             StateContainer.of(context)
-                                                .selectedAccount
-                                                ?.address ?? "")
+                                                    .selectedAccount
+                                                    ?.address ??
+                                                "")
                                         : UIUtil.getDragginatorURL(
                                             StateContainer.of(context)
-                                                .selectedAccount
-                                                ?.dragginatorDna ?? "",
+                                                    .selectedAccount
+                                                    ?.dragginatorDna ??
+                                                "",
                                             StateContainer.of(context)
-                                                .selectedAccount
-                                                ?.dragginatorStatus ?? ""),
+                                                    .selectedAccount
+                                                    ?.dragginatorStatus ??
+                                                ""),
                                   ),
                                   radius: 50.0,
                                 ),
@@ -644,15 +645,18 @@ class _SettingsSheetState extends State<SettingsSheet>
                                                           ""
                                                   ? UIUtil.getRobohashURL(
                                                       StateContainer.of(context)
-                                                          .recentLast
-                                                          ?.address ?? "")
+                                                              .recentLast
+                                                              ?.address ??
+                                                          "")
                                                   : UIUtil.getDragginatorURL(
                                                       StateContainer.of(context)
-                                                          .recentLast
-                                                          ?.dragginatorDna ?? "",
+                                                              .recentLast
+                                                              ?.dragginatorDna ??
+                                                          "",
                                                       StateContainer.of(context)
-                                                          .recentLast
-                                                          ?.dragginatorStatus ?? ""),
+                                                              .recentLast
+                                                              ?.dragginatorStatus ??
+                                                          ""),
                                             ),
                                             radius: 50.0,
                                           ),
@@ -717,15 +721,18 @@ class _SettingsSheetState extends State<SettingsSheet>
                                                           ""
                                                   ? UIUtil.getRobohashURL(
                                                       StateContainer.of(context)
-                                                          .recentSecondLast
-                                                          ?.address ?? "")
+                                                              .recentSecondLast
+                                                              ?.address ??
+                                                          "")
                                                   : UIUtil.getDragginatorURL(
                                                       StateContainer.of(context)
-                                                          .recentSecondLast
-                                                          ?.dragginatorDna ?? "",
+                                                              .recentSecondLast
+                                                              ?.dragginatorDna ??
+                                                          "",
                                                       StateContainer.of(context)
-                                                          .recentSecondLast
-                                                          ?.dragginatorStatus ?? ""),
+                                                              .recentSecondLast
+                                                              ?.dragginatorStatus ??
+                                                          ""),
                                             ),
                                             radius: 50.0,
                                           ),
@@ -779,29 +786,33 @@ class _SettingsSheetState extends State<SettingsSheet>
                                     _loadingAccounts = true;
                                   });
                                   try {
-                                    String? seed = await AppUtil.getSeedSafely(context);
+                                    String? seed =
+                                        await AppUtil.getSeedSafely(context);
                                     if (seed == null) {
                                       // Password mode but not unlocked
                                       setState(() {
                                         _loadingAccounts = false;
                                       });
                                       UIUtil.showSnackbar(
-                                          AppLocalization.of(context).unlock, 
+                                          AppLocalization.of(context).unlock,
                                           context);
                                       return;
                                     }
-                                    
-                                    List<Account> accounts = await sl.get<DBHelper>().getAccounts(seed);
+
+                                    List<Account> accounts = await sl
+                                        .get<DBHelper>()
+                                        .getAccounts(seed);
                                     setState(() {
                                       _loadingAccounts = false;
                                     });
-                                    AppAccountsSheet(accounts).mainBottomSheet(context);
+                                    AppAccountsSheet(accounts)
+                                        .mainBottomSheet(context);
                                   } catch (e) {
                                     setState(() {
                                       _loadingAccounts = false;
                                     });
                                     UIUtil.showSnackbar(
-                                        AppLocalization.of(context).sendError, 
+                                        AppLocalization.of(context).sendError,
                                         context);
                                     print("Error loading accounts: $e");
                                   }
@@ -837,7 +848,10 @@ class _SettingsSheetState extends State<SettingsSheet>
                           // Main account name
                           Container(
                             child: Text(
-                              StateContainer.of(context).selectedAccount?.name ?? "",
+                              StateContainer.of(context)
+                                      .selectedAccount
+                                      ?.name ??
+                                  "",
                               style: TextStyle(
                                 fontFamily: "Roboto",
                                 fontWeight: FontWeight.w600,
@@ -849,11 +863,11 @@ class _SettingsSheetState extends State<SettingsSheet>
                           // Main account address
                           Container(
                             child: Text(
-                              StateContainer.of(context)
-                                              .wallet
-                                              ?.address !=
-                                          null
-                                  ? StateContainer.of(context).wallet?.address ?? ""
+                              StateContainer.of(context).wallet?.address != null
+                                  ? StateContainer.of(context)
+                                          .wallet
+                                          ?.address ??
+                                      ""
                                   : "",
                               style: TextStyle(
                                 fontFamily: "OverpassMono",
@@ -887,6 +901,16 @@ class _SettingsSheetState extends State<SettingsSheet>
                               fontWeight: FontWeight.w100,
                               color:
                                   StateContainer.of(context).curTheme.text60)),
+                    ),
+                    Divider(
+                      height: 2,
+                      color: StateContainer.of(context).curTheme.text15,
+                    ),
+                    AppSettings.buildSettingsListItemSingleLineWithInfos(
+                      context,
+                      AppLocalization.of(context).bisPrice,
+                      _getPriceInfo(context),
+                      FontAwesome.money,
                     ),
                     Divider(
                       height: 2,
@@ -1070,7 +1094,6 @@ class _SettingsSheetState extends State<SettingsSheet>
     );
   }
 
-
   Widget buildSecurityMenu(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
@@ -1165,9 +1188,11 @@ class _SettingsSheetState extends State<SettingsSheet>
                             HapticUtil.lightFeedback();
                             try {
                               // For backup, use proper seed access method that handles both password and non-password modes
-                              String? seed = await AppUtil.getSeedSafely(context);
+                              String? seed =
+                                  await AppUtil.getSeedSafely(context);
                               if (seed != null) {
-                                AppSeedBackupSheet(seed).mainBottomSheet(context);
+                                AppSeedBackupSheet(seed)
+                                    .mainBottomSheet(context);
                               } else {
                                 print("Error: Could not get seed for backup");
                                 await authenticateWithPin();
@@ -1185,7 +1210,7 @@ class _SettingsSheetState extends State<SettingsSheet>
                       }
                     }),
                     // Authentication Method
-                    if (_hasBiometrics) ...[  
+                    if (_hasBiometrics) ...[
                       Divider(
                         height: 2,
                         color: StateContainer.of(context).curTheme.text15,
@@ -1258,7 +1283,8 @@ class _SettingsSheetState extends State<SettingsSheet>
                                 context,
                                 AppLocalization.of(context)
                                     .disableWalletPassword,
-                                AppIcons.walletpassworddisabled, onPressed: () async {
+                                AppIcons.walletpassworddisabled,
+                                onPressed: () async {
                               await Sheets.showAppHeightNineSheet(
                                   context: context,
                                   widget: DisablePasswordSheet());
@@ -1338,35 +1364,36 @@ class _SettingsSheetState extends State<SettingsSheet>
       cancelText: "Cancel",
     );
   }
-  
+
   Future<void> _authenticateForReset() async {
     // PIN Authentication for reset
     String? expectedPin = await sl.get<Vault>().getPin();
     if (expectedPin == null) {
       return;
     }
-    
-    bool authenticated = await Navigator.of(context).push(MaterialPageRoute(builder: (BuildContext context) {
+
+    bool authenticated = await Navigator.of(context)
+        .push(MaterialPageRoute(builder: (BuildContext context) {
       return PinScreen(
         PinOverlayType.ENTER_PIN,
         expectedPin: expectedPin,
         description: "Enter PIN to reset wallet",
       );
     }));
-    
+
     if (authenticated != null && authenticated) {
       // Reset the wallet
       await _performWalletReset();
     }
   }
-  
+
   Future<void> _performWalletReset() async {
     try {
       // Clear all wallet data
       await sl.get<DBHelper>().dropAll();
       await sl.get<Vault>().deleteAll();
       await sl.get<SharedPrefsUtil>().deleteAll();
-      
+
       // Navigate to intro welcome screen
       Navigator.of(context).pushNamedAndRemoveUntil(
         '/intro_welcome',
@@ -1425,5 +1452,41 @@ class _SettingsSheetState extends State<SettingsSheet>
         );
       }
     }
+  }
+
+  String _getPriceInfo(BuildContext context) {
+    final wallet = StateContainer.of(context).wallet;
+    final currency = StateContainer.of(context).curCurrency;
+
+    if (wallet?.rawBtcPrice == null || wallet?.rawLocalCurrencyPrice == null) {
+      return "Loading...";
+    }
+
+    // Parse the prices
+    double btcPrice = double.tryParse(wallet?.rawBtcPrice ?? '0') ?? 0;
+    double localPrice =
+        double.tryParse(wallet?.rawLocalCurrencyPrice ?? '0') ?? 0;
+
+    if (btcPrice == 0 && localPrice == 0) {
+      return "Price unavailable";
+    }
+
+    // Format BTC price (show more decimal places for small values)
+    String btcPriceStr = btcPrice < 0.001
+        ? btcPrice.toStringAsFixed(8)
+        : btcPrice.toStringAsFixed(6);
+    btcPriceStr = btcPriceStr
+        .replaceAll(RegExp(r'0+$'), '')
+        .replaceAll(RegExp(r'\.$'), '');
+
+    // Format local currency price
+    String localPriceStr = localPrice < 1
+        ? localPrice.toStringAsFixed(6)
+        : localPrice.toStringAsFixed(2);
+    localPriceStr = localPriceStr
+        .replaceAll(RegExp(r'0+$'), '')
+        .replaceAll(RegExp(r'\.$'), '');
+
+    return "$btcPriceStr BTC\n${currency.getCurrencySymbol()}$localPriceStr";
   }
 }
