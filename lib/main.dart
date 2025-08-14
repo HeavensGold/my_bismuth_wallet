@@ -280,10 +280,24 @@ class SplashState extends State<Splash> with WidgetsBindingObserver {
   }
 
   Future checkLoggedIn() async {
-    // Initialize session key if not exists, don't regenerate existing one
-    String existingKey = await sl.get<Vault>().getSessionKey();
-    if (existingKey.isEmpty) {
-      await sl.get<Vault>().updateSessionKey();
+    print('checkLoggedIn started');
+    // Android 15 fix: Defer secure storage access until after UI initialization
+    try {
+      // Initialize session key if not exists, don't regenerate existing one
+      String existingKey = await sl.get<Vault>().getSessionKey().timeout(
+        Duration(seconds: 10),
+        onTimeout: () {
+          print('Session key timeout - returning empty');
+          return "";
+        }
+      );
+      if (existingKey.isEmpty) {
+        await sl.get<Vault>().updateSessionKey();
+      }
+    } catch (e) {
+      // Android 15 compatibility: If secure storage fails, continue without session key
+      // The session key will be initialized later during normal app flow
+      print('SecureStorage access deferred: $e');
     }
 
     if (!kIsWeb &&
@@ -330,26 +344,47 @@ class SplashState extends State<Splash> with WidgetsBindingObserver {
       await sl.get<SharedPrefsUtil>().setFirstLaunch();
       // See if logged in already
       bool isEncrypted = false;
-      var seed = await sl.get<Vault>().getSeed();
-      var pin = await sl.get<Vault>().getPin();
+      // Android 15 fix: Add timeout to secure storage operations with logging
+      print('Attempting to get seed from vault...');
+      var seed = await sl.get<Vault>().getSeed().timeout(
+        Duration(seconds: 10), 
+        onTimeout: () {
+          print('getSeed timeout - returning empty');
+          return "";
+        }
+      );
+      print('Seed retrieved: ${seed.isNotEmpty}');
+      
+      print('Attempting to get pin from vault...');
+      var pin = await sl.get<Vault>().getPin().timeout(
+        Duration(seconds: 10), 
+        onTimeout: () {
+          print('getPin timeout - returning empty');
+          return "";
+        }
+      );
+      print('Pin retrieved: ${pin.isNotEmpty}');
       // If we have a seed set, but not a pin - or vice versa
       // Then delete the seed and pin from device and start over.
       // This would mean user did not complete the intro screen completely.
-      bool isLoggedIn =
-          seed != null && seed.isNotEmpty && pin != null && pin.isNotEmpty;
+      bool isLoggedIn = seed.isNotEmpty && pin.isNotEmpty;
       if (isLoggedIn) {
         isEncrypted = seedIsEncrypted(seed);
       }
 
       if (isLoggedIn) {
+        print('User is logged in, navigating to appropriate screen');
         if (isEncrypted) {
+          print('Seed is encrypted, navigating to password lock screen');
           Navigator.of(context).pushNamedAndRemoveUntil(
               '/password_lock_screen', (Route<dynamic> route) => false);
         } else if (await sl.get<SharedPrefsUtil>().getLock() ||
             await sl.get<SharedPrefsUtil>().shouldLock()) {
+          print('Lock required, navigating to lock screen');
           Navigator.of(context).pushNamedAndRemoveUntil(
               '/lock_screen', (Route<dynamic> route) => false);
         } else {
+          print('No lock required, logging in and navigating to home');
           await AppUtil().loginAccount(seed, context);
           // Reset any lingering failed attempts from previous sessions
           await sl.get<SharedPrefsUtil>().resetLockAttempts();
@@ -361,9 +396,11 @@ class SplashState extends State<Splash> with WidgetsBindingObserver {
         }
       } else {
         // No valid seed/pin found, go to intro welcome page
+        print('No valid seed/pin found, navigating to intro welcome');
         Navigator.of(context).pushReplacementNamed('/intro_welcome');
       }
     } catch (e) {
+      print('Error in checkLoggedIn: $e');
       /// Fallback secure storage
       /// A very small percentage of users are encountering issues writing to the
       /// Android keyStore using the flutter_secure_storage plugin.
@@ -375,11 +412,19 @@ class SplashState extends State<Splash> with WidgetsBindingObserver {
           (!kIsWeb &&
               Platform.isAndroid &&
               e.toString().contains("flutter_secure"))) {
+        print('Using legacy storage fallback');
         if (!(await sl.get<SharedPrefsUtil>().useLegacyStorage())) {
           await sl.get<SharedPrefsUtil>().setUseLegacyStorage();
           checkLoggedIn();
+        } else {
+          // If already using legacy storage and still failing, navigate to intro
+          print('Legacy storage also failed, navigating to intro');
+          if (mounted) {
+            Navigator.of(context).pushReplacementNamed('/intro_welcome');
+          }
         }
       } else {
+        print('Clearing all data and retrying');
         await sl.get<Vault>().deleteAll();
         await sl.get<DBHelper>().dropAll();
         await sl.get<SharedPrefsUtil>().deleteAll();
@@ -387,6 +432,12 @@ class SplashState extends State<Splash> with WidgetsBindingObserver {
           _retried = true;
           _hasCheckedLoggedIn = false;
           checkLoggedIn();
+        } else {
+          // If retry also failed, navigate to intro
+          print('Retry failed, navigating to intro');
+          if (mounted) {
+            Navigator.of(context).pushReplacementNamed('/intro_welcome');
+          }
         }
       }
     }
@@ -398,10 +449,22 @@ class SplashState extends State<Splash> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     _hasCheckedLoggedIn = false;
     _retried = false;
-    if (SchedulerBinding.instance.schedulerPhase ==
-        SchedulerPhase.persistentCallbacks) {
-      SchedulerBinding.instance.addPostFrameCallback((_) => checkLoggedIn());
-    }
+    
+    // Android 15 fix: Always use post-frame callback with increased delay
+    SchedulerBinding.instance.addPostFrameCallback((_) async {
+      // Increased delay for Android 15 compatibility
+      await Future.delayed(Duration(milliseconds: 1000));
+      print('Starting checkLoggedIn after delay');
+      try {
+        await checkLoggedIn();
+      } catch (e) {
+        print('Error in checkLoggedIn: $e');
+        // Fallback to intro screen if check fails
+        if (mounted) {
+          Navigator.of(context).pushReplacementNamed('/intro_welcome');
+        }
+      }
+    });
   }
 
   @override

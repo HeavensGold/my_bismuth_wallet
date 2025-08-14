@@ -100,29 +100,10 @@ class StateContainerState extends State<StateContainer> {
 
     // Register RxBus
     _registerBus();
-
-    // Initialize wallet on startup
-    Future.delayed(Duration(milliseconds: 100), () async {
-      if (mounted) {
-        // Try to get the saved selected account
-        try {
-          String seed = await getSeed();
-          Account? savedAccount =
-              await sl.get<DBHelper>().getSelectedAccount(seed);
-          if (savedAccount != null) {
-            // Initialize wallet with saved account
-            updateWallet(account: savedAccount);
-          } else {
-            // No saved account, get the main account
-            Account mainAccount = await sl.get<DBHelper>().getMainAccount(seed);
-            updateWallet(account: mainAccount);
-          }
-        } catch (e) {
-          // Error getting seed or account, wallet will be initialized later
-          print("Could not initialize wallet on startup: $e");
-        }
-      }
-    });
+    
+    // Android 15 fix: Remove automatic wallet initialization to prevent race conditions
+    // Wallet will be initialized after successful authentication
+    // This prevents conflicts with secure storage access during app startup
     // Set currency locale here for the UI to access
     sl.get<SharedPrefsUtil>().getCurrency(deviceLocale).then((currency) {
       setState(() {
