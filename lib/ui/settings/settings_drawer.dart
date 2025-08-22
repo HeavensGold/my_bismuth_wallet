@@ -6,9 +6,7 @@ import 'package:flutter/material.dart';
 
 // Package imports:
 import 'package:event_taxi/event_taxi.dart';
-import 'package:fluttericon/font_awesome5_icons.dart';
 import 'package:fluttericon/font_awesome_icons.dart';
-import 'package:fluttericon/iconic_icons.dart';
 import 'package:fluttericon/typicons_icons.dart';
 import 'package:logger/logger.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -17,6 +15,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:my_bismuth_wallet/app_icons.dart';
 import 'package:my_bismuth_wallet/appstate_container.dart';
 import 'package:my_bismuth_wallet/bus/events.dart';
+import 'package:my_bismuth_wallet/bus/unified_price_event.dart';
 import 'package:my_bismuth_wallet/localization.dart';
 import 'package:my_bismuth_wallet/model/authentication_method.dart';
 import 'package:my_bismuth_wallet/model/available_currency.dart';
@@ -26,9 +25,7 @@ import 'package:my_bismuth_wallet/model/db/hiveDB.dart';
 import 'package:my_bismuth_wallet/model/device_lock_timeout.dart';
 import 'package:my_bismuth_wallet/model/device_unlock_option.dart';
 import 'package:my_bismuth_wallet/model/vault.dart';
-import 'package:my_bismuth_wallet/network/model/response/individual_dex_prices_response.dart';
 // import 'package:my_bismuth_wallet/service/dragginator_service.dart'; // Deleted
-import 'package:my_bismuth_wallet/service/http_service.dart';
 import 'package:my_bismuth_wallet/service_locator.dart';
 import 'package:my_bismuth_wallet/styles.dart';
 import 'package:my_bismuth_wallet/util/app_ffi/apputil.dart';
@@ -36,7 +33,6 @@ import 'package:my_bismuth_wallet/ui/accounts/accountdetails_sheet.dart';
 import 'package:my_bismuth_wallet/ui/accounts/accounts_sheet.dart';
 // import 'package:my_bismuth_wallet/ui/dragginator/my_dragginator_breeding_list.dart'; // Deleted
 // import 'package:my_bismuth_wallet/ui/dragginator/my_dragginator_merging.dart'; // Deleted
-import 'package:my_bismuth_wallet/ui/send/send_confirm_sheet.dart';
 import 'package:my_bismuth_wallet/ui/settings/backupseed_sheet.dart';
 import 'package:my_bismuth_wallet/ui/settings/contacts_widget.dart';
 import 'package:my_bismuth_wallet/ui/settings/custom_url_widget.dart';
@@ -53,6 +49,8 @@ import 'package:my_bismuth_wallet/ui/widgets/sheet_util.dart';
 import 'package:my_bismuth_wallet/util/biometrics.dart';
 import 'package:my_bismuth_wallet/util/hapticutil.dart';
 import 'package:my_bismuth_wallet/util/sharedprefsutil.dart';
+import 'package:my_bismuth_wallet/service/price_manager.dart';
+import 'package:my_bismuth_wallet/service/price_sources/price_source.dart';
 
 class SettingsSheet extends StatefulWidget {
   final int eggPrice;
@@ -88,7 +86,7 @@ class _SettingsSheetState extends State<SettingsSheet>
   late bool _contactsOpen;
   
   // Price event subscription for auto-refresh
-  StreamSubscription<PriceEvent>? _priceEventSub;
+  StreamSubscription<UnifiedPriceUpdateEvent>? _unifiedPriceEventSub;
 
   bool notNull(Object o) => o != null;
 
@@ -134,7 +132,7 @@ class _SettingsSheetState extends State<SettingsSheet>
       });
     });
     // Subscribe to price events for auto-refresh
-    _priceEventSub = EventTaxiImpl.singleton().registerTo<PriceEvent>().listen((event) {
+    _unifiedPriceEventSub = EventTaxiImpl.singleton().registerTo<UnifiedPriceUpdateEvent>().listen((event) {
       if (mounted) {
         setState(() {
           // Price update will trigger rebuild of _getPriceInfo()
@@ -177,7 +175,7 @@ class _SettingsSheetState extends State<SettingsSheet>
 
   @override
   void dispose() {
-    _priceEventSub?.cancel();
+    _unifiedPriceEventSub?.cancel();
     _securityController.dispose();
     _customUrlController.dispose();
     _contactsController.dispose();
@@ -1483,21 +1481,15 @@ class _SettingsSheetState extends State<SettingsSheet>
       return "Loading...";
     }
 
-    // Get DEX-specific raw prices (per BIS, not wallet total)
-    String btcPriceStr = "0";
-    String localPriceStr = "0";
-
-    if (wallet.dexPrices != null && wallet.dexPrices![selectedDex] != null) {
-      DexPriceData dexData = wallet.dexPrices![selectedDex]!;
-      if (dexData.isActive) {
-        btcPriceStr = dexData.btcPrice;
-        localPriceStr = dexData.localCurrencyPrice;
-      }
-    } else {
-      // Fallback to aggregated prices
-      btcPriceStr = wallet.rawBtcPrice ?? '0';
-      localPriceStr = wallet.rawLocalCurrencyPrice ?? '0';
-    }
+    // Get prices from PriceManager for selected DEX
+    PriceData? priceData;
+    PriceManager priceManager = PriceManager.instance;
+    
+    // Get price data for current selected DEX
+    priceData = priceManager.selectedPrice;
+    
+    String btcPriceStr = priceData?.btcPrice.toString() ?? "0";
+    String localPriceStr = priceData?.localCurrencyPrice.toString() ?? "0";
 
     // Parse the prices
     double btcPrice = double.tryParse(btcPriceStr) ?? 0;
@@ -1541,23 +1533,10 @@ class _SettingsSheetState extends State<SettingsSheet>
   }
 
   void _showExchangesSheet(BuildContext context) async {
-    // Fetch individual DEX prices if not available
-    try {
-      final httpService = sl.get<HttpService>();
-      final currency = StateContainer.of(context).curCurrency;
-      final dexPricesResponse =
-          await httpService.getIndividualDexPrices(currency.getIso4217Code());
-
-      // Update wallet with DEX prices
-      StateContainer.of(context)
-          .wallet
-          ?.updateDexPrices(dexPricesResponse.dexPrices);
-
-      AppExchangesSheet(dexPricesResponse.dexPrices).mainBottomSheet(context);
-    } catch (e) {
-      print('Error fetching DEX prices: $e');
-      // Fallback to show sheet without DEX prices
-      AppExchangesSheet(null).mainBottomSheet(context);
-    }
+    // Request fresh price update to ensure we have latest DEX prices
+    StateContainer.of(context).requestPriceUpdate(forceRefresh: true);
+    
+    // Show exchanges sheet - it will get prices from PriceManager
+    AppExchangesSheet(null).mainBottomSheet(context);
   }
 }

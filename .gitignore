@@ -2,6 +2,8 @@
 CLAUDE.md
 context_image/
 memory/
+docs/
+tests/
 
 # Miscellaneous
 *.class

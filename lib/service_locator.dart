@@ -7,6 +7,10 @@ import 'package:my_bismuth_wallet/model/db/appdb.dart';
 import 'package:my_bismuth_wallet/model/vault.dart';
 import 'package:my_bismuth_wallet/service/app_service.dart';
 import 'package:my_bismuth_wallet/service/http_service.dart';
+import 'package:my_bismuth_wallet/service/price_manager.dart';
+import 'package:my_bismuth_wallet/service/price_sources/coingecko_source.dart';
+import 'package:my_bismuth_wallet/service/price_sources/uniswap_source.dart';
+import 'package:my_bismuth_wallet/service/price_sources/pancakeswap_source.dart';
 import 'package:my_bismuth_wallet/util/biometrics.dart';
 import 'package:my_bismuth_wallet/util/hapticutil.dart';
 import 'package:my_bismuth_wallet/util/sharedprefsutil.dart';
@@ -53,4 +57,18 @@ void setupServiceLocator() {
     sl.unregister<Logger>();
   }
   sl.registerLazySingleton<Logger>(() => Logger(printer: PrettyPrinter()));
+
+  if (sl.isRegistered<PriceManager>()) {
+    sl.unregister<PriceManager>();
+  }
+  sl.registerLazySingleton<PriceManager>(() {
+    PriceManager priceManager = PriceManager.instance;
+    
+    // Register all price sources
+    priceManager.registerSource(CoingeckoSource());
+    priceManager.registerSource(UniswapSource());
+    priceManager.registerSource(PancakeswapSource());
+    
+    return priceManager;
+  });
 }

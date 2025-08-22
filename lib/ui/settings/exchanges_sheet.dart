@@ -1,6 +1,3 @@
-// Dart imports:
-import 'dart:async';
-
 // Flutter imports:
 import 'package:flutter/material.dart';
 
@@ -10,13 +7,13 @@ import 'package:fluttericon/font_awesome_icons.dart';
 
 // Project imports:
 import 'package:my_bismuth_wallet/appstate_container.dart';
-import 'package:my_bismuth_wallet/localization.dart';
 import 'package:my_bismuth_wallet/network/model/response/individual_dex_prices_response.dart';
 import 'package:my_bismuth_wallet/service_locator.dart';
 import 'package:my_bismuth_wallet/styles.dart';
-import 'package:my_bismuth_wallet/ui/widgets/buttons.dart';
 import 'package:my_bismuth_wallet/ui/widgets/sheet_util.dart';
 import 'package:my_bismuth_wallet/util/sharedprefsutil.dart';
+import 'package:my_bismuth_wallet/service/price_manager.dart';
+import 'package:my_bismuth_wallet/service/price_sources/price_source.dart';
 
 class AppExchangesSheet {
   final Map<DefaultDex, DexPriceData>? dexPrices;
@@ -30,19 +27,44 @@ class AppExchangesSheet {
       // Dynamic decimals for fiat
       if (price >= 1) return price.toStringAsFixed(2);
       if (price >= 0.01) return price.toStringAsFixed(4);
-      return price.toStringAsFixed(5);
+      return price.toStringAsFixed(6);
     } else {
-      // BTC can keep more decimals
+      // BTC formatting with better precision
+      if (price == 0.0) return '0';
+      if (price < 0.00000001) {
+        // Use scientific notation for very small numbers
+        return price.toStringAsExponential(3);
+      }
       if (price < 0.0001) {
+        // Show up to 12 decimal places for small BTC amounts
         return price
-            .toStringAsFixed(10)
+            .toStringAsFixed(12)
             .replaceAll(RegExp(r'0+$'), '')
             .replaceAll(RegExp(r'\.$'), '');
       }
+      // Standard 8 decimal places for normal BTC amounts
       return price
           .toStringAsFixed(8)
           .replaceAll(RegExp(r'0+$'), '')
           .replaceAll(RegExp(r'\.$'), '');
+    }
+  }
+
+  /// Get current price data from PriceManager
+  Map<String, PriceData> _getCurrentPrices() {
+    return PriceManager.instance.allPrices;
+  }
+
+  /// Get price data for a specific DEX from PriceManager
+  PriceData? _getPriceForDex(DefaultDex dex) {
+    final prices = _getCurrentPrices();
+    switch (dex) {
+      case DefaultDex.AGGREGATED:
+        return prices['coingecko_aggregated'];
+      case DefaultDex.UNISWAP_V2:
+        return prices['uniswap_v2'];
+      case DefaultDex.PANCAKESWAP:
+        return prices['pancakeswap'];
     }
   }
 
@@ -119,46 +141,52 @@ class AppExchangesSheet {
                       margin: EdgeInsets.only(top: 20),
                       child: Column(
                         children: [
-                          // Aggregated option (always first)
-                          _buildDexOption(
-                            context,
-                            setState,
-                            DefaultDex.AGGREGATED,
-                            'Aggregated (by CoinGecko)',
-                            StateContainer.of(context).wallet?.rawBtcPrice ??
-                                '0',
-                            StateContainer.of(context)
-                                    .wallet
-                                    ?.rawLocalCurrencyPrice ??
-                                '0',
-                            0.0, // No specific volume for aggregated
-                          ),
+                          // Build options using PriceManager data
+                          ...(() {
+                            List<Widget> options = [];
+                            
+                            // Aggregated option (CoinGecko)
+                            PriceData? aggregatedPrice = _getPriceForDex(DefaultDex.AGGREGATED);
+                            options.add(_buildDexOption(
+                              context,
+                              setState,
+                              DefaultDex.AGGREGATED,
+                              'Aggregated (by CoinGecko)',
+                              aggregatedPrice?.btcPrice.toString() ?? '0',
+                              aggregatedPrice?.localCurrencyPrice.toString() ?? '0',
+                              0.0, // No specific volume for aggregated
+                            ));
 
-                          // Individual DEX options
-                          if (dexPrices != null) ...[
-                            if (dexPrices![DefaultDex.UNISWAP_V2] != null)
-                              _buildDexOption(
+                            // Uniswap V2 option
+                            PriceData? uniswapPrice = _getPriceForDex(DefaultDex.UNISWAP_V2);
+                            if (uniswapPrice != null) {
+                              options.add(_buildDexOption(
                                 context,
                                 setState,
                                 DefaultDex.UNISWAP_V2,
                                 'Uniswap V2',
-                                dexPrices![DefaultDex.UNISWAP_V2]!.btcPrice,
-                                dexPrices![DefaultDex.UNISWAP_V2]!
-                                    .localCurrencyPrice,
-                                dexPrices![DefaultDex.UNISWAP_V2]!.volume24h,
-                              ),
-                            if (dexPrices![DefaultDex.PANCAKESWAP] != null)
-                              _buildDexOption(
+                                uniswapPrice.btcPrice.toString(),
+                                uniswapPrice.localCurrencyPrice.toString(),
+                                uniswapPrice.volume24h,
+                              ));
+                            }
+
+                            // PancakeSwap option
+                            PriceData? pancakePrice = _getPriceForDex(DefaultDex.PANCAKESWAP);
+                            if (pancakePrice != null) {
+                              options.add(_buildDexOption(
                                 context,
                                 setState,
                                 DefaultDex.PANCAKESWAP,
                                 'PancakeSwap',
-                                dexPrices![DefaultDex.PANCAKESWAP]!.btcPrice,
-                                dexPrices![DefaultDex.PANCAKESWAP]!
-                                    .localCurrencyPrice,
-                                dexPrices![DefaultDex.PANCAKESWAP]!.volume24h,
-                              ),
-                          ],
+                                pancakePrice.btcPrice.toString(),
+                                pancakePrice.localCurrencyPrice.toString(),
+                                pancakePrice.volume24h,
+                              ));
+                            }
+
+                            return options;
+                          })(),
                         ],
                       ),
                     ),

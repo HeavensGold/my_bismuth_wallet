@@ -11,7 +11,7 @@ import 'package:logger/logger.dart';
 
 // Project imports:
 import 'package:my_bismuth_wallet/bus/events.dart';
-import 'package:my_bismuth_wallet/model/address.dart';
+import 'package:my_bismuth_wallet/bus/unified_price_event.dart';
 import 'package:my_bismuth_wallet/model/available_currency.dart';
 import 'package:my_bismuth_wallet/model/available_language.dart';
 import 'package:my_bismuth_wallet/model/db/appdb.dart';
@@ -23,6 +23,7 @@ import 'package:my_bismuth_wallet/network/model/response/address_txs_response.da
 import 'package:my_bismuth_wallet/network/model/response/balance_get_response.dart';
 import 'package:my_bismuth_wallet/service/app_service.dart';
 import 'package:my_bismuth_wallet/service/http_service.dart';
+import 'package:my_bismuth_wallet/service/price_manager.dart';
 import 'package:my_bismuth_wallet/service_locator.dart';
 import 'package:my_bismuth_wallet/themes.dart';
 import 'package:my_bismuth_wallet/util/app_ffi/apputil.dart';
@@ -122,12 +123,18 @@ class StateContainerState extends State<StateContainer> {
       setState(() {
         selectedDefaultDex = dex;
       });
+      
+      // Initialize PriceManager with current settings
+      PriceManager priceManager = sl.get<PriceManager>();
+      priceManager.setSelectedDex(dex);
+      priceManager.setCurrency(curCurrency.getIso4217Code());
     });
   }
 
   // Subscriptions
   StreamSubscription<BalanceGetEvent>? _balanceGetEventSub;
-  StreamSubscription<PriceEvent>? _priceEventSub;
+  StreamSubscription<UnifiedPriceUpdateEvent>? _unifiedPriceEventSub;
+  StreamSubscription<PriceSourceChangedEvent>? _priceSourceChangedEventSub;
   StreamSubscription<AccountModifiedEvent>? _accountModifiedSub;
   StreamSubscription<TransactionsListEvent>? _transactionsListEventSub;
 
@@ -143,14 +150,25 @@ class StateContainerState extends State<StateContainer> {
 
     // Transaction event subscription is now managed in requestUpdate() to avoid duplicates
 
-    _priceEventSub =
-        EventTaxiImpl.singleton().registerTo<PriceEvent>().listen((event) {
-      // PriceResponse's get pushed periodically, it wasn't a request we made so don't pop the queue
+    // Unified price event subscription - single source of truth
+    _unifiedPriceEventSub =
+        EventTaxiImpl.singleton().registerTo<UnifiedPriceUpdateEvent>().listen((event) {
+      if (event.isSuccess && event.selectedPrice != null) {
+        setState(() {
+          wallet?.btcPrice = event.selectedPrice!.btcPrice.toString();
+          wallet?.localCurrencyPrice = event.selectedPrice!.localCurrencyPrice.toString();
+        });
+      }
+    });
+
+    // Price source changed event subscription
+    _priceSourceChangedEventSub =
+        EventTaxiImpl.singleton().registerTo<PriceSourceChangedEvent>().listen((event) {
       setState(() {
-        wallet?.btcPrice = event.response?.btcPrice.toString() ?? '0';
-        wallet?.localCurrencyPrice =
-            event.response?.localCurrencyPrice.toString() ?? '0';
+        selectedDefaultDex = event.newDex;
       });
+      // Save to preferences
+      sl.get<SharedPrefsUtil>().setDefaultDex(event.newDex);
     });
 
     // Account has been deleted or name changed
@@ -295,7 +313,8 @@ class StateContainerState extends State<StateContainer> {
 
   void _destroyBus() {
     _balanceGetEventSub?.cancel();
-    _priceEventSub?.cancel();
+    _unifiedPriceEventSub?.cancel();
+    _priceSourceChangedEventSub?.cancel();
     _accountModifiedSub?.cancel();
     _transactionsListEventSub?.cancel();
   }
@@ -325,6 +344,9 @@ class StateContainerState extends State<StateContainer> {
       wallet = AppWallet(address: address, loading: true);
       requestUpdate();
     });
+    
+    // Initialize prices on first login
+    sl.get<PriceManager>().initializePrices();
   }
 
   Future<void> updateRecentlyUsedAccounts() async {
@@ -377,18 +399,16 @@ class StateContainerState extends State<StateContainer> {
   void updateCurrency(AvailableCurrency currency) async {
     String currencyCode = currency.getIso4217Code();
     
-    // Fetch both aggregated and DEX-specific prices for the new currency
-    await Future.wait([
-      sl.get<HttpService>().getSimplePrice(currencyCode),
-      sl.get<HttpService>().getIndividualDexPrices(currencyCode).then((dexResponse) {
-        // Update wallet with new DEX prices
-        wallet?.updateDexPrices(dexResponse.dexPrices);
-      }),
-    ]);
-    
     setState(() {
       curCurrency = currency;
     });
+    
+    // Update PriceManager with new currency - it will fetch from all sources
+    PriceManager priceManager = sl.get<PriceManager>();
+    priceManager.setCurrency(currencyCode);
+    
+    // Save to preferences
+    sl.get<SharedPrefsUtil>().setCurrency(currency);
   }
 
   // Change default DEX
@@ -396,6 +416,28 @@ class StateContainerState extends State<StateContainer> {
     setState(() {
       selectedDefaultDex = dex;
     });
+    
+    // Update PriceManager with new DEX selection
+    PriceManager priceManager = sl.get<PriceManager>();
+    priceManager.setSelectedDex(dex);
+    
+    // Save to preferences
+    sl.get<SharedPrefsUtil>().setDefaultDex(dex);
+  }
+
+  // Request price update (for UI components)
+  void requestPriceUpdate({bool forceRefresh = false}) {
+    sl.get<PriceManager>().requestPriceUpdate(forceRefresh: forceRefresh);
+  }
+
+  // Start periodic price updates
+  void startPeriodicPriceUpdates() {
+    sl.get<PriceManager>().startPeriodicUpdates();
+  }
+
+  // Stop periodic price updates
+  void stopPeriodicPriceUpdates() {
+    sl.get<PriceManager>().stopPeriodicUpdates();
   }
 
   // Set encrypted secret
@@ -463,9 +505,8 @@ class StateContainerState extends State<StateContainer> {
             .get<AppService>()
             .getBalanceGetResponse(selectedAccount.address!, true);
 
-        await sl
-            .get<HttpService>()
-            .getSimplePrice(curCurrency.getIso4217Code());
+        // Request price update through PriceManager
+        sl.get<PriceManager>().requestPriceUpdate();
 
         sl
             .get<AppService>()

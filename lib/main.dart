@@ -20,6 +20,7 @@ import 'package:my_bismuth_wallet/model/available_language.dart';
 import 'package:my_bismuth_wallet/model/db/appdb.dart';
 import 'package:my_bismuth_wallet/model/vault.dart';
 import 'package:my_bismuth_wallet/service_locator.dart';
+import 'package:my_bismuth_wallet/service/price_manager.dart';
 import 'package:my_bismuth_wallet/styles.dart';
 import 'package:my_bismuth_wallet/ui/before_scan_screen.dart';
 import 'package:my_bismuth_wallet/ui/home_page.dart';
@@ -46,6 +47,10 @@ Future<void> main() async {
 
   // Setup Service Provide
   setupServiceLocator();
+  
+  // Register PriceManager as lifecycle observer
+  WidgetsBinding.instance.addObserver(PriceManager.instance);
+  
   // Setup logger, only show warning and higher in release mode.
   if (kReleaseMode) {
     Logger.level = Level.warning;

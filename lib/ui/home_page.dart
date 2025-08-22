@@ -33,6 +33,7 @@ import 'package:my_bismuth_wallet/model/db/hiveDB.dart';
 import 'package:my_bismuth_wallet/model/vault.dart';
 import 'package:my_bismuth_wallet/network/model/block_types.dart';
 import 'package:my_bismuth_wallet/network/model/response/address_txs_response.dart';
+import 'package:my_bismuth_wallet/network/model/response/individual_dex_prices_response.dart';
 import 'package:my_bismuth_wallet/service/app_service.dart';
 import 'package:my_bismuth_wallet/service/http_service.dart';
 import 'package:my_bismuth_wallet/service_locator.dart';
@@ -95,6 +96,7 @@ class _AppHomePageState extends State<AppHomePage>
   late PriceConversion _priceConversion;
 
   bool _isRefreshing = false;
+  bool _dependenciesInitialized = false;
   int _historyVersion =
       0; // bump to force list rebuild when content changes without length change
 
@@ -147,8 +149,17 @@ class _AppHomePageState extends State<AppHomePage>
     // Generate initial QR code after frame is rendered
     // This fixes the issue where QR code is not generated on first app launch
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted && StateContainer.of(context).wallet?.address != null) {
-        paintQrCode(address: StateContainer.of(context).wallet!.address!);
+      // This will be called after build, so StateContainer should be available
+      if (mounted) {
+        try {
+          final wallet = StateContainer.of(context).wallet;
+          if (wallet?.address != null) {
+            paintQrCode(address: wallet!.address!);
+          }
+        } catch (e) {
+          // If StateContainer isn't available yet, skip QR generation for now
+          print('Skipping initial QR generation: $e');
+        }
       }
     });
     // Main Card Size
@@ -163,7 +174,7 @@ class _AppHomePageState extends State<AppHomePage>
       settingsIconMarginTop = 5;
     }
 
-    _addSampleContact();
+    // _addSampleContact() moved to didChangeDependencies
     _updateContacts();
     // Setup placeholder animation and start
     _animationDisposed = false;
@@ -182,6 +193,22 @@ class _AppHomePageState extends State<AppHomePage>
     );
     _opacityAnimation.addStatusListener(_animationStatusListener);
     _placeholderCardAnimationController.forward();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    
+    // Initialize StateContainer-dependent functionality here
+    if (!_dependenciesInitialized) {
+      _dependenciesInitialized = true;
+      
+      // Start periodic price updates through PriceManager
+      StateContainer.of(context).startPeriodicPriceUpdates();
+      
+      // Add sample contact if needed (moved from initState)
+      _addSampleContact();
+    }
   }
 
   void _animationStatusListener(AnimationStatus status) {
@@ -349,6 +376,7 @@ class _AppHomePageState extends State<AppHomePage>
   void dispose() {
     _destroyBus();
     _updateTimer?.cancel();
+    StateContainer.of(context).stopPeriodicPriceUpdates();
     lockStreamListener?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     _placeholderCardAnimationController.dispose();
@@ -697,6 +725,8 @@ class _AppHomePageState extends State<AppHomePage>
         StateContainer.of(context).requestUpdate();
       }
     });
+
+    // Start periodic price updates through PriceManager - moved to didChangeDependencies
 
     // Also request an initial update
     Future.delayed(Duration(seconds: 2), () {
@@ -2324,24 +2354,14 @@ class _AppHomePageState extends State<AppHomePage>
   }
 
   void _showExchangesSheet(BuildContext context) async {
-    // Fetch individual DEX prices if not available
-    try {
-      final httpService = sl.get<HttpService>();
-      final currency = StateContainer.of(context).curCurrency;
-      final dexPricesResponse =
-          await httpService.getIndividualDexPrices(currency.getIso4217Code());
-
-      // Update wallet with DEX prices
-      StateContainer.of(context)
-          .wallet
-          ?.updateDexPrices(dexPricesResponse.dexPrices);
-
-      AppExchangesSheet(dexPricesResponse.dexPrices).mainBottomSheet(context);
-    } catch (e) {
-      print('Error fetching DEX prices: $e');
-      // Fallback to show sheet without DEX prices
-      AppExchangesSheet(null).mainBottomSheet(context);
-    }
+    // Request fresh price update to ensure we have latest DEX prices
+    StateContainer.of(context).requestPriceUpdate(forceRefresh: true);
+    
+    // Get current DEX prices from wallet state
+    Map<DefaultDex, DexPriceData>? dexPrices = StateContainer.of(context).wallet?.dexPrices;
+    
+    // Show exchanges sheet with current prices
+    AppExchangesSheet(dexPrices).mainBottomSheet(context);
   }
 }
 
