@@ -80,15 +80,19 @@ android {
             }
         }
     }
-     signingConfigs {
+    // SECURITY FIX: Commented out duplicate signingConfigs block with hardcoded credentials
+    // This was overriding the secure configuration above (lines 68-82)
+    /*
+    signingConfigs {
         release {
             storeFile file('debug.jks')
             storePassword 'android'
             keyAlias 'debug'
             keyPassword 'android'
         }
-     }
-     buildTypes {
+    }
+    */
+    buildTypes {
         release {
             signingConfig signingConfigs.release
             //following line for regular use not needed now.

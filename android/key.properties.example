@@ -1,0 +1,30 @@
+# Android Keystore Configuration Template
+# Copy this file to key.properties and fill in your actual values
+# NEVER commit key.properties to git - it's already in .gitignore
+
+# Store password for your keystore file
+storePassword=YOUR_STRONG_STORE_PASSWORD
+
+# Password for the specific key alias
+keyPassword=YOUR_STRONG_KEY_PASSWORD
+
+# Alias name for your signing key
+keyAlias=YOUR_KEY_ALIAS
+
+# Path to your keystore file (relative to android/ directory)
+# For production: ../release.keystore
+# For development: you can use debug.jks temporarily
+storeFile=../path/to/your/keystore.jks
+
+# Security Notes:
+# - Use different passwords for store and key (both 16+ characters)
+# - Include uppercase, lowercase, numbers, and symbols
+# - Store passwords in a secure password manager
+# - Never share these credentials via email/chat
+# - Create encrypted backups of your keystore file
+# - How to create keystore file.
+#     keytool -genkeypair -v -keystore release.keystore \
+#      -keyalg RSA -keysize 4096 \
+#      -validity 10950 \
+#      -alias release
+
